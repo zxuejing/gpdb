@@ -1540,13 +1540,13 @@ pg_get_function_arguments(PG_FUNCTION_ARGS)
 	StringInfoData buf;
 	HeapTuple	proctup;
 
-	initStringInfo(&buf);
-
 	proctup = SearchSysCache(PROCOID,
 							 ObjectIdGetDatum(funcid),
 							 0, 0, 0);
 	if (!HeapTupleIsValid(proctup))
-		elog(ERROR, "cache lookup failed for function %u", funcid);
+		PG_RETURN_NULL();
+
+	initStringInfo(&buf);
 
 	(void) print_function_arguments(&buf, proctup, false, true);
 
@@ -1568,13 +1568,13 @@ pg_get_function_identity_arguments(PG_FUNCTION_ARGS)
 	StringInfoData buf;
 	HeapTuple	proctup;
 
-	initStringInfo(&buf);
-
 	proctup = SearchSysCache(PROCOID,
 							 ObjectIdGetDatum(funcid),
 							 0, 0, 0);
 	if (!HeapTupleIsValid(proctup))
-		elog(ERROR, "cache lookup failed for function %u", funcid);
+		PG_RETURN_NULL();
+
+	initStringInfo(&buf);
 
 	(void) print_function_arguments(&buf, proctup, false, false);
 
@@ -1598,16 +1598,16 @@ pg_get_function_result(PG_FUNCTION_ARGS)
 	Form_pg_proc procform;
 	int			ntabargs = 0;
 
-	initStringInfo(&buf);
-	initStringInfo(&argbuf);
-
 	proctup = SearchSysCache(PROCOID,
 							 ObjectIdGetDatum(funcid),
 							 0, 0, 0);
 
 	if (!HeapTupleIsValid(proctup))
-		elog(ERROR, "cache lookup failed for function %u", funcid);
+		PG_RETURN_NULL();
 	procform = (Form_pg_proc) GETSTRUCT(proctup);
+
+	initStringInfo(&buf);
+	initStringInfo(&argbuf);
 
 	ntabargs = print_function_arguments(&argbuf, proctup, true, true);
 

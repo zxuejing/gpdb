@@ -126,7 +126,7 @@ get_password_type(const char *shadow_pass)
 	if((strncmp(shadow_pass, SHA256_PREFIX, strlen(SHA256_PREFIX)) == 0)
 		&& strlen(shadow_pass) == SHA256_PASSWD_LEN)
 		return PASSWORD_TYPE_SHA256;
-	if (strncmp(shadow_pass, "scram-sha-256:", strlen("scram-sha-256:")) == 0)
+	if (strncmp(shadow_pass, "SCRAM-SHA-256$", strlen("SCRAM-SHA-256$")) == 0)
 		return PASSWORD_TYPE_SCRAM_SHA_256;
 	return PASSWORD_TYPE_PLAINTEXT;
 }

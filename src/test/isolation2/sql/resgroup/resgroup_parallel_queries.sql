@@ -6,8 +6,6 @@
 ! psql -d isolation2resgrouptest -f ./sql/resgroup/dblink.sql;
 -- end_ignore
 
-alter resource group admin_group set concurrency 30;
-
 -- This function execute commands N times. 
 -- % in command will be replaced by number specified by range1 sequentially
 -- # in command will be replaced by number specified by range2 randomly 
@@ -96,6 +94,20 @@ LANGUAGE 'plpgsql';
 5<:
 6<:
 
+1: select dblink_disconnect('dblink_rg_test1');
+2: select dblink_disconnect('dblink_rg_test2');
+3: select dblink_disconnect('dblink_rg_test3');
+4: select dblink_disconnect('dblink_rg_test4');
+5: select dblink_disconnect('dblink_rg_test5');
+6: select dblink_disconnect('dblink_rg_test6');
+
+
+1q:
+2q:
+3q:
+4q:
+5q:
+6q:
 --
 -- DDLs vs DMLs
 --
@@ -259,9 +271,13 @@ create role rg_test_r8 login resource group rg_test_g8;
 53>:select exec_commands_n('dblink_rg_test53', 'select 1', 'begin', 'abort', 100, '', '', true);
 53<:
 
-51:select dblink_disconnect('dblink_rg_test51');
-52:select dblink_disconnect('dblink_rg_test52');
-53:select dblink_disconnect('dblink_rg_test53');
+51: select dblink_disconnect('dblink_rg_test51');
+52: select dblink_disconnect('dblink_rg_test52');
+53: select dblink_disconnect('dblink_rg_test53');
+
+51q:
+52q:
+53q:
 
 -- num_executed and num_queued must be zero
 select num_queued, num_executed from gp_toolkit.gp_resgroup_status where rsgname = 'rg_test_g8';
@@ -269,5 +285,4 @@ drop role rg_test_r8;
 drop resource group rg_test_g8;
 
 -- clean up
-alter resource group admin_group set concurrency 20;
 select * from gp_toolkit.gp_resgroup_config;

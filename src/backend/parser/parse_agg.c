@@ -773,13 +773,6 @@ checkExprHasWindFuncs_walker(Node *node, void *context)
 
 		return checkExprHasWindFuncs_walker(e->val, context);
 	}
-	else if (IsA(node, Query))
-	{
-		/* Recurse into subselects */
-		return query_tree_walker((Query *) node,
-								 checkExprHasWindFuncs_walker,
-								 (void *) context, 0);
-	}
 	else if(IsA(node, A_Expr))
 	{
 		/* could be seen inside an untransformed window clause */

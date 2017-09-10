@@ -1585,6 +1585,8 @@ CTranslatorScalarToDXL::PdxlnScWindowref
 													GPOS_NEW(m_pmp) CMDIdGPDB(pwindowref->winfnoid),
 													GPOS_NEW(m_pmp) CMDIdGPDB(pwindowref->restype),
 													pwindowref->windistinct,
+													pwindowref->winstar,
+													pwindowref->winagg,
 													edxlwinstage,
 													ulWinSpecPos
 													);

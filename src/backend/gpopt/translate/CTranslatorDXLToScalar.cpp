@@ -518,8 +518,6 @@ CTranslatorDXLToScalar::PwindowrefFromDXLNodeScWindowRef
 	pwindowref->winlevel = 0;
 	pwindowref->winspec = pdxlop->UlWinSpecPos();
 	pwindowref->restype = CMDIdGPDB::PmdidConvert(pdxlop->PmdidRetType())->OidObjectId();
-	pwindowref->winstar = pdxlop->FStarArg();
-	pwindowref->winagg = pdxlop->FSimpleAgg();
 
 	EdxlWinStage edxlwinstage = pdxlop->Edxlwinstage();
 	GPOS_ASSERT(edxlwinstage != EdxlwinstageSentinel);

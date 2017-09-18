@@ -65,10 +65,10 @@ static void FiLockAcquire(void);
 static void FiLockRelease(void);
 
 static FaultInjectorEntry_s* FaultInjector_LookupHashEntry(
-								FaultInjectorIdentifier_e identifier);
+								const char* faultName);
 
 static FaultInjectorEntry_s* FaultInjector_InsertHashEntry(
-								FaultInjectorIdentifier_e identifier, 
+								const char* faultName,
 								bool	*exists);
 
 static int FaultInjector_NewHashEntry(
@@ -78,7 +78,7 @@ static int FaultInjector_UpdateHashEntry(
 								FaultInjectorEntry_s	*entry);
 
 static bool FaultInjector_RemoveHashEntry(
-								FaultInjectorIdentifier_e identifier);
+								const char* faultName);
 
 /*
  * NB: This list needs to be kept in sync with:
@@ -489,9 +489,9 @@ FaultInjector_ShmemInit(void)
 	faultInjectorShmem->faultInjectorSlots = 0;
 	
 	MemSet(&hash_ctl, 0, sizeof(hash_ctl));
-	hash_ctl.keysize = sizeof(int32);
+	hash_ctl.keysize = FAULT_NAME_MAX_LENGTH;
 	hash_ctl.entrysize = sizeof(FaultInjectorEntry_s);
-	hash_ctl.hash = int32_hash;
+	hash_ctl.hash = string_hash;
 	
 	faultInjectorShmem->hash = ShmemInitHash("fault injector hash",
 								   FAULTINJECTOR_MAX_SLOTS,
@@ -515,7 +515,22 @@ FaultInjector_InjectFaultIfSet(
 							   const char*					 databaseName,
 							   const char*					 tableName)
 {
+	return FaultInjector_InjectFaultNameIfSet(
+			FaultInjectorIdentifierEnumToString[identifier],
+			ddlStatement,
+			databaseName,
+			tableName);
 	
+}
+
+FaultInjectorType_e
+FaultInjector_InjectFaultNameIfSet(
+							   const char*				 faultName,
+							   DDLStatement_e			 ddlStatement,
+							   const char*				 databaseName,
+							   const char*				 tableName)
+{
+
 	FaultInjectorEntry_s   *entryShared, localEntry,
 						   *entryLocal = &localEntry;
 	char					databaseNameLocal[NAMEDATALEN];
@@ -545,7 +560,7 @@ FaultInjector_InjectFaultIfSet(
 
 	FiLockAcquire();
 
-	entryShared = FaultInjector_LookupHashEntry(identifier);
+	entryShared = FaultInjector_LookupHashEntry(faultName);
 
 	do
 	{
@@ -602,7 +617,7 @@ FaultInjector_InjectFaultIfSet(
 			ereport(LOG,
 					(errcode(ERRCODE_FAULT_INJECT),
 					 errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
-							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
+							entryLocal->faultName,
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));	
 			
 			pg_usleep(entryLocal->sleepTime * 1000000L);
@@ -644,7 +659,7 @@ FaultInjector_InjectFaultIfSet(
 			ereport(LOG, 
 					(errcode(ERRCODE_FAULT_INJECT),
 					 errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
-							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
+							entryLocal->faultName,
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));	
 			
 			break;
@@ -664,7 +679,7 @@ FaultInjector_InjectFaultIfSet(
 			ereport(FATAL, 
 					(errcode(ERRCODE_FAULT_INJECT),
 					 errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
-							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
+							entryLocal->faultName,
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));	
 
 			break;
@@ -684,7 +699,7 @@ FaultInjector_InjectFaultIfSet(
 			ereport(PANIC, 
 					(errcode(ERRCODE_FAULT_INJECT),
 					 errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
-							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
+							entryLocal->faultName,
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));	
 
 			break;
@@ -704,14 +719,14 @@ FaultInjector_InjectFaultIfSet(
 			ereport(ERROR, 
 					(errcode(ERRCODE_FAULT_INJECT),
 					 errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
-							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
+							entryLocal->faultName,
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));	
 			break;
 		case FaultInjectorTypeInfiniteLoop:
 			ereport(LOG, 
 					(errcode(ERRCODE_FAULT_INJECT),
 					 errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
-							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
+							entryLocal->faultName,
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));
 			if (entryLocal->faultInjectorIdentifier == FileRepImmediateShutdownRequested)
 				cnt = entryLocal->sleepTime;
@@ -736,7 +751,7 @@ FaultInjector_InjectFaultIfSet(
 			ereport(LOG, 
 					(errcode(ERRCODE_FAULT_INJECT),
 					 errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
-							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
+							entryLocal->faultName,
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));							
 			break;
 			
@@ -747,10 +762,10 @@ FaultInjector_InjectFaultIfSet(
 			ereport(LOG, 
 					(errcode(ERRCODE_FAULT_INJECT),
 					 errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
-							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
+							entryLocal->faultName,
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));	
 			
-			while ((entry = FaultInjector_LookupHashEntry(entryLocal->faultInjectorIdentifier)) != NULL &&
+			while ((entry = FaultInjector_LookupHashEntry(entryLocal->faultName)) != NULL &&
 				   entry->faultInjectorType != FaultInjectorTypeResume)
 			{
 				pg_usleep(1000000L);  // 1 sec
@@ -761,7 +776,7 @@ FaultInjector_InjectFaultIfSet(
 				ereport(LOG, 
 						(errcode(ERRCODE_FAULT_INJECT),
 						 errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
-							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
+							entryLocal->faultName,
 							FaultInjectorTypeEnumToString[entry->faultInjectorType])));	
 			}
 			else
@@ -769,7 +784,7 @@ FaultInjector_InjectFaultIfSet(
 				ereport(LOG, 
 						(errcode(ERRCODE_FAULT_INJECT),
 						 errmsg("fault 'NULL', fault name:'%s'  ",
-								FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier])));				
+								entryLocal->faultName)));
 
 				/*
 				 * Since the entry is gone already, we should NOT update
@@ -785,7 +800,7 @@ FaultInjector_InjectFaultIfSet(
 			ereport(LOG, 
 					(errcode(ERRCODE_FAULT_INJECT),
 					 errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
-							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
+							entryLocal->faultName,
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));							
 			break;
 			
@@ -796,7 +811,7 @@ FaultInjector_InjectFaultIfSet(
 			ereport(LOG, 
 					(errcode(ERRCODE_FAULT_INJECT),
 					 errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
-							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
+							entryLocal->faultName,
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));	
 
 			buffer = (char*) palloc(BLCKSZ);
@@ -814,7 +829,7 @@ FaultInjector_InjectFaultIfSet(
 			ereport(LOG, 
 					(errcode(ERRCODE_FAULT_INJECT),
 					 errmsg("unexpected error, fault triggered, fault name:'%s' fault type:'%s' ",
-							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
+							entryLocal->faultName,
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));	
 			
 			Assert(0);
@@ -838,7 +853,7 @@ FaultInjector_InjectFaultIfSet(
 			ereport(LOG,
 					(errcode(ERRCODE_FAULT_INJECT),
 					 errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
-							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
+							entryLocal->faultName,
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));
 
 			InterruptPending = true;
@@ -851,7 +866,7 @@ FaultInjector_InjectFaultIfSet(
 			ereport(LOG,
 					(errcode(ERRCODE_FAULT_INJECT),
 					 errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
-							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
+							entryLocal->faultName,
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));
 			QueryFinishPending = true;
 			break;
@@ -869,7 +884,7 @@ FaultInjector_InjectFaultIfSet(
 			ereport(PANIC,
 					(errcode(ERRCODE_FAULT_INJECT),
 					 errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
-							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
+							entryLocal->faultName,
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));
 			break;
 		}
@@ -879,7 +894,7 @@ FaultInjector_InjectFaultIfSet(
 			ereport(LOG, 
 					(errcode(ERRCODE_FAULT_INJECT),
 					 errmsg("unexpected error, fault triggered, fault name:'%s' fault type:'%s' ",
-							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
+							entryLocal->faultName,
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));	
 			
 			Assert(0);
@@ -901,22 +916,21 @@ FaultInjector_InjectFaultIfSet(
  */
 static FaultInjectorEntry_s*
 FaultInjector_LookupHashEntry(
-							  FaultInjectorIdentifier_e identifier)
+							  const char* faultName)
 {
 	FaultInjectorEntry_s	*entry;
 	
 	Assert(faultInjectorShmem->hash != NULL);
-	
 	entry = (FaultInjectorEntry_s *) hash_search(
 												  faultInjectorShmem->hash, 
-												  (void *) &identifier, // key 
+												  (void *) faultName, // key
 												  HASH_FIND, 
 												  NULL);
 	
 	if (entry == NULL) {
 		ereport(DEBUG5,
 				(errmsg("FaultInjector_LookupHashEntry() could not find fault injection hash entry identifier:'%d' ",
-						identifier)));
+						FaultInjectorIdentifierStringToEnum(faultName))));
 	} 
 	
 	return entry;
@@ -927,7 +941,7 @@ FaultInjector_LookupHashEntry(
  */ 
 static FaultInjectorEntry_s*
 FaultInjector_InsertHashEntry(
-							FaultInjectorIdentifier_e identifier, 
+							const char* faultName,
 							bool	*exists)
 {
 	
@@ -935,13 +949,12 @@ FaultInjector_InsertHashEntry(
 	FaultInjectorEntry_s	*entry;
 
 	Assert(faultInjectorShmem->hash != NULL);
-	
 	entry = (FaultInjectorEntry_s *) hash_search(
 												  faultInjectorShmem->hash, 
-												  (void *) &identifier, // key
-												  HASH_ENTER_NULL, 
+												  (void *) faultName, // key
+												  HASH_ENTER_NULL,
 												  &foundPtr);
-	
+
 	if (entry == NULL) {
 		*exists = FALSE;
 		return entry;
@@ -955,7 +968,7 @@ FaultInjector_InsertHashEntry(
 	} else {
 		*exists = FALSE;
 	}
-	
+
 	return entry;
 }
 
@@ -964,17 +977,16 @@ FaultInjector_InsertHashEntry(
  */
 static bool
 FaultInjector_RemoveHashEntry(
-							  FaultInjectorIdentifier_e identifier)
+							  const char* faultName)
 {	
 	
 	FaultInjectorEntry_s	*entry;
 	bool					isRemoved = FALSE;
 	
 	Assert(faultInjectorShmem->hash != NULL);
-	
 	entry = (FaultInjectorEntry_s *) hash_search(
 												  faultInjectorShmem->hash, 
-												  (void *) &identifier, // key
+												  (void *) faultName, // key
 												  HASH_REMOVE, 
 												  NULL);
 	
@@ -982,7 +994,7 @@ FaultInjector_RemoveHashEntry(
 	{
 		ereport(LOG, 
 				(errmsg("fault removed, fault name:'%s' fault type:'%s' ",
-						FaultInjectorIdentifierEnumToString[entry->faultInjectorIdentifier],
+						entry->faultName,
 						FaultInjectorTypeEnumToString[entry->faultInjectorType])));							
 		
 		isRemoved = TRUE;
@@ -1011,7 +1023,7 @@ FaultInjector_NewHashEntry(
 		ereport(WARNING,
 				(errmsg("could not insert fault injection, no slots available"
 						"fault name:'%s' fault type:'%s' ",
-						FaultInjectorIdentifierEnumToString[entry->faultInjectorIdentifier],
+						entry->faultName,
 						FaultInjectorTypeEnumToString[entry->faultInjectorType])));
 		snprintf(entry->bufOutput, sizeof(entry->bufOutput), 
 				 "could not insert fault injection, max slots:'%d' reached",
@@ -1056,7 +1068,7 @@ FaultInjector_NewHashEntry(
 				ereport(WARNING,
 						(errmsg("could not insert fault injection, fault type not supported"
 								"fault name:'%s' fault type:'%s' ",
-								FaultInjectorIdentifierEnumToString[entry->faultInjectorIdentifier],
+								entry->faultName,
 								FaultInjectorTypeEnumToString[entry->faultInjectorType])));
 				snprintf(entry->bufOutput, sizeof(entry->bufOutput), 
 						 "could not insert fault injection, fault type not supported");
@@ -1095,7 +1107,7 @@ FaultInjector_NewHashEntry(
 				ereport(WARNING,
 						(errmsg("could not insert fault injection entry into table, segment not in primary role"
 								"fault name:'%s' fault type:'%s' ",
-								FaultInjectorIdentifierEnumToString[entry->faultInjectorIdentifier],
+								entry->faultName,
 								FaultInjectorTypeEnumToString[entry->faultInjectorType])));
 				snprintf(entry->bufOutput, sizeof(entry->bufOutput), 
 						 "could not insert fault injection, segment not in primary role");
@@ -1116,7 +1128,7 @@ FaultInjector_NewHashEntry(
 						(errmsg("could not insert fault injection entry into table, "
 								"segment not in primary or mirror role, "
 								"fault name:'%s' fault type:'%s' ",
-								FaultInjectorIdentifierEnumToString[entry->faultInjectorIdentifier],
+								entry->faultName,
 								FaultInjectorTypeEnumToString[entry->faultInjectorType])));
 				snprintf(entry->bufOutput, sizeof(entry->bufOutput), 
 						 "could not insert fault injection, segment not in primary or mirror role");
@@ -1141,7 +1153,7 @@ FaultInjector_NewHashEntry(
 						(errmsg("could not insert fault injection entry into table, "
 								"segment not in master role, "
 								"fault name:'%s' fault type:'%s' ",
-								FaultInjectorIdentifierEnumToString[entry->faultInjectorIdentifier],
+								entry->faultName,
 								FaultInjectorTypeEnumToString[entry->faultInjectorType])));
 				snprintf(entry->bufOutput, sizeof(entry->bufOutput), 
 						 "could not insert fault injection, segment not in master role");
@@ -1203,7 +1215,7 @@ FaultInjector_NewHashEntry(
 						(errmsg("could not insert fault injection entry into table, "
 								"segment not in primary or master role, "
 								"fault name:'%s' fault type:'%s' ",
-								FaultInjectorIdentifierEnumToString[entry->faultInjectorIdentifier],
+								entry->faultName,
 								FaultInjectorTypeEnumToString[entry->faultInjectorType])));
 				snprintf(entry->bufOutput, sizeof(entry->bufOutput), 
 						 "could not insert fault injection, segment not in primary or master role");
@@ -1215,7 +1227,7 @@ FaultInjector_NewHashEntry(
 		default:
 			break;
 	}
-	entryLocal = FaultInjector_InsertHashEntry(entry->faultInjectorIdentifier, &exists);
+	entryLocal = FaultInjector_InsertHashEntry(entry->faultName, &exists);
 		
 	if (entryLocal == NULL) {
 		FiLockRelease();
@@ -1223,7 +1235,7 @@ FaultInjector_NewHashEntry(
 		ereport(WARNING,
 				(errmsg("could not insert fault injection entry into table, no memory, "
 						"fault name:'%s' fault type:'%s' ",
-						FaultInjectorIdentifierEnumToString[entry->faultInjectorIdentifier],
+						entry->faultName,
 						FaultInjectorTypeEnumToString[entry->faultInjectorType])));
 		snprintf(entry->bufOutput, sizeof(entry->bufOutput), 
 				 "could not insert fault injection, no memory");
@@ -1238,7 +1250,7 @@ FaultInjector_NewHashEntry(
 				(errmsg("could not insert fault injection entry into table, "
 						"entry already exists, "
 						"fault name:'%s' fault type:'%s' ",
-						FaultInjectorIdentifierEnumToString[entry->faultInjectorIdentifier],
+						entry->faultName,
 						FaultInjectorTypeEnumToString[entry->faultInjectorType])));
 		snprintf(entry->bufOutput, sizeof(entry->bufOutput), 
 				 "could not insert fault injection, entry already exists");
@@ -1247,7 +1259,9 @@ FaultInjector_NewHashEntry(
 	}
 		
 	entryLocal->faultInjectorType = entry->faultInjectorType;
-	
+	entryLocal->faultInjectorIdentifier = entry->faultInjectorIdentifier;
+	strlcpy(entryLocal->faultName, entry->faultName, sizeof(entryLocal->faultName));
+
 	entryLocal->sleepTime = entry->sleepTime;
 	entryLocal->ddlStatement = entry->ddlStatement;
 	
@@ -1271,7 +1285,7 @@ FaultInjector_NewHashEntry(
 	FiLockRelease();
 	
 	elog(DEBUG1, "FaultInjector_NewHashEntry() identifier:'%s'", 
-		 FaultInjectorIdentifierEnumToString[entry->faultInjectorIdentifier]);
+		 entry->faultName);
 	
 exit:
 		
@@ -1291,7 +1305,7 @@ FaultInjector_UpdateHashEntry(
 
 	FiLockAcquire();
 
-	entryLocal = FaultInjector_LookupHashEntry(entry->faultInjectorIdentifier);
+	entryLocal = FaultInjector_LookupHashEntry(entry->faultName);
 	
 	if (entryLocal == NULL)
 	{
@@ -1301,7 +1315,7 @@ FaultInjector_UpdateHashEntry(
 				(errmsg("could not update fault injection hash entry with fault injection status, "
 						"no entry found, "
 						"fault name:'%s' fault type:'%s' ",
-						FaultInjectorIdentifierEnumToString[entry->faultInjectorIdentifier],
+						entry->faultName,
 						FaultInjectorTypeEnumToString[entry->faultInjectorType])));
 		goto exit;
 	}
@@ -1321,7 +1335,7 @@ FaultInjector_UpdateHashEntry(
 	ereport(DEBUG1,
 			(errmsg("LOG(fault injector): update fault injection hash entry "
 					"identifier:'%s' state:'%s' occurrence:'%d' ",
-					FaultInjectorIdentifierEnumToString[entry->faultInjectorIdentifier], 
+					entry->faultName,
 					FaultInjectorStateEnumToString[entryLocal->faultInjectorState],
 					entry->occurrence)));
 	
@@ -1355,7 +1369,7 @@ FaultInjector_SetFaultInjection(
 				FiLockAcquire();
 				
 				while ((entryLocal = (FaultInjectorEntry_s *) hash_seq_search(&hash_status)) != NULL) {
-					isRemoved = FaultInjector_RemoveHashEntry(entryLocal->faultInjectorIdentifier);
+					isRemoved = FaultInjector_RemoveHashEntry(entryLocal->faultName);
 					if (isRemoved == TRUE) {
 						faultInjectorShmem->faultInjectorSlots--;
 					}					
@@ -1366,7 +1380,7 @@ FaultInjector_SetFaultInjection(
 			else
 			{
 				FiLockAcquire();
-				isRemoved = FaultInjector_RemoveHashEntry(entry->faultInjectorIdentifier);
+				isRemoved = FaultInjector_RemoveHashEntry(entry->faultName);
 				if (isRemoved == TRUE) {
 					faultInjectorShmem->faultInjectorSlots--;
 				}
@@ -1377,7 +1391,7 @@ FaultInjector_SetFaultInjection(
 				ereport(DEBUG1,
 						(errmsg("LOG(fault injector): could not remove fault injection from hash"
 								"identifier:'%s' ",
-								FaultInjectorIdentifierEnumToString[entry->faultInjectorIdentifier])));
+								entry->faultName)));
 			}			
 			
 			break;
@@ -1417,7 +1431,7 @@ FaultInjector_SetFaultInjection(
 							"sleep time:'%d' "
 							"fault injection state:'%s' "
 							"num times hit:'%d' ",
-							FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
+							entryLocal->faultName,
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType],
 							FaultInjectorDDLEnumToString[entryLocal->ddlStatement],
 							entryLocal->databaseName,
@@ -1440,7 +1454,7 @@ FaultInjector_SetFaultInjection(
 									  "sleep time:'%d' "
 									  "fault injection state:'%s'  "
 									  "num times hit:'%d' \n",
-									  FaultInjectorIdentifierEnumToString[entryLocal->faultInjectorIdentifier],
+									  entryLocal->faultName,
 									  FaultInjectorTypeEnumToString[entryLocal->faultInjectorType],
 									  FaultInjectorDDLEnumToString[entryLocal->ddlStatement],
 									  entryLocal->databaseName,
@@ -1455,7 +1469,7 @@ FaultInjector_SetFaultInjection(
 			if (found == FALSE) {
 				snprintf(entry->bufOutput, sizeof(entry->bufOutput), "Failure: "
 						 "fault name:'%s' not set",
-						 FaultInjectorIdentifierEnumToString[entry->faultInjectorIdentifier]);
+						 entry->faultName);
 			}
 			break;
 		}
@@ -1463,7 +1477,7 @@ FaultInjector_SetFaultInjection(
 			ereport(LOG, 
 					(errcode(ERRCODE_FAULT_INJECT),
 					 errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
-							FaultInjectorIdentifierEnumToString[entry->faultInjectorIdentifier],
+							entry->faultName,
 							FaultInjectorTypeEnumToString[entry->faultInjectorType])));	
 			
 			FaultInjector_UpdateHashEntry(entry);	
@@ -1482,7 +1496,7 @@ FaultInjector_SetFaultInjection(
  */
 bool
 FaultInjector_IsFaultInjected(
-							  FaultInjectorIdentifier_e identifier)
+							  char* faultName)
 {
 	FaultInjectorEntry_s	*entry = NULL;
 	bool					isCompleted = FALSE;
@@ -1491,7 +1505,7 @@ FaultInjector_IsFaultInjected(
 		
 	FiLockAcquire();
 		
-	entry = FaultInjector_LookupHashEntry(identifier);
+	entry = FaultInjector_LookupHashEntry(faultName);
 		
 	if (entry == NULL) {
 		retval = TRUE;
@@ -1513,13 +1527,13 @@ FaultInjector_IsFaultInjected(
 		case FaultInjectorStateFailed:
 			
 			isCompleted = TRUE;
-			isRemoved = FaultInjector_RemoveHashEntry(identifier);
+			isRemoved = FaultInjector_RemoveHashEntry(faultName);
 			
 			if (isRemoved == FALSE) {
 				ereport(DEBUG1,
 						(errmsg("LOG(fault injector): could not remove fault injection from hash"
 								"identifier:'%s' ",
-								FaultInjectorIdentifierEnumToString[identifier])));
+								faultName)));
 			} else {
 				faultInjectorShmem->faultInjectorSlots--;
 			}
@@ -1535,7 +1549,7 @@ exit:
 	if ((isCompleted == TRUE) && (retval == FALSE)) {
 		ereport(WARNING,
 				(errmsg("could not complete fault injection, fault name:'%s' fault type:'%s' ",
-						FaultInjectorIdentifierEnumToString[identifier],
+						faultName,
 						FaultInjectorTypeEnumToString[entry->faultInjectorType])));
 	}
 	return isCompleted;

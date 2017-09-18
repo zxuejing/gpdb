@@ -13,6 +13,8 @@
 
 #define FAULTINJECTOR_MAX_SLOTS	16
 
+#define FAULT_NAME_MAX_LENGTH	256
+
 /*
  *
  */
@@ -333,6 +335,8 @@ typedef enum FaultInjectorState_e {
  */
 typedef struct FaultInjectorEntry_s {
 	
+	char						faultName[FAULT_NAME_MAX_LENGTH];
+
 	FaultInjectorIdentifier_e	faultInjectorIdentifier;
 	
 	FaultInjectorType_e		faultInjectorType;
@@ -369,6 +373,12 @@ extern Size FaultInjector_ShmemSize(void);
 
 extern void FaultInjector_ShmemInit(void);
 
+extern FaultInjectorType_e FaultInjector_InjectFaultNameIfSet(
+							   const char*				 faultName,
+							   DDLStatement_e			 ddlStatement,
+							   const char*				 databaseName,
+							   const char*				 tableName);
+
 extern FaultInjectorType_e FaultInjector_InjectFaultIfSet(
 							   FaultInjectorIdentifier_e identifier,
 							   DDLStatement_e			 ddlStatement,
@@ -380,15 +390,17 @@ extern int FaultInjector_SetFaultInjection(
 
 
 extern bool FaultInjector_IsFaultInjected(
-							FaultInjectorIdentifier_e identifier);
+							char* faultName);
 
 
 #ifdef FAULT_INJECTOR
-#define SIMPLE_FAULT_INJECTOR(FaultName) \
-	FaultInjector_InjectFaultIfSet(FaultName, DDLNotSpecified, "", "")
-
+#define SIMPLE_FAULT_INJECTOR(FaultIdentifier) \
+	FaultInjector_InjectFaultIfSet(FaultIdentifier, DDLNotSpecified, "", "")
+#define SIMPLE_FAULT_NAME_INJECTOR(FaultName) \
+	FaultInjector_InjectFaultNameIfSet(FaultName, DDLNotSpecified, "", "")
 #else
-#define SIMPLE_FAULT_INJECTOR(FaultName)
+#define SIMPLE_FAULT_INJECTOR(FaultIdentifier)
+#define SIMPLE_FAULT_NAME_INJECTOR(FaultName)
 #endif
 
 #endif	/* FAULTINJECTOR_H */

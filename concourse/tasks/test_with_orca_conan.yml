@@ -6,6 +6,10 @@ image_resource:
     tag: 7-gcc6.2-llvm3.7
 inputs:
   - name: gpdb_src
+<<<<<<< HEAD
+=======
+  - name: bin_orca
+>>>>>>> 33ff52a... Add steps to build orca using conan and run icg
   - name: bin_gpdb
 outputs:
   - name: icg_output
@@ -14,6 +18,12 @@ run:
   args:
     - --mode=orca
     - --gpdb_name=bin_gpdb
+<<<<<<< HEAD
 params:
   BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
   TEST_SUITE: "icg"
+=======
+    - bin_orca
+params:
+  BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
+>>>>>>> 33ff52a... Add steps to build orca using conan and run icg

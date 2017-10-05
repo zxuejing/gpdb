@@ -924,6 +924,8 @@ jobs:
   - put: terraform
     params:
       <<: *ccp_default_params
+      vars:
+        <<: *ccp_default_vars
   - task: gen_cluster
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
@@ -1053,6 +1055,8 @@ jobs:
   - put: terraform
     params:
       <<: *ccp_default_params
+      vars:
+        <<: *ccp_default_vars
   - task: gen_cluster
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
@@ -1088,6 +1092,8 @@ jobs:
   - put: terraform
     params:
       <<: *ccp_default_params
+      vars:
+        <<: *ccp_default_vars
   - task: setup_gpdb4
     params:
       <<: *ccp_gen_cluster_default_params
@@ -1186,6 +1192,8 @@ jobs:
   - put: terraform
     params:
       <<: *ccp_default_params
+      vars:
+        <<: *ccp_default_vars
   - task: gen_cluster
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
@@ -1345,6 +1353,8 @@ jobs:
   - put: terraform
     params:
       <<: *ccp_default_params
+      vars:
+        <<: *ccp_default_vars
   - task: gen_cluster
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
@@ -1374,6 +1384,8 @@ jobs:
   - put: terraform
     params:
       <<: *ccp_default_params
+      vars:
+        <<: *ccp_default_vars
   - task: gen_cluster
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
@@ -2093,6 +2105,8 @@ jobs:
   - put: terraform
     params:
       <<: *ccp_default_params
+      vars:
+        <<: *ccp_default_vars
   - task: gen_cluster
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
@@ -2125,6 +2139,8 @@ jobs:
   - put: terraform
     params:
       <<: *ccp_default_params
+      vars:
+        <<: *ccp_default_vars
   - task: gen_cluster
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:

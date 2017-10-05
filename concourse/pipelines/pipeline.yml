@@ -521,7 +521,7 @@ resources:
 ## reusable anchors
 ## ======================================================================
 
-ccp_create_params_anchor: &ccp_create_params
+ccp_default_params_anchor: &ccp_default_params
   action: create
   delete_on_failure: true
   generate_random_name: true
@@ -923,7 +923,7 @@ jobs:
     - get: centos-gpdb-dev-6
   - put: terraform
     params:
-      <<: *ccp_create_params
+      <<: *ccp_default_params
   - task: gen_cluster
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
@@ -1052,7 +1052,7 @@ jobs:
     - get: centos-gpdb-dev-6
   - put: terraform
     params:
-      <<: *ccp_create_params
+      <<: *ccp_default_params
   - task: gen_cluster
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
@@ -1087,7 +1087,7 @@ jobs:
     - get: centos-gpdb-dev-6
   - put: terraform
     params:
-      <<: *ccp_create_params
+      <<: *ccp_default_params
   - task: setup_gpdb4
     params:
       <<: *ccp_gen_cluster_default_params
@@ -1185,7 +1185,7 @@ jobs:
     - get: centos-gpdb-dev-6
   - put: terraform
     params:
-      <<: *ccp_create_params
+      <<: *ccp_default_params
   - task: gen_cluster
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
@@ -1344,7 +1344,7 @@ jobs:
     - get: centos-gpdb-dev-6
   - put: terraform
     params:
-      <<: *ccp_create_params
+      <<: *ccp_default_params
   - task: gen_cluster
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
@@ -1373,7 +1373,7 @@ jobs:
     - get: centos-gpdb-dev-6
   - put: terraform
     params:
-      <<: *ccp_create_params
+      <<: *ccp_default_params
   - task: gen_cluster
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
@@ -2092,7 +2092,7 @@ jobs:
     - get: centos-gpdb-dev-6
   - put: terraform
     params:
-      <<: *ccp_create_params
+      <<: *ccp_default_params
   - task: gen_cluster
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
@@ -2124,7 +2124,7 @@ jobs:
     - get: centos-gpdb-dev-6
   - put: terraform
     params:
-      <<: *ccp_create_params
+      <<: *ccp_default_params
   - task: gen_cluster
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:

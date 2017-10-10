@@ -1486,6 +1486,7 @@ _readQueryDispatchDesc(void)
 	READ_NODE_FIELD(oidAssignments);
 	READ_NODE_FIELD(sliceTable);
 	READ_NODE_FIELD(cursorPositions);
+	READ_BOOL_FIELD(validate_reloptions);
 	READ_DONE();
 }
 

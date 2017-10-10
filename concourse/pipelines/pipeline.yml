@@ -647,6 +647,11 @@ debug_sleep_anchor_gpdb4: &debug_sleep_gpdb4
     ensure:
       <<: *ccp_destroy_gpdb4
 
+pulse_properties_anchor: &pulse_properties
+  PULSE_URL: {{pulse_url}}
+  PULSE_USERNAME: {{pulse_username}}
+  PULSE_PASSWORD: {{pulse_password}}
+
 ## ======================================================================
 ## jobs
 ## ======================================================================
@@ -1451,7 +1456,17 @@ jobs:
   - *ccp_destroy
 - name: MM_gpcheck
   plan:
-  - aggregate: *gets_for_behave
+  - aggregate: &gets_for_behave
+    - get: gpdb_src
+      params:
+        submodules:
+        - gpMgmt/bin/pythonSrc/ext
+      passed: [gate_mm_misc_start]
+    - get: bin_gpdb
+      resource: bin_gpdb_centos6
+      passed: [gate_mm_misc_start]
+      trigger: true
+    - get: centos-gpdb-dev-6
   - task: gpcheck_as_gpadmin
     file: gpdb_src/concourse/tasks/behave_gpdb.yml
     image: centos-gpdb-dev-6
@@ -1468,17 +1483,7 @@ jobs:
       BEHAVE_TAGS: analyzedb
 - name: MM_gpperfmon
   plan:
-  - aggregate: &gets_for_behave
-    - get: gpdb_src
-      params:
-        submodules:
-        - gpMgmt/bin/pythonSrc/ext
-      passed: [gate_mm_misc_start]
-    - get: bin_gpdb
-      resource: bin_gpdb_centos6
-      passed: [gate_mm_misc_start]
-      trigger: true
-    - get: centos-gpdb-dev-6
+  - aggregate: *gets_for_behave
   - task: gpperfmon
     file: gpdb_src/concourse/tasks/behave_gpdb.yml
     image: centos-gpdb-dev-6
@@ -1978,7 +1983,11 @@ jobs:
   - task: trigger_pulse
     tags: ["gpdb5-pulse-worker"]
     file: gpdb_src/ci/pulse/api/trigger_pulse.yml
-    input_mapping: *input_mappings
+    input_mapping: &input_mappings
+      gpdb_src_archive: gpdb_src_tinc_tarball
+      installer_gpdb_rc: installer_rhel6_gpdb_rc
+      qautils_tarball: qautils_rhel6_tarball
+      gpdb_src_behave_tarball: gpdb_src_behave_tarball
     params:
       <<: *pulse_properties
       PULSE_PROJECT_NAME: "mpp-interconnect"
@@ -2148,25 +2157,6 @@ jobs:
   plan:
   - get: nightly-trigger
     trigger: true
-  - aggregate: *post_packaging_gets_trigger_false
-  - task: trigger_pulse
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/trigger_pulse.yml
-    input_mapping: *input_mappings
-    params:
-      <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-gpexpand-parallel"
-  - task: monitor_pulse
-    attempts: 2
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/monitor_pulse.yml
-    params:
-      <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-gpexpand-parallel"
-- name: DPM_netbackup77
-  plan:
-  - get: nightly-trigger
-    trigger: true
   - aggregate: &post_packaging_gets_trigger_false
     - get: gpdb_src
       params: {submodules: none}
@@ -2187,21 +2177,36 @@ jobs:
   - task: trigger_pulse
     tags: ["gpdb5-pulse-worker"]
     file: gpdb_src/ci/pulse/api/trigger_pulse.yml
-    input_mapping: &input_mappings
-      gpdb_src_archive: gpdb_src_tinc_tarball
-      installer_gpdb_rc: installer_rhel6_gpdb_rc
-      qautils_tarball: qautils_rhel6_tarball
-      gpdb_src_behave_tarball: gpdb_src_behave_tarball
-    params: &pulse_properties
-      PULSE_URL: {{pulse_url}}
-      PULSE_PROJECT_NAME: "GPDB-BehaveNetBackup77"
-      PULSE_USERNAME: {{pulse_username}}
-      PULSE_PASSWORD: {{pulse_password}}
+    input_mapping: *input_mappings
+    params:
+      <<: *pulse_properties
+      PULSE_PROJECT_NAME: "GPDB-gpexpand-parallel"
   - task: monitor_pulse
     attempts: 2
     tags: ["gpdb5-pulse-worker"]
     file: gpdb_src/ci/pulse/api/monitor_pulse.yml
-    params: *pulse_properties
+    params:
+      <<: *pulse_properties
+      PULSE_PROJECT_NAME: "GPDB-gpexpand-parallel"
+- name: DPM_netbackup77
+  plan:
+  - get: nightly-trigger
+    trigger: true
+  - aggregate: *post_packaging_gets_trigger_false
+  - task: trigger_pulse
+    tags: ["gpdb5-pulse-worker"]
+    file: gpdb_src/ci/pulse/api/trigger_pulse.yml
+    input_mapping: *input_mappings
+    params:
+      <<: *pulse_properties
+      PULSE_PROJECT_NAME: "GPDB-BehaveNetBackup77"
+  - task: monitor_pulse
+    attempts: 2
+    tags: ["gpdb5-pulse-worker"]
+    file: gpdb_src/ci/pulse/api/monitor_pulse.yml
+    params:
+      <<: *pulse_properties
+      PULSE_PROJECT_NAME: "GPDB-BehaveNetBackup77"
 - name: cs-aoco-compression
   plan:
   - get: nightly-trigger

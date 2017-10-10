@@ -1940,6 +1940,12 @@ jobs:
 ############### Cluster Start
 - name: gate_cluster_start
   plan:
+  - task: sleep_before_starting
+    config:
+      platform: linux
+      run:
+        path: 'sh'
+        args: ['-c', 'sleep 300']
   - get: gpdb_src
     passed:
     - gate_mm_misc_end
@@ -2081,6 +2087,12 @@ jobs:
 ############### Nightly Start
 - name: gate_nightly_start
   plan:
+  - task: sleep_before_starting
+    config:
+      platform: linux
+      run:
+        path: 'sh'
+        args: ['-c', 'sleep 300']
   - get: gpdb_src
     passed:
     - gate_icw_end
@@ -2391,6 +2403,12 @@ jobs:
 ############## CS Misc Start
 - name: gate_cs_misc_start
   plan:
+  - task: sleep_before_starting
+    config:
+      platform: linux
+      run:
+        path: 'sh'
+        args: ['-c', 'sleep 300']
   - aggregate:
     - get: gpdb_src
       passed:

@@ -1073,7 +1073,6 @@ jobs:
       - compile_gpdb_centos7
       - compile_gpdb_sles11
       - compile_gpdb_windows_cl
-      - validate_pipeline
       - gpdb_rc_packaging_centos
       trigger: true
     - get: bin_gpdb_sles11

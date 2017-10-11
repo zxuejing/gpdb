@@ -4845,7 +4845,7 @@ PROCESS_SEGMENT_DATA:
 					nulls = baseNulls;
 				}
 
-				if (is_check_distkey)
+				if (is_check_distkey && distData->p_nattrs > 0)
 				{
 					target_seg = GetTargetSeg(distData, values, nulls);
 					/*check distribution key if COPY FROM ON SEGMENT*/

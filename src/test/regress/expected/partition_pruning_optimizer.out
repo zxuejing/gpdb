@@ -123,7 +123,7 @@ EXPLAIN EXECUTE prep_prune;
                Partitions selected: 1 (out of 5)
          ->  Dynamic Table Scan on pt_lt_tab (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=14)
                Filter: col2 = 10::numeric
- Settings:  enable_bitmapscan=on; enable_indexscan=on; enable_seqscan=off; optimizer=on
+ Settings:  enable_bitmapscan=on; enable_indexscan=on; enable_seqscan=off
 (9 rows)
 
 -- @description B-tree single index key = non-partitioning key

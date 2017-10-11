@@ -77,7 +77,8 @@ groups:
   - QP_runaway-query
   - QP_memory-accounting
   - QP_optimizer-functional
-  - regression_tests_pxf_centos
+  - regression_tests_pxf_hdp
+  - regression_tests_pxf_cdh
   - regression_tests_gphdfs_centos
   - regression_tests_gpcloud_centos
   - mpp_resource_group
@@ -216,7 +217,8 @@ groups:
   - QP_runaway-query
   - QP_memory-accounting
   - QP_optimizer-functional
-  - regression_tests_pxf_centos
+  - regression_tests_pxf_hdp
+  - regression_tests_pxf_cdh
   - regression_tests_gphdfs_centos
   - regression_tests_gpcloud_centos
   - mpp_resource_group
@@ -546,6 +548,15 @@ resources:
     bucket: {{pxf-aws-bucket-name}}
     region_name: {{aws-region}}
     versioned_file: singlecluster-without-pxf/singlecluster-HDP.tar.gz
+
+- name: singlecluster-CDH
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    secret_access_key: {{bucket-secret-access-key}}
+    bucket: {{pxf-aws-bucket-name}}
+    region_name: {{aws-region}}
+    versioned_file: singlecluster-without-pxf/singlecluster-CDH.tar.gz
 
 - name: nightly-trigger
   type: time
@@ -2506,7 +2517,7 @@ jobs:
         BLDWRAP_POSTGRES_CONF_ADDONS: fsync=off optimizer_print_missing_stats=off
         TEST_OS: centos
         CONFIGURE_FLAGS: {{configure_flags}}
-- name: regression_tests_pxf_centos
+- name: regression_tests_pxf_hdp
   plan:
   - aggregate:
     - get: gpdb_src
@@ -2517,6 +2528,29 @@ jobs:
       trigger: true
     - get: singlecluster
       resource: singlecluster-HDP
+      trigger: true
+    - get: pxf_automation_src
+      trigger: true
+    - get: centos-gpdb-dev-6
+  - aggregate:
+    - task: regression_tests_pxf
+      file: gpdb_src/concourse/tasks/regression_tests_pxf.yml
+      image: centos-gpdb-dev-6
+      params:
+        GROUP: gpdb
+        TARGET_OS: centos
+        TARGET_OS_VERSION: 6
+- name: regression_tests_pxf_cdh
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [gate_general_misc_start]
+    - get: bin_gpdb
+      resource: bin_gpdb_centos6
+      passed: [gate_general_misc_start]
+      trigger: true
+    - get: singlecluster
+      resource: singlecluster-CDH
       trigger: true
     - get: pxf_automation_src
       trigger: true
@@ -2600,7 +2634,8 @@ jobs:
     - QP_memory-accounting
     - regression_tests_gpcloud_centos
     - regression_tests_gphdfs_centos
-    - regression_tests_pxf_centos
+    - regression_tests_pxf_hdp
+    - regression_tests_pxf_cdh
     - QP_runaway-query
     - QP_optimizer-functional
     - MM_gpcheckcat
@@ -2813,7 +2848,8 @@ jobs:
     - QP_memory-accounting
     - regression_tests_gpcloud_centos
     - regression_tests_gphdfs_centos
-    - regression_tests_pxf_centos
+    - regression_tests_pxf_hdp
+    - regression_tests_pxf_cdh
     - gpdb_rc_packaging_centos
     - DPM_netbackup77
     - DPM_backup-restore_ddboost_part1

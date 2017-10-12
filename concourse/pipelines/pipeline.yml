@@ -284,7 +284,7 @@ resources:
       ###########################################################
       bucket_path: {{tf-bucket-path}}
 
-- name: terraform_gpdb4
+- name: terraform_for_dpm
   type: terraform
   source:
     env:
@@ -602,11 +602,11 @@ ccp_destroy_anchor: &ccp_destroy
   get_params:
     action: destroy
 
-ccp_destroy_anchor_gpdb4: &ccp_destroy_gpdb4
-  put: terraform_gpdb4
+dpm_ccp_destroy_anchor: &dpm_ccp_destroy
+  put: terraform_for_dpm
   params:
     action: destroy
-    env_name_file: terraform_gpdb4/name
+    env_name_file: terraform_for_dpm/name
     terraform_source: ccp_src/aws-pivotal-pa-toolsmiths/
     vars:
       aws_instance-node-instance_type: t2.micro #t2.micro is ignored in destroy, but aws_instance-node-instance_type is required.
@@ -644,7 +644,7 @@ debug_sleep_anchor: &debug_sleep
     ensure:
       <<: *ccp_destroy
 
-debug_sleep_anchor_gpdb4: &debug_sleep_gpdb4
+dpm_debug_sleep_anchor: &dpm_debug_sleep
   do:
   - task: debug_sleep
     config:
@@ -658,7 +658,7 @@ debug_sleep_anchor_gpdb4: &debug_sleep_gpdb4
         path: 'sh'
         args: ['-c', 'sleep 6h']
     ensure:
-      <<: *ccp_destroy_gpdb4
+      <<: *dpm_ccp_destroy
 
 pulse_properties_anchor: &pulse_properties
   PULSE_URL: {{pulse_url}}
@@ -2405,7 +2405,7 @@ jobs:
       passed: [gate_nightly_start]
     - get: centos-gpdb-dev-6
       tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
-  - put: terraform_gpdb4
+  - put: terraform_for_dpm
     params:
       <<: *ccp_default_params
       terraform_source: ccp_src/aws-pivotal-pa-toolsmiths/
@@ -2414,13 +2414,13 @@ jobs:
     tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
   - task: gen_cluster
     input_mapping:
-      terraform: terraform_gpdb4
+      terraform: terraform_for_dpm
     tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gpdb4_gen_cluster_default_params
     on_failure:
-      <<: *ccp_destroy_gpdb4
+      <<: *dpm_ccp_destroy
   - task: run_tests
     tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
     file: gpdb_src/concourse/tasks/run_behave.yml
@@ -2430,8 +2430,8 @@ jobs:
       CUSTOM_ENV: export DD_SOURCE_HOST={{datadomain_source_host}}; export DD_DEST_HOST={{datadomain_dest_host}}; export DD_USER={{datadomain_user}}; export DD_PASSWORD={{datadomain_password}};
       PRE_TEST_SCRIPT: "source /home/gpadmin/gpdb_src/concourse/scripts/backup_utils.sh; setup_ddboost"
     on_failure:
-      <<: *debug_sleep_gpdb4
-  - *ccp_destroy_gpdb4
+      <<: *dpm_debug_sleep
+  - *dpm_ccp_destroy
 - name: DPM_backup-restore_ddboost_part2
   plan:
   - get: nightly-trigger
@@ -2448,7 +2448,7 @@ jobs:
       passed: [gate_nightly_start]
     - get: centos-gpdb-dev-6
       tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
-  - put: terraform_gpdb4
+  - put: terraform_for_dpm
     params:
       <<: *ccp_default_params
       terraform_source: ccp_src/aws-pivotal-pa-toolsmiths/
@@ -2457,13 +2457,13 @@ jobs:
     tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
   - task: gen_cluster
     input_mapping:
-      terraform: terraform_gpdb4
+      terraform: terraform_for_dpm
     tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gpdb4_gen_cluster_default_params
     on_failure:
-      <<: *ccp_destroy_gpdb4
+      <<: *dpm_ccp_destroy
   - task: run_tests
     tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
     file: gpdb_src/concourse/tasks/run_behave.yml
@@ -2473,8 +2473,8 @@ jobs:
       CUSTOM_ENV: export DD_SOURCE_HOST={{datadomain_source_host}}; export DD_DEST_HOST={{datadomain_dest_host}}; export DD_USER={{datadomain_user}}; export DD_PASSWORD={{datadomain_password}};
       PRE_TEST_SCRIPT: "source /home/gpadmin/gpdb_src/concourse/scripts/backup_utils.sh; setup_ddboost"
     on_failure:
-      <<: *debug_sleep_gpdb4
-  - *ccp_destroy_gpdb4
+      <<: *dpm_debug_sleep
+  - *dpm_ccp_destroy
 - name: DPM_backup-restore_ddboost_part3
   plan:
   - get: nightly-trigger
@@ -2491,7 +2491,7 @@ jobs:
       passed: [gate_nightly_start]
     - get: centos-gpdb-dev-6
       tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
-  - put: terraform_gpdb4
+  - put: terraform_for_dpm
     params:
       <<: *ccp_default_params
       terraform_source: ccp_src/aws-pivotal-pa-toolsmiths/
@@ -2500,13 +2500,13 @@ jobs:
     tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
   - task: gen_cluster
     input_mapping:
-      terraform: terraform_gpdb4
+      terraform: terraform_for_dpm
     tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gpdb4_gen_cluster_default_params
     on_failure:
-      <<: *ccp_destroy_gpdb4
+      <<: *dpm_ccp_destroy
   - task: run_tests
     tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
     file: gpdb_src/concourse/tasks/run_behave.yml
@@ -2516,8 +2516,8 @@ jobs:
       CUSTOM_ENV: export DD_SOURCE_HOST={{datadomain_source_host}}; export DD_DEST_HOST={{datadomain_dest_host}}; export DD_USER={{datadomain_user}}; export DD_PASSWORD={{datadomain_password}};
       PRE_TEST_SCRIPT: "source /home/gpadmin/gpdb_src/concourse/scripts/backup_utils.sh; setup_ddboost"
     on_failure:
-      <<: *debug_sleep_gpdb4
-  - *ccp_destroy_gpdb4
+      <<: *dpm_debug_sleep
+  - *dpm_ccp_destroy
 - name: gate_nightly_end
   plan:
   - get: gpdb_src

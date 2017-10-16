@@ -431,6 +431,22 @@ where g in (
 );
 
 
+--
+-- Test window function with constant PARTITION BY
+--
+CREATE TABLE testtab (a int4);
+insert into testtab values (1), (2);
+SELECT count(*) OVER (PARTITION BY 1) AS count FROM testtab;
+
+-- Another variant, where the PARTITION BY is not a literal, but the
+-- planner can deduce that it's a constant through equivalence classes.
+SELECT 1
+FROM (
+  SELECT a, count(*) OVER (PARTITION BY a) FROM (VALUES (1,1)) AS foo(a)
+) AS sup(c, d)
+WHERE c = 87 ;
+
+
 -- CLEANUP
 -- start_ignore
 drop schema bfv_olap cascade;

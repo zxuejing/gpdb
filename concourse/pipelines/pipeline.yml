@@ -682,7 +682,7 @@ resources:
   type: s3
   source:
     access_key_id: {{gpdb4-bucket-access-key-id}}
-    bucket: {{gpdb4-bucket-name}}
+    bucket: {{netbackup_installer_bucket}}
     region_name: {{aws-region}}
     secret_access_key: {{gpdb4-bucket-secret-access-key}}
     versioned_file: netbackup-installation/NetBackup_7.7.3_CLIENTS_RHEL_2.6.18.tar.gz

@@ -62,8 +62,8 @@
       credentials were set.</p>
     <p>There are many more <codeph>gpcrondump</codeph> options available to configure backups. Refer
       to the <i>Greenplum Utility Reference Guide</i> for information about all of the available
-      options. See <xref href="backup-ddboost.xml#topic17"/> for details of backing up with Data
-      Domain Boost. </p>
+      options. <ph otherprops="pivotal">See <xref href="backup-ddboost.xml#topic17"/> for details of
+        backing up with Data Domain Boost. </ph></p>
     <note type="warning">Backing up a database with <codeph>gpcrondump</codeph> while simultaneously
       running <codeph>ALTER TABLE</codeph> might cause <codeph>gpcrondump</codeph> to
         fail.<p>Backing up a database with <codeph>gpcrondump</codeph> while simultaneously running

@@ -77,8 +77,8 @@
 #include "pgstat.h"
 #include "access/distributedlog.h"
 #include "nodes/makefuncs.h"     /* makeRangeVar */
-#include "gp-libpq-fe.h"
-#include "gp-libpq-int.h"
+#include "libpq-fe.h"
+#include "libpq-int.h"
 
 
 /*

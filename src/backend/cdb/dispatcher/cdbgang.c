@@ -18,7 +18,7 @@
 #include <pthread.h>
 #include <limits.h>
 
-#include "gp-libpq-fe.h"
+#include "libpq-fe.h"
 #include "miscadmin.h"			/* MyDatabaseId */
 #include "storage/proc.h"		/* MyProc */
 #include "storage/ipc.h"
@@ -33,8 +33,8 @@
 #include "utils/sharedsnapshot.h"
 #include "tcop/pquery.h"
 
-#include "gp-libpq-fe.h"
-#include "gp-libpq-int.h"
+#include "libpq-fe.h"
+#include "libpq-int.h"
 #include "cdb/cdbconn.h"		/* SegmentDatabaseDescriptor */
 #include "cdb/cdbfts.h"
 #include "cdb/cdbdisp_query.h"

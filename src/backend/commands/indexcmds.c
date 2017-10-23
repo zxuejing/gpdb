@@ -61,7 +61,7 @@
 #include "cdb/cdbpartition.h"
 #include "cdb/cdbsrlz.h"
 #include "cdb/cdbvars.h"
-#include "gp-libpq-fe.h"
+#include "libpq-fe.h"
 
 /* non-export function prototypes */
 static void CheckPredicate(Expr *predicate);

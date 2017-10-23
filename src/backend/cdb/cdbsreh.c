@@ -18,7 +18,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
-#include "gp-libpq-fe.h"
+#include "libpq-fe.h"
 #include "access/transam.h"
 #include "catalog/gp_policy.h"
 #include "catalog/namespace.h"

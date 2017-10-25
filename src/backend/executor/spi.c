@@ -21,7 +21,6 @@
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
 #include "utils/typcache.h"
-#include "utils/resource_manager.h"
 #include "utils/resscheduler.h"
 
 #include "cdb/cdbvars.h"
@@ -2543,15 +2542,7 @@ static uint64 SPIMemReserved = 0;
 void SPI_InitMemoryReservation(void)
 {
 	Assert(!IsResManagerMemoryPolicyNone());
-
-	if (IsResGroupEnabled())
-	{
-		SPIMemReserved = 0;
-	}
-	else
-	{
-		SPIMemReserved = (uint64) statement_mem * 1024L;;
-	}
+	SPIMemReserved = (uint64) statement_mem * 1024L;;
 }
 
 /**
@@ -2586,12 +2577,12 @@ uint64 SPI_GetMemoryReservation(void)
 }
 
 /**
- * Is there memory reserved for SPI calls
+ * Is memory reserved stack empty?
  */
 bool SPI_IsMemoryReserved(void)
 {
 	Assert(!IsResManagerMemoryPolicyNone());
-	return (SPIMemReserved != 0);
+	return (SPIMemReserved == 0);
 }
 
 /**

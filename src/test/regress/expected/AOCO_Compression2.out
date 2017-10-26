@@ -3943,6 +3943,12 @@ DEFAULT COLUMN ENCODING (COMPRESSTYPE=zlib, compresslevel=5)
 )
 WITH (APPENDONLY=true, ORIENTATION=column, OIDS=FALSE)
 distributed by (col1);
+select get_ao_compression_ratio('mpp17012_compress_test2');
+ get_ao_compression_ratio
+--------------------------
+                       -1
+(1 row)
+
 \d+ mpp17012_compress_test2
                              Append-Only Columnar Table "public.mpp17012_compress_test2"
  Column |       Type        | Modifiers | Storage  | Compression Type | Compression Level | Block Size | Description 
@@ -3961,5 +3967,13 @@ select get_ao_compression_ratio('mpp17012_compress_test2');
  get_ao_compression_ratio 
 --------------------------
                     36.75
+(1 row)
+
+-- compute compression ratio on empty aorow table
+create table empty_aorow_table (c int) with (appendonly=true) distributed by (c);
+select get_ao_compression_ratio('empty_aorow_table');
+ get_ao_compression_ratio 
+--------------------------
+                        1
 (1 row)
 

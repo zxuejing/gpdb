@@ -760,7 +760,7 @@ ccp_vars_anchor: &ccp_default_vars
 
 ccp_destroy_anchor: &ccp_destroy
   put: terraform
-  tags: ["gpdb5_ccp_external_worker"]
+  tags: ["ccp"]
   params:
     action: destroy
     env_name_file: terraform/name
@@ -814,7 +814,7 @@ ccp_gpdb4_gen_cluster_default_params_anchor: &ccp_gpdb4_gen_cluster_default_para
 debug_sleep_anchor: &debug_sleep
   do:
   - task: debug_sleep
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     config:
       platform: linux
       image_resource:
@@ -851,30 +851,30 @@ pulse_properties_anchor: &pulse_properties
 
 cs_ccp_aggregate_nightly_start_anchor: &cs_ccp_aggregate_nightly_start
   - get: gpdb_src
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     passed: [gate_nightly_start]
   - get: gpdb_binary
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     resource: bin_gpdb_centos6
     passed: [gate_nightly_start]
   - get: ccp_src
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
   - get: centos-gpdb-dev-6
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
 
 cs_ccp_aggregate_cluster_start_anchor: &cs_ccp_aggregate_cluster_start
   - get: gpdb_src
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     passed: [gate_cluster_start]
   - get: gpdb_binary
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     resource: bin_gpdb_centos6
     passed: [gate_cluster_start]
     trigger: true
   - get: ccp_src
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
   - get: centos-gpdb-dev-6
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
 
 cs_ccp_terraform_vars_anchor: &cs_ccp_terraform_vars
   aws_instance-node-instance_type: m4.large
@@ -882,7 +882,7 @@ cs_ccp_terraform_vars_anchor: &cs_ccp_terraform_vars
   number_of_nodes: 1
 
 cs_ccp_terraform_params_anchor: &cs_ccp_terraform_params
-  tags: ["gpdb5_ccp_external_worker"]
+  tags: ["ccp"]
   params:
     <<: *ccp_default_params
     vars:
@@ -890,7 +890,7 @@ cs_ccp_terraform_params_anchor: &cs_ccp_terraform_params
       <<: *cs_ccp_terraform_vars
 
 cs_ccp_gen_cluster_params_anchor: &cs_ccp_gen_cluster_params
-  tags: ["gpdb5_ccp_external_worker"]
+  tags: ["ccp"]
   file: ccp_src/ci/tasks/gen_cluster.yml
   params:
     <<: *ccp_gen_cluster_default_params
@@ -898,7 +898,7 @@ cs_ccp_gen_cluster_params_anchor: &cs_ccp_gen_cluster_params
     <<: *ccp_destroy
 
 cs_ccp_run_tests_params_anchor: &cs_ccp_run_tests_params
-  tags: ["gpdb5_ccp_external_worker"]
+  tags: ["ccp"]
   file: gpdb_src/concourse/tasks/run_tinc.yml
   image: centos-gpdb-dev-6
   on_failure:
@@ -1098,21 +1098,21 @@ jobs:
   - aggregate:
     - get: reduced-frequency-trigger
       trigger: ((reduced-frequency-trigger-flag))
-      tags: ["gpdb5_wix_external_worker"]
+      tags: ["wix"]
     - get: gpdb_src
       trigger: ((gpdb_src-trigger-flag))
-      tags: ["gpdb5_wix_external_worker"]
+      tags: ["wix"]
     - get: gpaddon_src
-      tags: ["gpdb5_wix_external_worker"]
+      tags: ["wix"]
       passed: [gate_compile_start]
     - get: pxf_src
-      tags: ["gpdb5_wix_external_worker"]
+      tags: ["wix"]
       passed: [gate_compile_start]
     - get: centos-mingw
-      tags: ["gpdb5_wix_external_worker"]
+      tags: ["wix"]
       passed: [gate_compile_start]
   - task: compile_gpdb
-    tags: ["gpdb5_wix_external_worker"]
+    tags: ["wix"]
     image: centos-mingw
     file: gpdb_src/concourse/tasks/compile_gpdb.yml
     params:
@@ -1125,11 +1125,11 @@ jobs:
       IVYREPO_PASSWD: {{ivyrepo_passwd}}
   - aggregate:
     - put: bin_gpdb_windows_clients
-      tags: ["gpdb5_wix_external_worker"]
+      tags: ["wix"]
       params:
         file: gpdb_artifacts/greenplum-clients-*-WinXP-x86_32.msi
     - put: bin_gpdb_windows_loaders
-      tags: ["gpdb5_wix_external_worker"]
+      tags: ["wix"]
       params:
         file: gpdb_artifacts/greenplum-loaders-*-WinXP-x86_32.msi
 - name: compile_gpdb_aix7_remote
@@ -1752,32 +1752,32 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       passed: [gate_cs_misc_start]
     - get: gpdb_binary
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       resource: bin_gpdb_centos6
       passed: [gate_cs_misc_start]
       trigger: true
     - get: ccp_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
     - get: centos-gpdb-dev-6
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
   - put: terraform
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     params:
       <<: *ccp_default_params
       vars:
         <<: *ccp_default_vars
   - task: gen_cluster
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
     on_failure:
       <<: *ccp_destroy
   - task: run_tests
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_tinc.yml
     image: centos-gpdb-dev-6
     params:
@@ -1789,32 +1789,32 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       passed: [gate_cs_misc_start]
     - get: gpdb_binary
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       resource: bin_gpdb_centos6
       passed: [gate_cs_misc_start]
       trigger: true
     - get: ccp_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
     - get: centos-gpdb-dev-6
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
   - put: terraform
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     params:
       <<: *ccp_default_params
       vars:
         <<: *ccp_default_vars
   - task: gen_cluster
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
     on_failure:
       <<: *ccp_destroy
   - task: run_tests
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_tinc.yml
     image: centos-gpdb-dev-6
     params:
@@ -1826,19 +1826,19 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       passed: [gate_cs_misc_start]
     - get: gpdb_binary
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       resource: bin_gpdb_centos6
       passed: [gate_cs_misc_start]
       trigger: true
     - get: ccp_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
     - get: centos-gpdb-dev-6
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
   - put: terraform
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     params:
       <<: *ccp_default_params
       vars:
@@ -1847,14 +1847,14 @@ jobs:
         aws_ebs_volume_type: gp2
         number_of_nodes: 1
   - task: gen_cluster
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
     on_failure:
       <<: *ccp_destroy
   - task: run_tests
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_tinc.yml
     image: centos-gpdb-dev-6
     params:
@@ -1866,19 +1866,19 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       passed: [gate_cs_misc_start]
     - get: gpdb_binary
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       resource: bin_gpdb_centos6
       passed: [gate_cs_misc_start]
       trigger: true
     - get: ccp_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
     - get: centos-gpdb-dev-6
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
   - put: terraform
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     params:
       <<: *ccp_default_params
       vars:
@@ -1887,14 +1887,14 @@ jobs:
         aws_ebs_volume_type: gp2
         number_of_nodes: 1
   - task: gen_cluster
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
     on_failure:
       <<: *ccp_destroy
   - task: run_tests
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_tinc.yml
     image: centos-gpdb-dev-6
     params:
@@ -1906,19 +1906,19 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       passed: [gate_cs_misc_start]
     - get: gpdb_binary
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       resource: bin_gpdb_centos6
       passed: [gate_cs_misc_start]
       trigger: true
     - get: ccp_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
     - get: centos-gpdb-dev-6
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
   - put: terraform
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     params:
       <<: *ccp_default_params
       vars:
@@ -1927,14 +1927,14 @@ jobs:
         aws_ebs_volume_type: gp2
         number_of_nodes: 1
   - task: gen_cluster
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
     on_failure:
       <<: *ccp_destroy
   - task: run_tests
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_tinc.yml
     image: centos-gpdb-dev-6
     params:
@@ -1946,19 +1946,19 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       passed: [gate_cs_misc_start]
     - get: gpdb_binary
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       resource: bin_gpdb_centos6
       passed: [gate_cs_misc_start]
       trigger: true
     - get: ccp_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
     - get: centos-gpdb-dev-6
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
   - put: terraform
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     params:
       <<: *ccp_default_params
       vars:
@@ -1967,14 +1967,14 @@ jobs:
         aws_ebs_volume_type: gp2
         number_of_nodes: 1
   - task: gen_cluster
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
     on_failure:
       <<: *ccp_destroy
   - task: run_tests
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_tinc.yml
     image: centos-gpdb-dev-6
     params:
@@ -1986,19 +1986,19 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       passed: [gate_cs_misc_start]
     - get: gpdb_binary
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       resource: bin_gpdb_centos6
       passed: [gate_cs_misc_start]
       trigger: true
     - get: ccp_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
     - get: centos-gpdb-dev-6
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
   - put: terraform
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     params:
       <<: *ccp_default_params
       vars:
@@ -2007,14 +2007,14 @@ jobs:
         aws_ebs_volume_type: gp2
         number_of_nodes: 1
   - task: gen_cluster
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
     on_failure:
       <<: *ccp_destroy
   - task: run_tests
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_tinc.yml
     image: centos-gpdb-dev-6
     params:
@@ -2026,19 +2026,19 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       passed: [gate_cs_misc_start]
     - get: gpdb_binary
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       resource: bin_gpdb_centos6
       passed: [gate_cs_misc_start]
       trigger: true
     - get: ccp_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
     - get: centos-gpdb-dev-6
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
   - put: terraform
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     params:
       <<: *ccp_default_params
       vars:
@@ -2047,14 +2047,14 @@ jobs:
         aws_ebs_volume_type: gp2
         number_of_nodes: 1
   - task: gen_cluster
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
     on_failure:
       <<: *ccp_destroy
   - task: run_tests
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_tinc.yml
     image: centos-gpdb-dev-6
     params:
@@ -2066,19 +2066,19 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       passed: [gate_cs_misc_start]
     - get: gpdb_binary
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       resource: bin_gpdb_centos6
       passed: [gate_cs_misc_start]
       trigger: true
     - get: ccp_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
     - get: centos-gpdb-dev-6
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
   - put: terraform
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     params:
       <<: *ccp_default_params
       vars:
@@ -2087,14 +2087,14 @@ jobs:
         aws_ebs_volume_type: gp2
         number_of_nodes: 1
   - task: gen_cluster
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
     on_failure:
       <<: *ccp_destroy
   - task: run_tests
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_tinc.yml
     image: centos-gpdb-dev-6
     params:
@@ -2106,19 +2106,19 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       passed: [gate_cs_misc_start]
     - get: gpdb_binary
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       resource: bin_gpdb_centos6
       passed: [gate_cs_misc_start]
       trigger: true
     - get: ccp_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
     - get: centos-gpdb-dev-6
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
   - put: terraform
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     params:
       <<: *ccp_default_params
       vars:
@@ -2127,14 +2127,14 @@ jobs:
         aws_ebs_volume_type: gp2
         number_of_nodes: 1
   - task: gen_cluster
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
     on_failure:
       <<: *ccp_destroy
   - task: run_tests
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_tinc.yml
     image: centos-gpdb-dev-6
     params:
@@ -2213,30 +2213,30 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       passed: [gate_cluster_start]
     - get: gpdb_binary
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       resource: bin_gpdb_centos6
       passed: [gate_cluster_start]
       trigger: true
     - get: ccp_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
     - get: centos-gpdb-dev-6
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
   # The separate clusters can be created in parallel with the aggregate and do blocks
   #  The terraform put and gen cluster that correspond must still happen serially
   - aggregate:
     - do:
       - put: terraform
-        tags: ["gpdb5_ccp_external_worker"]
+        tags: ["ccp"]
         params:
           <<: *ccp_default_params
           vars:
             <<: *ccp_default_vars
             aws_instance-node-instance_type: m4.large
       - task: gen_cluster1
-        tags: ["gpdb5_ccp_external_worker"]
+        tags: ["ccp"]
         file: ccp_src/ci/tasks/gen_cluster.yml
         params:
           <<: *ccp_gen_cluster_default_params
@@ -2244,7 +2244,7 @@ jobs:
           <<: *ccp_destroy
     - do:
       - put: terraform2
-        tags: ["gpdb5_ccp_external_worker"]
+        tags: ["ccp"]
         params:
           <<: *ccp_default_params
           vars:
@@ -2252,7 +2252,7 @@ jobs:
             aws_instance-node-instance_type: m4.large
             cluster_suffix: "-2"
       - task: gen_cluster2
-        tags: ["gpdb5_ccp_external_worker"]
+        tags: ["ccp"]
         file: ccp_src/ci/tasks/gen_cluster.yml
         params:
           <<: *ccp_gen_cluster_default_params
@@ -2262,7 +2262,7 @@ jobs:
           cluster_env_files: cluster_env_files2
         on_failure:
           put: terraform2
-          tags: ["gpdb5_ccp_external_worker"]
+          tags: ["ccp"]
           params:
             action: destroy
             env_name_file: terraform2/name
@@ -2273,13 +2273,13 @@ jobs:
           get_params:
             action: destroy
   - task: exchange_keys
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: gpdb_src/concourse/tasks/exchange_keys.yml
     image: centos-gpdb-dev-6
     on_failure:
       <<: *ccp_destroy_2_cluster
   - task: run_gptransfer_tests
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_behave.yml
     image: centos-gpdb-dev-6
     params:
@@ -2289,7 +2289,7 @@ jobs:
     on_failure:
       do:
       - task: debug_sleep_2_cluster
-        tags: ["gpdb5_ccp_external_worker"]
+        tags: ["ccp"]
         config:
           platform: linux
           image_resource:
@@ -2308,35 +2308,35 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       params:
         submodules:
         - gpMgmt/bin/pythonSrc/ext
       passed: [gate_cluster_start]
     - get: gpdb_binary
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       resource: bin_gpdb_centos6
       passed: [gate_cluster_start]
       trigger: true
     - get: ccp_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
     - get: centos-gpdb-dev-6
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
   - put: terraform
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     params:
       <<: *ccp_default_params
       vars:
         <<: *ccp_default_vars
   - task: gen_cluster
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
     on_failure:
       <<: *ccp_destroy
   - task: run_tests
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_behave.yml
     image: centos-gpdb-dev-6
     params:
@@ -2457,42 +2457,42 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       params:
         submodules:
         - gpMgmt/bin/pythonSrc/ext
       passed: [gate_mm_misc_start]
     - get: gpdb_binary
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       resource: bin_gpdb_centos6
       passed: [gate_mm_misc_start]
       trigger: true
     - get: ccp_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
     - get: centos-gpdb-dev-6
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
   - put: terraform
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     params:
       <<: *ccp_default_params
       vars:
         <<: *ccp_default_vars
   - task: gen_cluster
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
     on_failure:
       <<: *ccp_destroy
   - task: setup_gppkg_second_install
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: gpdb_src/concourse/tasks/gppkg_behave.yml
     params:
       SECOND_BINARY_INSTALL_LOCATION: /tmp/gppkg_migrate
     on_failure:
       <<: *ccp_destroy
   - task: run_tests
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_behave.yml
     image: centos-gpdb-dev-6
     params:
@@ -2504,35 +2504,35 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       params:
         submodules:
         - gpMgmt/bin/pythonSrc/ext
       passed: [gate_mm_misc_start]
     - get: gpdb_binary
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       resource: bin_gpdb_centos6
       passed: [gate_mm_misc_start]
       trigger: true
     - get: ccp_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
     - get: centos-gpdb-dev-6
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
   - put: terraform
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     params:
       <<: *ccp_default_params
       vars:
         <<: *ccp_default_vars
   - task: gen_cluster
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
     on_failure:
       <<: *ccp_destroy
   - task: run_tests
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_behave.yml
     image: centos-gpdb-dev-6
     params:
@@ -2693,34 +2693,34 @@ jobs:
 - name: DPM_backup_43_restore_5
   plan:
   - get: nightly-trigger
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     trigger: true
   - aggregate:
     - get: gpdb_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       params:
         submodules:
         - gpMgmt/bin/pythonSrc/ext
       passed: [gate_nightly_start]
     - get: gpdb_binary
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       resource: bin_gpdb_centos6
       passed: [gate_nightly_start]
     - get: gpdb4_binary
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       resource: bin_gpdb4_centos6
     - get: ccp_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
     - get: centos-gpdb-dev-6
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
   - put: terraform
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     params:
       <<: *ccp_default_params
       vars:
         <<: *ccp_default_vars
   - task: setup_gpdb4
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
@@ -2729,7 +2729,7 @@ jobs:
     on_failure:
       <<: *ccp_destroy
   - task: run_backup_tests
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_behave.yml
     image: centos-gpdb-dev-6
     params:
@@ -2737,7 +2737,7 @@ jobs:
     on_failure:
       <<: *debug_sleep
   - task: setup_gpdb5
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: gpdb_src/concourse/tasks/setup_new_gpdb_for_backup_restore.yml
     params:
       <<: *ccp_gen_cluster_default_params
@@ -2745,7 +2745,7 @@ jobs:
     on_failure:
       <<: *debug_sleep
   - task: run_restore_tests
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_behave.yml
     image: centos-gpdb-dev-6
     params:
@@ -2757,36 +2757,36 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       params:
         submodules:
         - gpMgmt/bin/pythonSrc/ext
       passed: [gate_mm_misc_start]
     - get: gpdb_binary
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       resource: bin_gpdb_centos6
       passed: [gate_mm_misc_start]
       trigger: true
     - get: ccp_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
     - get: centos-gpdb-dev-6
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
   - put: terraform
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     params:
       <<: *ccp_default_params
       vars:
         <<: *ccp_default_vars
         number_of_nodes: 5
   - task: gen_cluster
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
     on_failure:
       <<: *ccp_destroy
   - task: run_tests
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_tinc.yml
     image: centos-gpdb-dev-6
     params:
@@ -2800,36 +2800,36 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       params:
         submodules:
         - gpMgmt/bin/pythonSrc/ext
       passed: [gate_mm_misc_start]
     - get: gpdb_binary
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       resource: bin_gpdb_centos6
       passed: [gate_mm_misc_start]
       trigger: true
     - get: ccp_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
     - get: centos-gpdb-dev-6
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
   - put: terraform
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     params:
       <<: *ccp_default_params
       vars:
         <<: *ccp_default_vars
         number_of_nodes: 5
   - task: gen_cluster
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
     on_failure:
       <<: *ccp_destroy
   - task: run_tests
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_tinc.yml
     image: centos-gpdb-dev-6
     params:
@@ -2842,22 +2842,22 @@ jobs:
 - name: DPM_backup-restore_netbackup_part1
   plan:
   - get: nightly-trigger
-    tags: ["gpdb4_ccp_external_worker"]
+    tags: ["netbackup"]
     trigger: true
   - aggregate:
     - get: ccp_src
-      tags: ["gpdb4_ccp_external_worker"]
+      tags: ["netbackup"]
     - get: gpdb_src
-      tags: ["gpdb4_ccp_external_worker"]
+      tags: ["netbackup"]
       passed: [gate_nightly_start]
     - get: gpdb_binary
-      tags: ["gpdb4_ccp_external_worker"]
+      tags: ["netbackup"]
       resource: bin_gpdb_centos6
       passed: [gate_nightly_start]
     - get: centos-gpdb-dev-6
-      tags: ["gpdb4_ccp_external_worker"]
+      tags: ["netbackup"]
     - get: netbackup_installer
-      tags: ["gpdb4_ccp_external_worker"]
+      tags: ["netbackup"]
       resource: netbackup-client-installer
   - put: terraform_for_dpm
     params:
@@ -2865,24 +2865,24 @@ jobs:
       terraform_source: ccp_src/aws-pivotal-pa-toolsmiths/
       vars:
         <<: *ccp_default_vars
-    tags: ["gpdb4_ccp_external_worker"]
+    tags: ["netbackup"]
   - task: gen_cluster
     input_mapping:
       terraform: terraform_for_dpm
-    tags: ["gpdb4_ccp_external_worker"]
+    tags: ["netbackup"]
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gpdb4_gen_cluster_default_params
     on_failure:
       <<: *dpm_ccp_destroy
   - task: setup_netbackup
-    tags: ["gpdb4_ccp_external_worker"]
+    tags: ["netbackup"]
     file: gpdb_src/concourse/tasks/setup_netbackup.yml
     image: centos-gpdb-dev-6
     params:
       CUSTOM_ENV: export NETBACKUP_SERVER={{netbackup_host}}; export NETBACKUP_KEY={{netbackup_key}};
   - task: run_tests
-    tags: ["gpdb4_ccp_external_worker"]
+    tags: ["netbackup"]
     file: gpdb_src/concourse/tasks/run_behave.yml
     image: centos-gpdb-dev-6
     params:
@@ -2894,22 +2894,22 @@ jobs:
 - name: DPM_backup-restore_netbackup_part2
   plan:
   - get: nightly-trigger
-    tags: ["gpdb4_ccp_external_worker"]
+    tags: ["netbackup"]
     trigger: true
   - aggregate:
     - get: ccp_src
-      tags: ["gpdb4_ccp_external_worker"]
+      tags: ["netbackup"]
     - get: gpdb_src
-      tags: ["gpdb4_ccp_external_worker"]
+      tags: ["netbackup"]
       passed: [gate_nightly_start]
     - get: gpdb_binary
-      tags: ["gpdb4_ccp_external_worker"]
+      tags: ["netbackup"]
       resource: bin_gpdb_centos6
       passed: [gate_nightly_start]
     - get: centos-gpdb-dev-6
-      tags: ["gpdb4_ccp_external_worker"]
+      tags: ["netbackup"]
     - get: netbackup_installer
-      tags: ["gpdb4_ccp_external_worker"]
+      tags: ["netbackup"]
       resource: netbackup-client-installer
   - put: terraform_for_dpm
     params:
@@ -2917,24 +2917,24 @@ jobs:
       terraform_source: ccp_src/aws-pivotal-pa-toolsmiths/
       vars:
         <<: *ccp_default_vars
-    tags: ["gpdb4_ccp_external_worker"]
+    tags: ["netbackup"]
   - task: gen_cluster
     input_mapping:
       terraform: terraform_for_dpm
-    tags: ["gpdb4_ccp_external_worker"]
+    tags: ["netbackup"]
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gpdb4_gen_cluster_default_params
     on_failure:
       <<: *dpm_ccp_destroy
   - task: setup_netbackup
-    tags: ["gpdb4_ccp_external_worker"]
+    tags: ["netbackup"]
     file: gpdb_src/concourse/tasks/setup_netbackup.yml
     image: centos-gpdb-dev-6
     params:
       CUSTOM_ENV: export NETBACKUP_SERVER={{netbackup_host}}; export NETBACKUP_KEY={{netbackup_key}};
   - task: run_tests
-    tags: ["gpdb4_ccp_external_worker"]
+    tags: ["netbackup"]
     file: gpdb_src/concourse/tasks/run_behave.yml
     image: centos-gpdb-dev-6
     params:
@@ -2946,22 +2946,22 @@ jobs:
 - name: DPM_backup-restore_netbackup_part3
   plan:
   - get: nightly-trigger
-    tags: ["gpdb4_ccp_external_worker"]
+    tags: ["netbackup"]
     trigger: true
   - aggregate:
     - get: ccp_src
-      tags: ["gpdb4_ccp_external_worker"]
+      tags: ["netbackup"]
     - get: gpdb_src
-      tags: ["gpdb4_ccp_external_worker"]
+      tags: ["netbackup"]
       passed: [gate_nightly_start]
     - get: gpdb_binary
-      tags: ["gpdb4_ccp_external_worker"]
+      tags: ["netbackup"]
       resource: bin_gpdb_centos6
       passed: [gate_nightly_start]
     - get: centos-gpdb-dev-6
-      tags: ["gpdb4_ccp_external_worker"]
+      tags: ["netbackup"]
     - get: netbackup_installer
-      tags: ["gpdb4_ccp_external_worker"]
+      tags: ["netbackup"]
       resource: netbackup-client-installer
   - put: terraform_for_dpm
     params:
@@ -2969,24 +2969,24 @@ jobs:
       terraform_source: ccp_src/aws-pivotal-pa-toolsmiths/
       vars:
         <<: *ccp_default_vars
-    tags: ["gpdb4_ccp_external_worker"]
+    tags: ["netbackup"]
   - task: gen_cluster
     input_mapping:
       terraform: terraform_for_dpm
-    tags: ["gpdb4_ccp_external_worker"]
+    tags: ["netbackup"]
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gpdb4_gen_cluster_default_params
     on_failure:
       <<: *dpm_ccp_destroy
   - task: setup_netbackup
-    tags: ["gpdb4_ccp_external_worker"]
+    tags: ["netbackup"]
     file: gpdb_src/concourse/tasks/setup_netbackup.yml
     image: centos-gpdb-dev-6
     params:
       CUSTOM_ENV: export NETBACKUP_SERVER={{netbackup_host}}; export NETBACKUP_KEY={{netbackup_key}};
   - task: run_tests
-    tags: ["gpdb4_ccp_external_worker"]
+    tags: ["netbackup"]
     file: gpdb_src/concourse/tasks/run_behave.yml
     image: centos-gpdb-dev-6
     params:
@@ -2998,36 +2998,36 @@ jobs:
 - name: DPM_gptransfer-43x-to-5x
   plan:
   - get: nightly-trigger
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     trigger: true
   - aggregate:
     - get: gpdb_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       passed: [gate_nightly_start]
     - get: gpdb_binary
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       resource: bin_gpdb_centos6
       passed: [gate_nightly_start]
     - get: gpdb4_binary
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       resource: bin_gpdb4_centos6
     - get: ccp_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
     - get: centos-gpdb-dev-6
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
   # The separate clusters can be created in parallel with the aggregate and do blocks
   #  The terraform put and gen cluster that correspond must still happen serially
   - aggregate:
     - do:
       - put: terraform
-        tags: ["gpdb5_ccp_external_worker"]
+        tags: ["ccp"]
         params:
           <<: *ccp_default_params
           vars:
             <<: *ccp_default_vars
             aws_instance-node-instance_type: m4.large
       - task: gen_cluster1
-        tags: ["gpdb5_ccp_external_worker"]
+        tags: ["ccp"]
         file: ccp_src/ci/tasks/gen_cluster.yml
         params:
           <<: *ccp_gen_cluster_default_params
@@ -3035,7 +3035,7 @@ jobs:
           <<: *ccp_destroy
     - do:
       - put: terraform2
-        tags: ["gpdb5_ccp_external_worker"]
+        tags: ["ccp"]
         params:
           <<: *ccp_default_params
           vars:
@@ -3043,7 +3043,7 @@ jobs:
             aws_instance-node-instance_type: m4.large
             cluster_suffix: "-2"
       - task: gen_cluster2
-        tags: ["gpdb5_ccp_external_worker"]
+        tags: ["ccp"]
         file: ccp_src/ci/tasks/gen_cluster.yml
         params:
           <<: *ccp_gen_cluster_default_params
@@ -3054,7 +3054,7 @@ jobs:
           cluster_env_files: cluster_env_files2
         on_failure:
           put: terraform2
-          tags: ["gpdb5_ccp_external_worker"]
+          tags: ["ccp"]
           params:
             action: destroy
             env_name_file: terraform2/name
@@ -3065,13 +3065,13 @@ jobs:
           get_params:
             action: destroy
   - task: exchange_keys
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: gpdb_src/concourse/tasks/exchange_keys.yml
     image: centos-gpdb-dev-6
     on_failure:
       <<: *ccp_destroy_2_cluster
   - task: run_gptransfer_tests
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_behave.yml
     image: centos-gpdb-dev-6
     params:
@@ -3081,7 +3081,7 @@ jobs:
     on_failure:
       do:
       - task: debug_sleep_2_cluster
-        tags: ["gpdb5_ccp_external_worker"]
+        tags: ["ccp"]
         config:
           platform: linux
           image_resource:
@@ -3102,34 +3102,34 @@ jobs:
     trigger: true
   - aggregate:
     - get: ccp_src
-      tags: ["gpdb4_ccp_external_worker"]
+      tags: ["ddboost"]
     - get: gpdb_src
-      tags: ["gpdb4_ccp_external_worker"]
+      tags: ["ddboost"]
       passed: [gate_nightly_start]
     - get: gpdb_binary
-      tags: ["gpdb4_ccp_external_worker"]
+      tags: ["ddboost"]
       resource: bin_gpdb_centos6
       passed: [gate_nightly_start]
     - get: centos-gpdb-dev-6
-      tags: ["gpdb4_ccp_external_worker"]
+      tags: ["ddboost"]
   - put: terraform_for_dpm
     params:
       <<: *ccp_default_params
       terraform_source: ccp_src/aws-pivotal-pa-toolsmiths/
       vars:
         <<: *ccp_default_vars
-    tags: ["gpdb4_ccp_external_worker"]
+    tags: ["ddboost"]
   - task: gen_cluster
     input_mapping:
       terraform: terraform_for_dpm
-    tags: ["gpdb4_ccp_external_worker"]
+    tags: ["ddboost"]
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gpdb4_gen_cluster_default_params
     on_failure:
       <<: *dpm_ccp_destroy
   - task: run_tests
-    tags: ["gpdb4_ccp_external_worker"]
+    tags: ["ddboost"]
     file: gpdb_src/concourse/tasks/run_behave.yml
     image: centos-gpdb-dev-6
     params:
@@ -3145,34 +3145,34 @@ jobs:
     trigger: true
   - aggregate:
     - get: ccp_src
-      tags: ["gpdb4_ccp_external_worker"]
+      tags: ["ddboost"]
     - get: gpdb_src
-      tags: ["gpdb4_ccp_external_worker"]
+      tags: ["ddboost"]
       passed: [gate_nightly_start]
     - get: gpdb_binary
-      tags: ["gpdb4_ccp_external_worker"]
+      tags: ["ddboost"]
       resource: bin_gpdb_centos6
       passed: [gate_nightly_start]
     - get: centos-gpdb-dev-6
-      tags: ["gpdb4_ccp_external_worker"]
+      tags: ["ddboost"]
   - put: terraform_for_dpm
     params:
       <<: *ccp_default_params
       terraform_source: ccp_src/aws-pivotal-pa-toolsmiths/
       vars:
         <<: *ccp_default_vars
-    tags: ["gpdb4_ccp_external_worker"]
+    tags: ["ddboost"]
   - task: gen_cluster
     input_mapping:
       terraform: terraform_for_dpm
-    tags: ["gpdb4_ccp_external_worker"]
+    tags: ["ddboost"]
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gpdb4_gen_cluster_default_params
     on_failure:
       <<: *dpm_ccp_destroy
   - task: run_tests
-    tags: ["gpdb4_ccp_external_worker"]
+    tags: ["ddboost"]
     file: gpdb_src/concourse/tasks/run_behave.yml
     image: centos-gpdb-dev-6
     params:
@@ -3188,34 +3188,34 @@ jobs:
     trigger: true
   - aggregate:
     - get: ccp_src
-      tags: ["gpdb4_ccp_external_worker"]
+      tags: ["ddboost"]
     - get: gpdb_src
-      tags: ["gpdb4_ccp_external_worker"]
+      tags: ["ddboost"]
       passed: [gate_nightly_start]
     - get: gpdb_binary
-      tags: ["gpdb4_ccp_external_worker"]
+      tags: ["ddboost"]
       resource: bin_gpdb_centos6
       passed: [gate_nightly_start]
     - get: centos-gpdb-dev-6
-      tags: ["gpdb4_ccp_external_worker"]
+      tags: ["ddboost"]
   - put: terraform_for_dpm
     params:
       <<: *ccp_default_params
       terraform_source: ccp_src/aws-pivotal-pa-toolsmiths/
       vars:
         <<: *ccp_default_vars
-    tags: ["gpdb4_ccp_external_worker"]
+    tags: ["ddboost"]
   - task: gen_cluster
     input_mapping:
       terraform: terraform_for_dpm
-    tags: ["gpdb4_ccp_external_worker"]
+    tags: ["ddboost"]
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gpdb4_gen_cluster_default_params
     on_failure:
       <<: *dpm_ccp_destroy
   - task: run_tests
-    tags: ["gpdb4_ccp_external_worker"]
+    tags: ["ddboost"]
     file: gpdb_src/concourse/tasks/run_behave.yml
     image: centos-gpdb-dev-6
     params:
@@ -3497,35 +3497,35 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       params:
         submodules:
         - gpMgmt/bin/pythonSrc/ext
       passed: [gate_general_misc_start]
     - get: gpdb_binary
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       resource: bin_gpdb_centos6
       passed: [gate_general_misc_start]
       trigger: true
     - get: ccp_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
     - get: centos-gpdb-dev-6
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
   - put: terraform
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     params:
       <<: *ccp_default_params
       vars:
         <<: *ccp_default_vars
   - task: gen_cluster
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
     on_failure:
       <<: *ccp_destroy
   - task: run_tests
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_behave.yml
     image: centos-gpdb-dev-6
     params:
@@ -3714,25 +3714,25 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       passed: [gate_general_misc_start]
     - get: bin_gpdb
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       resource: bin_gpdb_centos6
       passed: [gate_general_misc_start]
       trigger: true
     - get: ccp_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
     - get: centos-gpdb-dev-6
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
   - put: terraform
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     params:
       <<: *ccp_default_params
       vars:
         <<: *ccp_default_vars
   - task: gen_cluster
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
@@ -3741,7 +3741,7 @@ jobs:
     on_failure:
       <<: *ccp_destroy
   - task: run_tests
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: gpdb_src/concourse/tasks/ic_gpdb_resgroup.yml
     image: centos-gpdb-dev-6
     params:
@@ -3823,19 +3823,19 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       passed: [gate_filerep_start]
     - get: gpdb_binary
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       resource: bin_gpdb_centos6
       passed: [gate_filerep_start]
       trigger: true
     - get: ccp_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
     - get: centos-gpdb-dev-6
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
   - put: terraform
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     params:
       <<: *ccp_default_params
       terraform_source: ccp_src/aws-nvme-block-device/
@@ -3844,14 +3844,14 @@ jobs:
         aws_instance-node-instance_type: i3.xlarge
         number_of_nodes: 1
   - task: gen_cluster
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
     on_failure:
       <<: *ccp_destroy
   - task: run_tests
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_tinc.yml
     image: centos-gpdb-dev-6
     params:
@@ -3863,19 +3863,19 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       passed: [gate_filerep_start]
     - get: gpdb_binary
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       resource: bin_gpdb_centos6
       passed: [gate_filerep_start]
       trigger: true
     - get: ccp_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
     - get: centos-gpdb-dev-6
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
   - put: terraform
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     params:
       <<: *ccp_default_params
       terraform_source: ccp_src/aws-nvme-block-device/
@@ -3884,14 +3884,14 @@ jobs:
         aws_instance-node-instance_type: i3.xlarge
         number_of_nodes: 1
   - task: gen_cluster
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
     on_failure:
       <<: *ccp_destroy
   - task: run_tests
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_tinc.yml
     image: centos-gpdb-dev-6
     params:
@@ -3903,19 +3903,19 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       passed: [gate_filerep_start]
     - get: gpdb_binary
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       resource: bin_gpdb_centos6
       passed: [gate_filerep_start]
       trigger: true
     - get: ccp_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
     - get: centos-gpdb-dev-6
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
   - put: terraform
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     params:
       <<: *ccp_default_params
       terraform_source: ccp_src/aws-nvme-block-device/
@@ -3923,14 +3923,14 @@ jobs:
         <<: *ccp_default_vars
         aws_instance-node-instance_type: i3.xlarge
   - task: gen_cluster
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
     on_failure:
       <<: *ccp_destroy
   - task: run_tests
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_tinc.yml
     image: centos-gpdb-dev-6
     params:
@@ -3942,19 +3942,19 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       passed: [gate_filerep_start]
     - get: gpdb_binary
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
       resource: bin_gpdb_centos6
       passed: [gate_filerep_start]
       trigger: true
     - get: ccp_src
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
     - get: centos-gpdb-dev-6
-      tags: ["gpdb5_ccp_external_worker"]
+      tags: ["ccp"]
   - put: terraform
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     params:
       <<: *ccp_default_params
       terraform_source: ccp_src/aws-nvme-block-device/
@@ -3963,14 +3963,14 @@ jobs:
         aws_instance-node-instance_type: i3.xlarge
         number_of_nodes: 1
   - task: gen_cluster
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
     on_failure:
       <<: *ccp_destroy
   - task: run_tests
-    tags: ["gpdb5_ccp_external_worker"]
+    tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_tinc.yml
     image: centos-gpdb-dev-6
     params:

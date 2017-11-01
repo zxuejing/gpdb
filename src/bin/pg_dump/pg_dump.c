@@ -56,7 +56,9 @@
 int			optreset;
 #endif
 
-#include "access/htup.h"
+#include "access/attnum.h"
+#include "access/sysattr.h"
+#include "catalog/pg_magic_oid.h"
 #include "catalog/pg_class.h"
 #include "catalog/pg_proc.h"
 #include "catalog/pg_trigger.h"

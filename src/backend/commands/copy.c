@@ -4274,7 +4274,7 @@ CopyFrom(CopyState cstate)
 	/*----------
 	 * Check to see if we can avoid writing WAL
 	 *
-	 * If archive logging is not enabled *and* either
+	 * If archive logging/streaming is not enabled *and* either
 	 *	- table was created in same transaction as this COPY
 	 *	- data is being written to relfilenode created in this transaction
 	 * then we can skip writing WAL.  It's safe because if the transaction
@@ -4302,8 +4302,7 @@ CopyFrom(CopyState cstate)
 		cstate->rel->rd_newRelfilenodeSubid != InvalidSubTransactionId)
 	{
 		use_fsm = false;
-		if (!XLogArchivingActive())
-			use_wal = false;
+		use_wal = XLogIsNeeded();
 	}
 
 	oldcontext = MemoryContextSwitchTo(estate->es_query_cxt);

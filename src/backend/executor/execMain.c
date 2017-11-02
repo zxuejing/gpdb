@@ -3161,18 +3161,13 @@ ExecInsert(TupleTableSlot *slot,
 
 	/* BEFORE ROW INSERT Triggers */
 	if (resultRelInfo->ri_TrigDesc &&
-		resultRelInfo->ri_TrigDesc->n_before_row[TRIGGER_EVENT_INSERT] > 0)
+		resultRelInfo->ri_TrigDesc->n_before_row[TRIGGER_EVENT_INSERT] > 0 &&
+		!isUpdate)
 	{
 		HeapTuple	newtuple;
 		HeapTuple	tuple;
 
 		tuple = ExecFetchSlotHeapTuple(slot);
-
-		/*
-		 * Not implemented for ORCA yet. It should fall back to the Postgres planner
-		 * if there are any before-row triggers.
-		 */
-		Assert(planGen == PLANGEN_PLANNER);
 
 		newtuple = ExecBRInsertTriggers(estate, resultRelInfo, tuple);
 
@@ -3286,7 +3281,8 @@ ExecInsert(TupleTableSlot *slot,
 
 	/* AFTER ROW INSERT Triggers */
 	if (resultRelInfo->ri_TrigDesc &&
-		resultRelInfo->ri_TrigDesc->n_after_row[TRIGGER_EVENT_INSERT] > 0)
+		resultRelInfo->ri_TrigDesc->n_after_row[TRIGGER_EVENT_INSERT] > 0 &&
+		!isUpdate)
 	{
 		HeapTuple tuple = ExecFetchSlotHeapTuple(slot);
 

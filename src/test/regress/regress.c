@@ -111,7 +111,6 @@ extern Datum udf_unsetenv(PG_FUNCTION_ARGS);
 
 extern Datum repeatPalloc(PG_FUNCTION_ARGS);
 extern Datum resGroupPalloc(PG_FUNCTION_ARGS);
-extern Datum getSelfRGCapability(PG_FUNCTION_ARGS);
 
 #ifdef PG_MODULE_MAGIC
 PG_MODULE_MAGIC;
@@ -2869,21 +2868,6 @@ repeatPalloc(PG_FUNCTION_ARGS)
 		MemoryContextAlloc(TopMemoryContext, size * 1024 * 1024);
 
 	PG_RETURN_INT32(0);
-}
-
-PG_FUNCTION_INFO_V1(getSelfRGCapability);
-Datum
-getSelfRGCapability(PG_FUNCTION_ARGS)
-{
-	char *cap = PG_GETARG_CSTRING(0);
-	int64 ret = -1;
-
-	if (!IsResGroupEnabled())
-		PG_RETURN_INT64(-1);
-
-	ret = ResGroupGetSelfCapability(cap);
-
-	PG_RETURN_INT64(ret);
 }
 
 PG_FUNCTION_INFO_V1(resGroupPalloc);

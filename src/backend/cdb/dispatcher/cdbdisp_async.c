@@ -405,13 +405,22 @@ checkDispatchResult(CdbDispatcherState *ds,
 				continue;
 
 			Assert(!cdbconn_isBadConnection(segdbDesc));
+
 			/*
 			 * Flush out buffer in case some commands are not fully
 			 * dispatched to QEs, this can prevent QD from polling
 			 * on such QEs forever.
 			 */
 			if (conn->outCount > 0)
-				pqFlush(conn);
+			{
+				/*
+				 * Don't error out here, let following poll() routine to
+				 * handle it.
+				 */
+				if (pqFlush(conn) < 0)
+					elog(LOG, "Failed flushing outbound data to %s:%s",
+						 segdbDesc->whoami, PQerrorMessage(conn));
+			}
 
 			/*
 			 * Add socket to fd_set if still connected.

@@ -2748,12 +2748,6 @@ CommitTransaction(void)
 	/* All relations that are in the vacuum process are being commited now. */
 	ResetVacuumRels();
 
-	/*
-	 * Process resource group commit processing,
-	 * It must be called after prepareDtxTransaction()
-	 */
-	AtEOXact_ResGroup(true);
-
 	/* Check we've released all buffer pins */
 	AtEOXact_Buffers(true);
 
@@ -2847,6 +2841,10 @@ CommitTransaction(void)
 	RESUME_INTERRUPTS();
 
 	freeGangsForPortal(NULL);
+
+	/* Release resource group slot at the end of a transaction */
+	if (ShouldUnassignResGroup())
+		UnassignResGroup();
 }
 
 
@@ -2896,9 +2894,6 @@ PrepareTransaction(void)
 		if (!PrepareHoldablePortals())
 			break;
 	}
-
-	/* detach from current resouce group */
-	AtPrepare_ResGroup();
 
 	/* Now we can shut down the deferred-trigger manager */
 	AfterTriggerEndXact(true);
@@ -3131,6 +3126,10 @@ PrepareTransaction(void)
 	s->state = TRANS_DEFAULT;
 
 	RESUME_INTERRUPTS();
+
+	/* Release resource group slot at the end of prepare transaction on segment */
+	if (ShouldUnassignResGroup())
+		UnassignResGroup();
 }
 
 
@@ -3219,9 +3218,6 @@ AbortTransaction(void)
 	if (Gp_role == GP_ROLE_DISPATCH && IsResQueueEnabled())
 		AtAbort_ResScheduler();
 		
-	/* Perform any Resource Group abort processing. */
-	AtEOXact_ResGroup(false);
-
 	/* Perform any AO table abort processing */
 	AtAbort_AppendOnly();
 
@@ -3350,6 +3346,10 @@ AbortTransaction(void)
 	 */
 	if(elog_geterrcode() == ERRCODE_GP_MEMPROT_KILL)
 		DisconnectAndDestroyAllGangs(true);
+
+	/* Release resource group slot at the end of a transaction */
+	if (ShouldUnassignResGroup())
+		UnassignResGroup();
 }
 
 /*
@@ -3398,6 +3398,10 @@ CleanupTransaction(void)
 	s->state = TRANS_DEFAULT;
 
 	finishDistributedTransactionContext("CleanupTransaction", true);
+
+	/* Release resource group slot at the end of a transaction */
+	if (ShouldUnassignResGroup())
+		UnassignResGroup();
 }
 
 /*

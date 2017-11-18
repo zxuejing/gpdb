@@ -29,6 +29,47 @@ our @EXPORT = qw(
   configure_test_server_for_ssl switch_server_cert
 );
 
+# Define a couple of helper functions to test connecting to the server.
+
+# Attempt connection to server with given connection string.
+sub run_test_psql
+{
+	my $connstr   = $_[0];
+	my $logstring = $_[1];
+
+	my $cmd = [
+		'psql', '-X', '-A', '-t', '-c', "SELECT 'connected with $connstr'",
+		'-d', "$connstr" ];
+
+	my $result = run_log($cmd);
+	return $result;
+}
+
+#
+# The first argument is a base connection string to use for connection.
+# The second argument is a complementary connection string, and it's also
+# printed out as the test case name.
+sub test_connect_ok
+{
+	my $common_connstr = $_[0];
+	my $connstr = $_[1];
+	my $test_name = $_[2];
+
+	my $result =
+	  run_test_psql("$common_connstr $connstr", "(should succeed)");
+	ok($result, $test_name || $connstr);
+}
+
+sub test_connect_fails
+{
+	my $common_connstr = $_[0];
+	my $connstr = $_[1];
+	my $test_name = $_[2];
+
+	my $result = run_test_psql("$common_connstr $connstr", "(should fail)");
+	ok(!$result, $test_name || "$connstr (should fail)");
+}
+
 # Copy a set of files, taking into account wildcards
 sub copy_files
 {
@@ -46,8 +87,7 @@ sub copy_files
 
 sub configure_test_server_for_ssl
 {
-	my $node       = $_[0];
-	my $serverhost = $_[1];
+	my ($node, $serverhost, $authmethod, $password, $password_enc) = @_;
 
 	my $pgdata = $node->data_dir;
 
@@ -56,6 +96,15 @@ sub configure_test_server_for_ssl
 	$node->psql('postgres', "CREATE USER anotheruser");
 	$node->psql('postgres', "CREATE DATABASE trustdb");
 	$node->psql('postgres', "CREATE DATABASE certdb");
+
+	# Update password of each user as needed.
+	if (defined($password))
+	{
+		$node->psql('postgres',
+"SET password_encryption='$password_enc'; ALTER USER ssltestuser PASSWORD '$password';");
+		$node->psql('postgres',
+"SET password_encryption='$password_enc'; ALTER USER anotheruser PASSWORD '$password';");
+	}
 
 	# enable logging etc.
 	open CONF, ">>$pgdata/postgresql.conf";
@@ -78,22 +127,11 @@ sub configure_test_server_for_ssl
 	copy_files("ssl/root_ca.crt", $pgdata);
 	copy_files("ssl/root+client.crl",    $pgdata);
 
-  # Only accept SSL connections from localhost. Our tests don't depend on this
-  # but seems best to keep it as narrow as possible for security reasons.
-  #
-  # When connecting to certdb, also check the client certificate.
-	open HBA, ">$pgdata/pg_hba.conf";
-	print HBA
-"# TYPE  DATABASE        USER            ADDRESS                 METHOD\n";
-	print HBA
-"hostssl trustdb         ssltestuser     $serverhost/32            trust\n";
-	print HBA
-"hostssl trustdb         ssltestuser     ::1/128                 trust\n";
-	print HBA
-"hostssl certdb          ssltestuser     $serverhost/32            cert\n";
-	print HBA
-"hostssl certdb          ssltestuser     ::1/128                 cert\n";
-	close HBA;
+	# Stop and restart server to load new listen_addresses.
+	$node->restart;
+
+	# Change pg_hba after restart because hostssl requires ssl=on
+	configure_hba_for_ssl($node, $serverhost, $authmethod);
 }
 
 # Change the configuration to use given server cert file, and restart
@@ -116,5 +154,29 @@ sub switch_server_cert
 	close SSLCONF;
 
 	# Stop and restart server to reload the new config.
-	$node->restart;
+	$node->reload;
+}
+
+sub configure_hba_for_ssl
+{
+	my ($node, $serverhost, $authmethod) = @_;
+	my $pgdata     = $node->data_dir;
+
+  # Only accept SSL connections from localhost. Our tests don't depend on this
+  # but seems best to keep it as narrow as possible for security reasons.
+  #
+  # When connecting to certdb, also check the client certificate.
+	open my $hba, '>', "$pgdata/pg_hba.conf";
+	print $hba
+"# TYPE  DATABASE        USER            ADDRESS                 METHOD\n";
+	print $hba
+"hostssl trustdb         ssltestuser     $serverhost/32            $authmethod\n";
+	print $hba
+"hostssl trustdb         ssltestuser     ::1/128                 $authmethod\n";
+	print $hba
+"hostssl certdb          ssltestuser     $serverhost/32            cert\n";
+	print $hba
+"hostssl certdb          ssltestuser     ::1/128                 cert\n";
+	close $hba;
+>>>>>>> 9288d62bb4... Support channel binding 'tls-unique' in SCRAM
 }

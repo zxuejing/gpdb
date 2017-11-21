@@ -156,6 +156,9 @@ class GpStop:
                     if self.onlyThisHost in self.gparray.get_master_host_names():
                         raise Exception("Specified host '%s' has the master or standby master on it. This node can only be stopped as part of a full-cluster gpstop, without '--host'." %
                                         self.onlyThisHost)
+                    hasMirrors = (self.gparray.getFaultStrategy() is FAULT_STRATEGY_FILE_REPLICATION)
+                    if not hasMirrors:
+                        raise Exception("Cannot perform host-specific gpstop on a cluster without segment mirroring.")
                     segs = self._filter_segments_for_single_host_stop()
                 else:
                     segs = self.gparray.getSegDbList()

@@ -60,8 +60,9 @@ ssh <hostname of your machine>  # e.g., ssh briarwood
 
 ```bash
 cd depends
-conan remote add conan-gpdb https://api.bintray.com/conan/greenplum-db/gpdb-oss
-conan install --build
+./configure
+make
+make install_local
 cd ..
 ```
 

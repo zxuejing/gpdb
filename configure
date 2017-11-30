@@ -1555,7 +1555,7 @@ Optional Features:
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
-  --with-extra-version=STRING  append STRING to version
+STRING
 
   --with-docdir=DIR       install the documentation in DIR [PREFIX/doc]
   --without-docdir        do not install the documentation
@@ -3045,18 +3045,16 @@ if test "${with_extra_version+set}" = set; then :
       as_fn_error $? "argument required for --with-extra-version option" "$LINENO" 5
       ;;
     *)
-      PG_VERSION="$PG_PACKAGE_VERSION$withval"
+      append STRING to version
       ;;
   esac
 
-else
-  PG_VERSION="$PG_PACKAGE_VERSION"
 fi
 
 
 
 cat >>confdefs.h <<_ACEOF
-#define PG_VERSION "$PG_VERSION"
+#define PG_VERSION "$PG_PACKAGE_VERSION"
 _ACEOF
 
 

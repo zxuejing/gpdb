@@ -726,8 +726,6 @@ debug_sleep_anchor: &debug_sleep
       run:
         path: 'sh'
         args: ['-c', 'sleep {{ccp_debug_sleep}}']
-    ensure:
-      <<: *ccp_destroy
 
 dpm_debug_sleep_anchor: &dpm_debug_sleep
   do:
@@ -742,8 +740,6 @@ dpm_debug_sleep_anchor: &dpm_debug_sleep
       run:
         path: 'sh'
         args: ['-c', 'sleep {{ccp_debug_sleep}}']
-    ensure:
-      <<: *dpm_ccp_destroy
 
 pulse_properties_anchor: &pulse_properties
   PULSE_URL: {{pulse_url}}
@@ -795,8 +791,6 @@ cs_ccp_gen_cluster_params_anchor: &cs_ccp_gen_cluster_params
   file: ccp_src/ci/tasks/gen_cluster.yml
   params:
     <<: *ccp_gen_cluster_default_params
-  on_failure:
-    <<: *ccp_destroy
 
 cs_ccp_run_tests_params_anchor: &cs_ccp_run_tests_params
   tags: ["ccp"]
@@ -1599,8 +1593,6 @@ jobs:
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
-    on_failure:
-      <<: *ccp_destroy
   - task: run_tests
     tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_tinc.yml
@@ -1609,7 +1601,8 @@ jobs:
       TINC_TARGET: walrep_1
     on_failure:
       <<: *debug_sleep
-  - *ccp_destroy
+  ensure:
+    <<: *ccp_destroy
 
 - name: cs_walrep_2
   plan:
@@ -1638,8 +1631,6 @@ jobs:
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
-    on_failure:
-      <<: *ccp_destroy
   - task: run_tests
     tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_tinc.yml
@@ -1648,7 +1639,8 @@ jobs:
       TINC_TARGET: walrep_2
     on_failure:
       <<: *debug_sleep
-  - *ccp_destroy
+  ensure:
+    <<: *ccp_destroy
 
 - name: cs_pg_twophase_01_10
   plan:
@@ -1680,8 +1672,6 @@ jobs:
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
-    on_failure:
-      <<: *ccp_destroy
   - task: run_tests
     tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_tinc.yml
@@ -1690,7 +1680,8 @@ jobs:
       TINC_TARGET: test_pg_twophase_01_10
     on_failure:
       <<: *debug_sleep
-  - *ccp_destroy
+  ensure:
+    <<: *ccp_destroy
 
 - name: cs_pg_twophase_11_20
   plan:
@@ -1722,8 +1713,6 @@ jobs:
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
-    on_failure:
-      <<: *ccp_destroy
   - task: run_tests
     tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_tinc.yml
@@ -1732,7 +1721,8 @@ jobs:
       TINC_TARGET: test_pg_twophase_11_20
     on_failure:
       <<: *debug_sleep
-  - *ccp_destroy
+  ensure:
+    <<: *ccp_destroy
 
 - name: cs_pg_twophase_21_30
   plan:
@@ -1764,8 +1754,6 @@ jobs:
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
-    on_failure:
-      <<: *ccp_destroy
   - task: run_tests
     tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_tinc.yml
@@ -1774,7 +1762,8 @@ jobs:
       TINC_TARGET: test_pg_twophase_21_30
     on_failure:
       <<: *debug_sleep
-  - *ccp_destroy
+  ensure:
+    <<: *ccp_destroy
 
 - name: cs_pg_twophase_31_40
   plan:
@@ -1806,8 +1795,6 @@ jobs:
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
-    on_failure:
-      <<: *ccp_destroy
   - task: run_tests
     tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_tinc.yml
@@ -1816,7 +1803,8 @@ jobs:
       TINC_TARGET: test_pg_twophase_31_40
     on_failure:
       <<: *debug_sleep
-  - *ccp_destroy
+  ensure:
+    <<: *ccp_destroy
 
 - name: cs_pg_twophase_41_49
   plan:
@@ -1848,8 +1836,6 @@ jobs:
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
-    on_failure:
-      <<: *ccp_destroy
   - task: run_tests
     tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_tinc.yml
@@ -1858,7 +1844,8 @@ jobs:
       TINC_TARGET: test_pg_twophase_41_49
     on_failure:
       <<: *debug_sleep
-  - *ccp_destroy
+  ensure:
+    <<: *ccp_destroy
 
 - name: cs_pg_twophase_switch
   plan:
@@ -1890,8 +1877,6 @@ jobs:
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
-    on_failure:
-      <<: *ccp_destroy
   - task: run_tests
     tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_tinc.yml
@@ -1900,7 +1885,8 @@ jobs:
       TINC_TARGET: test_switch_01_12
     on_failure:
       <<: *debug_sleep
-  - *ccp_destroy
+  ensure:
+    <<: *ccp_destroy
 
 - name: cs_crash_recovery_schema_topology
   plan:
@@ -1914,7 +1900,8 @@ jobs:
     <<: *cs_ccp_run_tests_params
     params:
       TINC_TARGET: crash_recovery_schema_topology
-  - *ccp_destroy
+  ensure:
+    <<: *ccp_destroy
 
 - name: cs_crash_recovery_04_10
   plan:
@@ -1928,7 +1915,8 @@ jobs:
     <<: *cs_ccp_run_tests_params
     params:
       TINC_TARGET: crash_recovery_04_10
-  - *ccp_destroy
+  ensure:
+    <<: *ccp_destroy
 
 - name: cs_crash_recovery_11_20
   plan:
@@ -1942,7 +1930,8 @@ jobs:
     <<: *cs_ccp_run_tests_params
     params:
       TINC_TARGET: crash_recovery_11_20
-  - *ccp_destroy
+  ensure:
+    <<: *ccp_destroy
 
 - name: cs_crash_recovery_21_30
   plan:
@@ -1956,7 +1945,8 @@ jobs:
     <<: *cs_ccp_run_tests_params
     params:
       TINC_TARGET: crash_recovery_21_30
-  - *ccp_destroy
+  ensure:
+    <<: *ccp_destroy
 
 - name: cs_crash_recovery_31_42
   plan:
@@ -1970,7 +1960,8 @@ jobs:
     <<: *cs_ccp_run_tests_params
     params:
       TINC_TARGET: crash_recovery_31_42
-  - *ccp_destroy
+  ensure:
+    <<: *ccp_destroy
 
 - name: gate_cs_end
   plan:
@@ -2048,7 +2039,8 @@ jobs:
       TINC_TARGET: mpp_interconnect
       PRE_TEST_SCRIPT_USER: centos
       PRE_TEST_SCRIPT: sudo bash -c 'yum -y install "kernel-devel-uname-r == $(uname -r)"'
-  - *ccp_destroy
+  ensure:
+    <<: *ccp_destroy
 
 - name: mpp_resource_group_centos6
   plan:
@@ -2079,8 +2071,6 @@ jobs:
       <<: *ccp_gen_cluster_default_params
     input_mapping:
       gpdb_binary: bin_gpdb
-    on_failure:
-      <<: *ccp_destroy
   - task: run_tests
     tags: ["ccp"]
     file: gpdb_src/concourse/tasks/ic_gpdb_resgroup.yml
@@ -2089,7 +2079,8 @@ jobs:
       TEST_OS: centos6
     on_failure:
       <<: *debug_sleep
-  - *ccp_destroy
+  ensure:
+    <<: *ccp_destroy
 
 - name: mpp_resource_group_centos7
   plan:
@@ -2121,8 +2112,6 @@ jobs:
       <<: *ccp_gen_cluster_default_params
     input_mapping:
       gpdb_binary: bin_gpdb
-    on_failure:
-      <<: *ccp_destroy
   - task: run_tests
     tags: ["ccp"]
     file: gpdb_src/concourse/tasks/ic_gpdb_resgroup.yml
@@ -2131,7 +2120,8 @@ jobs:
       TEST_OS: centos7
     on_failure:
       <<: *debug_sleep
-  - *ccp_destroy
+  ensure:
+    <<: *ccp_destroy
 
 - name: gate_mpp_end
   plan:
@@ -2203,8 +2193,6 @@ jobs:
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
-    on_failure:
-      <<: *ccp_destroy
   - task: run_tests
     tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_behave.yml
@@ -2213,7 +2201,8 @@ jobs:
       BEHAVE_FLAGS: --tags=gpcheckcat
     on_failure:
       <<: *debug_sleep
-  - *ccp_destroy
+  ensure:
+    <<: *ccp_destroy
 
 - name: MM_gppkg
   plan:
@@ -2245,15 +2234,11 @@ jobs:
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
-    on_failure:
-      <<: *ccp_destroy
   - task: setup_gppkg_second_install
     tags: ["ccp"]
     file: gpdb_src/concourse/tasks/gppkg_behave.yml
     params:
       SECOND_BINARY_INSTALL_LOCATION: /tmp/gppkg_migrate
-    on_failure:
-      <<: *ccp_destroy
   - task: run_tests
     tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_behave.yml
@@ -2262,7 +2247,8 @@ jobs:
       BEHAVE_FLAGS: --tags=gppkg
     on_failure:
       <<: *debug_sleep
-  - *ccp_destroy
+  ensure:
+    <<: *ccp_destroy
 
 - name: MM_gprecoverseg
   plan:
@@ -2294,8 +2280,6 @@ jobs:
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
-    on_failure:
-      <<: *ccp_destroy
   - task: run_tests
     tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_behave.yml
@@ -2304,7 +2288,8 @@ jobs:
       BEHAVE_FLAGS: --tags=gprecoverseg
     on_failure:
       <<: *debug_sleep
-  - *ccp_destroy
+  ensure:
+    <<: *ccp_destroy
 
 - name: MM_gpcheck
   plan:
@@ -2426,8 +2411,6 @@ jobs:
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
-    on_failure:
-      <<: *ccp_destroy
   - task: pre_run_test_setup
     tags: ["ccp"]
     image: centos-gpdb-dev-6
@@ -2456,7 +2439,8 @@ jobs:
       CUSTOM_ENV: HOST1=mdw HOST2=sdw1 HOST3=sdw2 HOST4=sdw3 HOST5=sdw4
     on_failure:
       <<: *debug_sleep
-  - *ccp_destroy
+  ensure:
+    <<: *ccp_destroy
 
 - name: MM_gpexpand_2
   plan:
@@ -2489,8 +2473,6 @@ jobs:
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
-    on_failure:
-      <<: *ccp_destroy
   - task: pre_run_test_setup
     tags: ["ccp"]
     image: centos-gpdb-dev-6
@@ -2519,7 +2501,8 @@ jobs:
       CUSTOM_ENV: HOST1=mdw HOST2=sdw1 HOST3=sdw2 HOST4=sdw3 HOST5=sdw4
     on_failure:
       <<: *debug_sleep
-  - *ccp_destroy
+  ensure:
+    <<: *ccp_destroy
 
 - name: gate_mm_end
   plan:
@@ -2595,8 +2578,6 @@ jobs:
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
-    on_failure:
-      <<: *ccp_destroy
   - task: run_tests
     tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_behave.yml
@@ -2605,7 +2586,8 @@ jobs:
       BEHAVE_FLAGS: --tags=backups,backup_and_restore_backups,backup_and_restore_restores,restores --tags=-nbuonly --tags=-ddonly
     on_failure:
       <<: *debug_sleep
-  - *ccp_destroy
+  ensure:
+    <<: *ccp_destroy
 
 - name: DPM_backup-restore_ddboost_part1
   plan:
@@ -3013,8 +2995,6 @@ jobs:
       <<: *ccp_gen_cluster_default_params
     input_mapping:
       gpdb_binary: gpdb4_binary
-    on_failure:
-      <<: *ccp_destroy
   - task: run_backup_tests
     tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_behave.yml
@@ -3039,7 +3019,8 @@ jobs:
       BEHAVE_FLAGS: --tags=backup_and_restore_restores --tags=-nbuonly --tags=-ddonly --tags=-skip_for_gpdb_43
     on_failure:
       <<: *debug_sleep
-  - *ccp_destroy
+  ensure:
+    <<: *ccp_destroy
 
 - name: DPM_gptransfer-43x-to-5x
   plan:
@@ -3131,8 +3112,6 @@ jobs:
         - -exc
         - |
           source gpdb_src/concourse/scripts/transfer_utils.sh; setup_gptransfer
-    on_failure:
-      <<: *ccp_destroy_2_cluster
   - task: run_gptransfer_tests
     tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_behave.yml
@@ -3154,10 +3133,9 @@ jobs:
           run:
             path: 'sh'
             args: ['-c', 'sleep {{ccp_debug_sleep}}']
-        ensure:
-          <<: *ccp_destroy_2_cluster
   # Similar to the on_failure blocks, the final cleanup needs to be both clusters as well
-  - *ccp_destroy_2_cluster
+  ensure:
+    <<: *ccp_destroy_2_cluster
 
 - name: DPM_gptransfer-5x-to-5x
   plan:
@@ -3243,8 +3221,6 @@ jobs:
         - -exc
         - |
           source gpdb_src/concourse/scripts/transfer_utils.sh; setup_gptransfer
-    on_failure:
-      <<: *ccp_destroy_2_cluster
   - task: run_gptransfer_tests
     tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_behave.yml
@@ -3266,10 +3242,9 @@ jobs:
           run:
             path: 'sh'
             args: ['-c', 'sleep {{ccp_debug_sleep}}']
-        ensure:
-          <<: *ccp_destroy_2_cluster
   # Similar to the on_failure blocks, the final cleanup needs to be both clusters as well
-  - *ccp_destroy_2_cluster
+  ensure:
+    <<: *ccp_destroy_2_cluster
 
 - name: gate_dpm_end
   plan:
@@ -3742,8 +3717,6 @@ jobs:
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
-    on_failure:
-      <<: *ccp_destroy
   - task: run_tests
     tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_tinc.yml
@@ -3752,7 +3725,8 @@ jobs:
       TINC_TARGET: filerep_end_to_end_full_mirror
     on_failure:
       <<: *debug_sleep
-  - *ccp_destroy
+  ensure:
+    <<: *ccp_destroy
 
 - name: cs_filerep_e2e_incr_mirror
   plan:
@@ -3784,8 +3758,6 @@ jobs:
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
-    on_failure:
-      <<: *ccp_destroy
   - task: run_tests
     tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_tinc.yml
@@ -3794,7 +3766,8 @@ jobs:
       TINC_TARGET: filerep_end_to_end_incr_mirror
     on_failure:
       <<: *debug_sleep
-  - *ccp_destroy
+  ensure:
+    <<: *ccp_destroy
 
 - name: cs_filerep_e2e_full_primary
   plan:
@@ -3825,8 +3798,6 @@ jobs:
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
-    on_failure:
-      <<: *ccp_destroy
   - task: run_tests
     tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_tinc.yml
@@ -3835,7 +3806,8 @@ jobs:
       TINC_TARGET: filerep_end_to_end_full_primary
     on_failure:
       <<: *debug_sleep
-  - *ccp_destroy
+  ensure:
+    <<: *ccp_destroy
 
 - name: cs_filerep_e2e_incr_primary
   plan:
@@ -3867,8 +3839,6 @@ jobs:
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
-    on_failure:
-      <<: *ccp_destroy
   - task: run_tests
     tags: ["ccp"]
     file: gpdb_src/concourse/tasks/run_tinc.yml
@@ -3877,7 +3847,8 @@ jobs:
       TINC_TARGET: filerep_end_to_end_incr_primary
     on_failure:
       <<: *debug_sleep
-  - *ccp_destroy
+  ensure:
+    <<: *ccp_destroy
 
 - name: gate_filerep_end
   plan:

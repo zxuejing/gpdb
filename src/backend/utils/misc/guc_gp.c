@@ -4647,7 +4647,7 @@ struct config_int ConfigureNamesInt_gp[] =
 			NULL
 		},
 		&optimizer_join_order_threshold,
-		10, 0, INT_MAX, NULL, NULL
+		10, 0, 12, NULL, NULL
 	},
 
 	{

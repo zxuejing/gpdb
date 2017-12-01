@@ -698,7 +698,6 @@ signalQEs(CdbDispatchCmdAsync* pParms)
 
 		if (!dispatchResult->stillRunning ||
 			dispatchResult->wasCanceled ||
-			waitMode == dispatchResult->sentSignal ||
 			cdbconn_isBadConnection(segdbDesc))
 			continue;
 

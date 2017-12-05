@@ -16,7 +16,7 @@ setup
 	CREATE FUNCTION i_one (val int, dyn bool) RETURNS void AS $$
 	BEGIN
 		IF (dyn) THEN
-			EXECUTE 'INSERT INTO udf_dl_one VALUES ($1, $2)' USING val,val;
+			EXECUTE 'INSERT INTO udf_dl_one VALUES (' || quote_literal(val) || ',' || quote_literal(val) || ')';
 		ELSE
 			INSERT INTO udf_dl_one VALUES (val, val);
 		END IF;
@@ -26,7 +26,7 @@ setup
 	CREATE FUNCTION i_two (val int, dyn bool) RETURNS void AS $$
 	BEGIN
 		IF (dyn) THEN
-			EXECUTE 'INSERT INTO udf_dl_two VALUES ($1, $2)' USING val,val;
+			EXECUTE 'INSERT INTO udf_dl_two VALUES (' || quote_literal(val) || ',' || quote_literal(val) || ')';
 		ELSE
 			INSERT INTO udf_dl_two VALUES (val, val);
 		END IF;

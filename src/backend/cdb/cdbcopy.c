@@ -32,6 +32,8 @@
 #include "utils/faultinjector.h"
 #include "utils/memutils.h"
 
+#include <poll.h>
+
 /*
  * Create a cdbCopy object that includes all the cdb
  * information and state needed by the backend COPY.
@@ -188,8 +190,8 @@ cdbCopyStart(CdbCopy *c, char *copyCmd, struct GpPolicy *policy)
 	MemoryContextSwitchTo(oldcontext);
 
 	CdbDispatchUtilityStatement((Node *) q->utilityStmt,
-								(c->copy_in ? DF_NEED_TWO_PHASE | DF_WITH_SNAPSHOT : DF_WITH_SNAPSHOT),
-								NIL, /* FIXME */
+								(c->copy_in ? DF_NEED_TWO_PHASE | DF_WITH_SNAPSHOT : DF_WITH_SNAPSHOT) | DF_CANCEL_ON_ERROR,
+								NIL,	/* FIXME */
 								NULL);
 
 	SIMPLE_FAULT_INJECTOR(CdbCopyStartAfterDispatch);
@@ -434,10 +436,12 @@ processCopyEndResults(CdbCopy *c,
 					  int *total_rows_completed)
 {
 	SegmentDatabaseDescriptor *q;
-	int seg;
-	PGresult *res;
-	int			segment_rows_rejected  = 0; /* num of rows rejected by this QE */
-	int			segment_rows_completed = 0; /* num of rows completed by this QE */
+	int			seg;
+	PGresult   *res;
+	struct pollfd	*pollRead = (struct pollfd *) palloc(sizeof(struct pollfd));
+	int			segment_rows_rejected = 0;	/* num of rows rejected by this QE */
+	int			segment_rows_completed = 0; /* num of rows completed by this
+											 * QE */
 
 	for (seg = 0; seg < size; seg ++)
 	{
@@ -465,6 +469,23 @@ processCopyEndResults(CdbCopy *c,
 			c->io_errors = true;
 		}
 
+		pollRead->fd = PQsocket(q->conn);
+		pollRead->events = POLLIN;
+		pollRead->revents = 0;
+
+		while (PQisBusy(q->conn))
+		{
+			if ((Gp_role == GP_ROLE_DISPATCH) && InterruptPending)
+			{
+				PQrequestCancel(q->conn);
+			}
+
+			if (poll(pollRead, 1, 200) > 0)
+			{
+				break;
+			}
+		}
+
 		/*
 		 * Fetch any error status existing on completion of the COPY command.
 		 * It is critical that for any connection that had an asynchronous
@@ -472,6 +493,7 @@ processCopyEndResults(CdbCopy *c,
 		 * Otherwise, the next time a command is sent to that connection,
 		 * it will return an error that there's a command pending.
 		 */
+		HOLD_INTERRUPTS();
 		while ((res = PQgetResult(q->conn)) != NULL && PQstatus(q->conn) != CONNECTION_BAD)
 		{
 			elog(DEBUG1,"PQgetResult got status %d seg %d    ",
@@ -592,6 +614,7 @@ processCopyEndResults(CdbCopy *c,
 			/* free the PGresult object */
 			PQclear(res);
 		}
+		RESUME_INTERRUPTS();
 
 		/* Finished with this segment db. */
 		c->segdb_state[seg][0] = SEGDB_DONE;
@@ -637,8 +660,6 @@ processCopyEndResults(CdbCopy *c,
 		}
 	}
 }
-
-					  
 
 /*
  * ends the copy command on all segment databases.

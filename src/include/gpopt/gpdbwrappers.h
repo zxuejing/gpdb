@@ -634,6 +634,9 @@ namespace gpdb {
 
 	void OptimizerFree(void *ptr);
 
+	// returns true if a query cancel is requested in GPDB
+	bool FAbortRequested(void);
+
 } //namespace gpdb
 
 #define ForEach(cell, l)	\

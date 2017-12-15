@@ -38,6 +38,8 @@ transfer_ownership() {
     find gpdb_src -type d -exec chmod a+w {} \;
     # Needed for the gpload test
     [ -f gpdb_src/gpMgmt/bin/gpload_test/gpload2/data_file.csv ] && chown gpadmin:gpadmin gpdb_src/gpMgmt/bin/gpload_test/gpload2/data_file.csv
+    # Needed for the citext test
+    [ -f gpdb_src/contrib/citext/citext.sql ] && chown gpadmin:gpadmin gpdb_src/contrib/citext/citext.sql 
     [ -d /usr/local/gpdb ] && chown -R gpadmin:gpadmin /usr/local/gpdb
     [ -d /usr/local/greenplum-db-devel ] && chown -R gpadmin:gpadmin /usr/local/greenplum-db-devel
     chown -R gpadmin:gpadmin /home/gpadmin

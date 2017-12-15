@@ -231,7 +231,7 @@ PGAC_ARG_BOOL(enable, atomics, yes,
 #
 # gpfdist
 #
-PGAC_ARG_BOOL(enable, gpfdist, no,
+PGAC_ARG_BOOL(enable, gpfdist, yes,
              [  --disable-gpfdist       do not use gpfdist])
 AC_SUBST(enable_gpfdist)
 

@@ -3582,7 +3582,7 @@ if test "${enable_gpfdist+set}" = set; then :
   esac
 
 else
-  enable_gpfdist=yes
+  enable_gpfdist=no
 
 fi
 

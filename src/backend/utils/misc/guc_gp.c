@@ -5473,7 +5473,7 @@ struct config_string ConfigureNamesString_gp[] =
 			GUC_GPDB_ADDOPT
 		},
 		&gp_hadoop_target_version,
-		"hadoop", NULL, NULL
+		"gphd-1.1", NULL, NULL
 	},
 
 	{

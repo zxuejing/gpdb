@@ -535,8 +535,6 @@ pg_SASL_init(PGconn *conn, int payloadlen)
 	bool		success;
 	const char *selected_mechanism;
 	PQExpBufferData mechanism_buf;
-	char	   *tls_finished = NULL;
-	size_t		tls_finished_len = 0;
 	char	   *password;
 
 	initPQExpBuffer(&mechanism_buf);
@@ -572,26 +570,44 @@ pg_SASL_init(PGconn *conn, int payloadlen)
 
 		/*
 		 * Select the mechanism to use.  Pick SCRAM-SHA-256-PLUS over anything
-		 * else.  Pick SCRAM-SHA-256 if nothing else has already been picked.
-		 * If we add more mechanisms, a more refined priority mechanism might
+		 * else if a channel binding type is set and if the client supports
+		 * it. Pick SCRAM-SHA-256 if nothing else has already been picked.  If
+		 * we add more mechanisms, a more refined priority mechanism might
 		 * become necessary.
 		 */
-#ifdef USE_SSL
-		if (conn->ssl != NULL && strcmp(mechanism_buf.data, SCRAM_SHA256_PLUS_NAME) == 0)
+		if (strcmp(mechanism_buf.data, SCRAM_SHA_256_PLUS_NAME) == 0)
 		{
-			selected_mechanism = SCRAM_SHA256_PLUS_NAME;
-		}
-		else
-		{
-			if((strcmp(mechanism_buf.data, SCRAM_SHA256_NAME) == 0 &&
-			!selected_mechanism))
-			selected_mechanism = SCRAM_SHA256_NAME;
-		}
-#else
-		if (strcmp(mechanism_buf.data, SCRAM_SHA256_NAME) == 0 &&
-				 !selected_mechanism)
-			selected_mechanism = SCRAM_SHA256_NAME;
+#ifdef HAVE_PGTLS_GET_PEER_CERTIFICATE_HASH
+			if (conn->ssl != NULL)
+			{
+				/*
+				 * The server has offered SCRAM-SHA-256-PLUS, which is only
+				 * supported by the client if a hash of the peer certificate
+				 * can be created.
+				 */
+
+				selected_mechanism = SCRAM_SHA_256_PLUS_NAME;
+			}
+			else
 #endif
+			{
+				/*
+				 * The server offered SCRAM-SHA-256-PLUS, but the connection
+				 * is not SSL-encrypted. That's not sane. Perhaps SSL was
+				 * stripped by a proxy? There's no point in continuing,
+				 * because the server will reject the connection anyway if we
+				 * try authenticate without channel binding even though both
+				 * the client and server supported it. The SCRAM exchange
+				 * checks for that, to prevent downgrade attacks.
+				 */
+				printfPQExpBuffer(&conn->errorMessage,
+								  libpq_gettext("server offered SCRAM-SHA-256-PLUS authentication over a non-SSL connection\n"));
+				goto error;
+			}
+		}
+		else if (strcmp(mechanism_buf.data, SCRAM_SHA_256_NAME) == 0 &&
+				 !selected_mechanism)
+			selected_mechanism = SCRAM_SHA_256_NAME;
 	}
 
 	if (!selected_mechanism)
@@ -620,43 +636,15 @@ pg_SASL_init(PGconn *conn, int payloadlen)
 		goto error;
 	}
 
-#ifdef USE_SSL
-	/*
-	 * Get data for channel binding.
-	 */
-	if (strcmp(selected_mechanism, SCRAM_SHA256_PLUS_NAME) == 0)
-	{
-		tls_finished = pgtls_get_finished(conn, &tls_finished_len);
-		if (tls_finished == NULL)
-			goto oom_error;
-	}
 	/*
 	 * Initialize the SASL state information with all the information
 	 * gathered during the initial exchange.
 	 *
 	 * Note: Only tls-unique is supported for the moment.
 	 */
-	conn->sasl_state = pg_fe_scram_init(conn->pguser,
+	conn->sasl_state = pg_fe_scram_init(conn,
 										password,
-										conn->ssl != NULL,
-										selected_mechanism,
-										tls_finished,
-										tls_finished_len);
-#else
-
-	/*
-	 * Initialize the SASL state information with all the information
-	 * gathered during the initial exchange.
-	 *
-	 * Note: Only tls-unique is supported for the moment.
-	 */
-	conn->sasl_state = pg_fe_scram_init(conn->pguser,
-										password,
-										false,
-										selected_mechanism,
-										tls_finished,
-										tls_finished_len);
-#endif
+										selected_mechanism);
 	if (!conn->sasl_state)
 		goto oom_error;
 
@@ -664,7 +652,7 @@ pg_SASL_init(PGconn *conn, int payloadlen)
 	pg_fe_scram_exchange(conn->sasl_state,
 						 NULL, -1,
 						 &initialresponse, &initialresponselen,
-						 &done, &success, &conn->errorMessage);
+						 &done, &success);
 
 	if (done && !success)
 		goto error;
@@ -745,7 +733,7 @@ pg_SASL_continue(PGconn *conn, int payloadlen, bool final)
 	pg_fe_scram_exchange(conn->sasl_state,
 						 challenge, payloadlen,
 						 &output, &outputlen,
-						 &done, &success, &conn->errorMessage);
+						 &done, &success);
 	free(challenge);			/* don't need the input anymore */
 
 	if (final && !done)

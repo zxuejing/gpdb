@@ -85,6 +85,7 @@ static int ldapServiceLookup(const char *purl, PQconninfoOption *options,
 #endif
 
 #include "libpq/ip.h"
+#include "common/scram-common.h"
 #include "mb/pg_wchar.h"
 
 #if defined(_AIX)
@@ -284,7 +285,6 @@ static const internalPQconninfoOption PQconninfoOptions[] = {
 	{"keepalives_count", NULL, NULL, NULL,
 		"TCP-Keepalives-Count", "", 10, /* strlen(INT32_MAX) == 10 */
 	offsetof(struct pg_conn, keepalives_count)},
-
 	/*
 	 * ssl options are allowed even without client SSL support because the
 	 * client can still handle SSL modes "disable" and "allow". Other

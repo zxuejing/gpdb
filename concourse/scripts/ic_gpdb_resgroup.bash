@@ -6,7 +6,7 @@ set -eox pipefail
 
 CLUSTER_NAME=$(cat ./cluster_env_files/terraform/name)
 
-prepare_env() {
+validate_env() {
     local gpdb_host_alias=$1
     local pkgs='bzip2-devel'
 
@@ -14,7 +14,7 @@ prepare_env() {
         pkgs+=' perl-Env perl-Data-Dumper'
     fi
 
-    ssh -t $gpdb_host_alias sudo yum install -d1 -y $pkgs
+    ssh -t $gpdb_host_alias sudo yum --cacheonly list installed $pkgs
 }
 
 mount_cgroups() {
@@ -89,8 +89,8 @@ EOF1
 EOF
 }
 
-prepare_env ccp-${CLUSTER_NAME}-0
-prepare_env ccp-${CLUSTER_NAME}-1
+validate_env ccp-${CLUSTER_NAME}-0
+validate_env ccp-${CLUSTER_NAME}-1
 mount_cgroups ccp-${CLUSTER_NAME}-0
 mount_cgroups ccp-${CLUSTER_NAME}-1
 make_cgroups_dir ccp-${CLUSTER_NAME}-0

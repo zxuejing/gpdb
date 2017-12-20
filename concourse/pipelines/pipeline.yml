@@ -2100,7 +2100,7 @@ jobs:
     params:
       TINC_TARGET: mpp_interconnect
       PRE_TEST_SCRIPT_USER: centos
-      PRE_TEST_SCRIPT: sudo bash -c 'yum -y install "kernel-devel-uname-r == $(uname -r)"'
+      PRE_TEST_SCRIPT: sudo bash -c 'yum --cacheonly list installed kernel-devel-$(uname -r)'
   ensure:
     <<: *ccp_destroy
 

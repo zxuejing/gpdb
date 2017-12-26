@@ -4512,6 +4512,7 @@ ATAocsWriteNewColumns(
 				 * greater than 1.
 				 */
 				expectedFRN = sdesc->ao_read.current.firstRowNum;
+				aocs_addcol_setfirstrownum(idesc, expectedFRN);
 			}
 			else
 			{

@@ -48,7 +48,7 @@ function run_pxf_automation() {
 	cp -r \${psi_dir} ${GPHOME}/lib/python
 	psql -d template1 -c "CREATE EXTENSION PXF"
 	cd \${1}/pxf_automation_src
-	make GROUP=gpdb
+	make GROUP=${GROUP}
 
 	exit 0
 	EOF
@@ -170,17 +170,9 @@ function _main() {
 
 	time make_cluster
 	time start_pxf $(pwd)/singlecluster
-        # Let's make sure that the pxf_automation_src directory is writeable
-        # Recusive chowning will hammer OverlayFS and introduce flakiness so we'll make
-        # the directory structure writable by all
-        local pxf_src_dir=pxf_automation_src
-        if [ -d "${pxf_src_dir}" ]
-        then
-            chmod a+w ${pxf_src_dir} 
-            find ${pxf_src_dir}  -type d -exec chmod a+w {} \;
-        fi
-        #chowning the singlecluster else test will fail
-        chown -R gpadmin:gpadmin singlecluster
+	# Let's make sure that pxf_automation/singlecluster directories are writeable
+	chmod a+w pxf_automation_src singlecluster
+	find pxf_automation_src/tinc* -type d -exec chmod a+w {} \;
 	time run_regression_test
 	time run_pxf_automation $(pwd)/singlecluster
 }

@@ -360,20 +360,23 @@ DATA(insert OID = 7001 ( rank  PGNSP PGUID 12 1 0 0 f f f f i 0 0 20 t "" _null_
 /* dense_rank() => int8 */ 
 DATA(insert OID = 7002 ( dense_rank  PGNSP PGUID 12 1 0 0 f f f f i 0 0 20 t "" _null_ _null_ _null_ _null_ window_dummy _null_ _null_ _null_ n ));
 
+#define WINDOW_PERCENT_RANK 7003
 /* percent_rank() => float8 */ 
 DATA(insert OID = 7003 ( percent_rank  PGNSP PGUID 12 1 0 0 f f f f i 0 0 701 t "" _null_ _null_ _null_ _null_ window_dummy _null_ _null_ _null_ n ));
 
+#define CUME_DIST_OID 7004
 /* cume_dist() => float8 */ 
 DATA(insert OID = 7004 ( cume_dist  PGNSP PGUID 12 1 0 0 f f f f i 0 0 701 t "" _null_ _null_ _null_ _null_ window_dummy _null_ _null_ _null_ n ));
 
-
-#define CUME_DIST_OID 7004
+#define WINDOW_NTILE_INT4 7005
 /* ntile(int4) => int8 */ 
 DATA(insert OID = 7005 ( ntile  PGNSP PGUID 12 1 0 0 f f f f i 1 0 20 t "23" _null_ _null_ _null_ _null_ window_dummy _null_ _null_ _null_ n ));
 
+#define WINDOW_NTILE_INT8 7006
 /* ntile(int8) => int8 */ 
 DATA(insert OID = 7006 ( ntile  PGNSP PGUID 12 1 0 0 f f f f i 1 0 20 t "20" _null_ _null_ _null_ _null_ window_dummy _null_ _null_ _null_ n ));
 
+#define WINDOW_NTILE_NUMERIC 7007
 /* ntile("numeric") => int8 */ 
 DATA(insert OID = 7007 ( ntile  PGNSP PGUID 12 1 0 0 f f f f i 1 0 20 t "1700" _null_ _null_ _null_ _null_ window_dummy _null_ _null_ _null_ n ));
 

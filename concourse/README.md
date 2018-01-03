@@ -69,19 +69,10 @@ Use this team to create any pipelines instead of the `main` team.
 ### Creating Your Own Pipeline
 Many developers want to create their own copies of the master pipeline.
 
-To accommodate this without naming confusion, workload instability, nor
-artifact collision, we have the following solution:
+To accommodate this without naming confusion, workload instability,
+nor artifact collision, please follow instructions in pipelines
+[README.md](pipelines/README.md) for additional information.
 
-1. Fork or branch the gpdb git repo
-1. Create an s3 bucket for your pipeline to use
-1. Edit `concourse/pipelines/pipeline.yml` to point at your git branch and s3 bucket
-1. Commit and push your branch
-1. Set the pipeline using a unique pipeline name. Example:
-
-```bash
-fly -t gpdb login
-fly -t gpdb set-pipeline -c concourse/pipelines/pipeline.yml -p NEW_PIPELINE_NAME
-```
 #### Notes and warnings
 
 * Clean up your dev pipelines when you are finished with them. (Use `fly destroy-pipeline`)

@@ -346,7 +346,6 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 %type <boolean> opt_freeze opt_default opt_ordered opt_recheck
 %type <boolean> opt_rootonly_all
 %type <boolean> opt_dxl
-%type <boolean> codegen
 %type <defelt>	opt_binary opt_oids copy_delimiter
 
 %type <boolean> copy_from opt_program skip_external_partition
@@ -8914,7 +8913,7 @@ opt_name_list:
  *
  *****************************************************************************/
 
-ExplainStmt: EXPLAIN opt_analyze opt_verbose opt_dxl opt_force codegen ExplainableStmt
+ExplainStmt: EXPLAIN opt_analyze opt_verbose opt_dxl opt_force ExplainableStmt
 				{
 					ExplainStmt *n = makeNode(ExplainStmt);
 					n->analyze = $2;
@@ -8924,8 +8923,7 @@ ExplainStmt: EXPLAIN opt_analyze opt_verbose opt_dxl opt_force codegen Explainab
 						ereport(ERROR, (errcode(ERRCODE_SYNTAX_ERROR), 
 								errmsg("cannot use force with explain statement")
 							       ));
-					n->codegen = $6;
-					n->query = $7;
+					n->query = $6;
 					$$ = (Node *)n;
 				}
 		;
@@ -8953,11 +8951,6 @@ opt_dxl:	DXL										{ $$ = TRUE; }
 
 opt_analyze:
 			analyze_keyword			{ $$ = TRUE; }
-			| /* EMPTY */			{ $$ = FALSE; }
-		;
-
-codegen:
-			CODEGEN				{ $$ = TRUE; }
 			| /* EMPTY */			{ $$ = FALSE; }
 		;
 
@@ -13042,7 +13035,6 @@ unreserved_keyword:
 			| CLASS
 			| CLOSE
 			| CLUSTER
-			| CODEGEN
 			| COMMENT
 			| COMMIT
 			| COMMITTED

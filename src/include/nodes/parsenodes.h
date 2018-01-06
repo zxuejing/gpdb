@@ -2603,7 +2603,6 @@ typedef struct ExplainStmt
 	bool		verbose;		/* print plan info */
 	bool		analyze;		/* get statistics by executing plan */
 	bool		dxl;			/* display plan in dxl format */
-	bool		codegen;		/* display generated IR codegen */
 } ExplainStmt;
 
 /* ----------------------

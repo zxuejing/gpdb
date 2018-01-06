@@ -6169,10 +6169,7 @@ ExecCleanTargetListLength(List *targetlist)
  * of *isDone = ExprMultipleResult signifies a set element, and a return
  * of *isDone = ExprEndResult signifies end of the set of tuple.
  */
-#ifndef USE_CODEGEN
-static
-#endif
-bool
+static bool
 ExecTargetList(List *targetlist,
 			   ExprContext *econtext,
 			   Datum *values,
@@ -6315,10 +6312,7 @@ ExecTargetList(List *targetlist,
  *
  * Results are stored into the passed values and isnull arrays.
  */
-#ifndef USE_CODEGEN
-static
-#endif
-void
+static void
 ExecVariableList(ProjectionInfo *projInfo,
 				 Datum *values,
 				 bool *isnull)
@@ -6387,7 +6381,7 @@ ExecProject(ProjectionInfo *projInfo, ExprDoneCond *isDone)
 		if (isDone)
 			*isDone = ExprSingleResult;
 
-		call_ExecVariableList(projInfo,
+		ExecVariableList(projInfo,
 						 slot_get_values(slot),
 						 slot_get_isnull(slot));
 		ExecStoreVirtualTuple(slot);

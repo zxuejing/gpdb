@@ -10175,7 +10175,7 @@ EXPLAIN SELECT a FROM csq_cast_param_outer WHERE b in (SELECT CASE WHEN a > 1 TH
                                                    QUERY PLAN
 -----------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)  (cost=1.11..2.49 rows=4 width=4)
-   ->  Nested Loop Semi Join  (cost=1.11..2.49 rows=2 width=4)
+   ->  Nested Loop EXISTS Join  (cost=1.11..2.49 rows=2 width=4)
          Join Filter: CASE WHEN csq_cast_param_outer.a > 1 THEN csq_cast_param_inner.d ELSE '42'::myint END::bigint = csq_cast_param_outer.b::bigint
          ->  Seq Scan on csq_cast_param_outer  (cost=0.00..1.02 rows=1 width=8)
          ->  Materialize  (cost=1.11..1.17 rows=2 width=4)
@@ -10199,7 +10199,7 @@ EXPLAIN SELECT a FROM csq_cast_param_outer WHERE b in (SELECT CASE WHEN a > 1 TH
                                                     QUERY PLAN
 -------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)  (cost=1.11..2.49 rows=4 width=4)
-   ->  Nested Loop Semi Join  (cost=1.11..2.49 rows=2 width=4)
+   ->  Nested Loop EXISTS Join  (cost=1.11..2.49 rows=2 width=4)
          Join Filter: CASE WHEN csq_cast_param_outer.a > 1 THEN csq_cast_param_inner.d ELSE '42'::myint END::numeric = csq_cast_param_outer.b::numeric
          ->  Seq Scan on csq_cast_param_outer  (cost=0.00..1.02 rows=1 width=8)
          ->  Materialize  (cost=1.11..1.17 rows=2 width=4)

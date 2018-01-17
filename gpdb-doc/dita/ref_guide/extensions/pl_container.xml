@@ -412,11 +412,8 @@ $$ LANGUAGE plcontainer;</codeblock></p>
           documentation for additional information about
           <codeph>plpy.subtransaction()</codeph>.</li>
       </ul>
-      <p>PL/Container does not support these Greenplum Database PL/Python features:<ul
+      <p>PL/Container does not support this Greenplum Database PL/Python feature:<ul
           id="ul_qzd_1w5_ncb">
-          <li><codeph>plpy.SPIError</codeph> - If an error occurs when running
-              <codeph>plpy.execute</codeph> or <codeph>plpy.prepare</codeph>, the exception
-              <codeph>plpy.SPIError</codeph> is raised. </li>
           <li> Multi-dimensional arrays.</li>
         </ul></p>
       <p>Also, the Python module has two global dictionary objects that retain the data between

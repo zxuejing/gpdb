@@ -200,6 +200,7 @@ make installcheck-world
 ## Alternative Configurations
 
 ### Building GPDB without GPORCA
+
 Currently, GPDB is built with ORCA by default so latest ORCA libraries and headers need
 to be available in the environment. [Build and Install](#buildOrca) the latest ORCA.
 
@@ -213,6 +214,7 @@ make distclean
 ```
 
 ### Building GPDB with PXF
+
 PXF is an extension framework for GPDB to enable fast access to external hadoop datasets.
 Refer to [PXF extension](https://github.com/greenplum-db/gpdb/tree/master/gpAux/extensions/pxf) for more information.
 Currently, GPDPB is built with PXF by default (--enable-pxf is on).
@@ -231,62 +233,13 @@ gpperfmon is dependent on several libraries like apr, apu, and libsigar
 
 ## Development with Docker
 
+See [README.docker.md](README.docker.md).
+
 We provide a docker image with all dependencies required to compile and test
-GPDB. You can view the dependency dockerfile at `./src/tools/docker/base/Dockerfile`.
-The image is hosted on docker hub at `pivotaldata/gpdb-devel`. This docker
-image is currently under heavy development.
+GPDB [(See Usage)](src/tools/docker/README.md). You can view the dependency dockerfile at `./src/tools/docker/centos6-admin/Dockerfile`.
+The image is hosted on docker hub at `pivotaldata/gpdb-dev:centos6-gpadmin`.
 
 A quickstart guide to Docker can be found on the [Pivotal Engineering Journal](http://engineering.pivotal.io/post/docker-gpdb/).
-
-Known issues:
-* The `installcheck-world` make target has at least 4 failures, some of which
-  are non-deterministic
-
-### Running regression tests with Docker
-
-1. Create a docker host with 8gb RAM and 4 cores
-    ```bash
-    docker-machine create -d virtualbox --virtualbox-cpu-count 4 --virtualbox-disk-size 50000 --virtualbox-memory 8192 gpdb
-    eval $(docker-machine env gpdb)
-    ```
-
-1. Build your code on gpdb-devel rootfs
-    ```bash
-    cd [path/to/gpdb]
-    docker build .
-    # image beefc4f3 built
-    ```
-    The top level Dockerfile will automatically sync your current working
-    directory into the docker image. This means that any code you are working
-    on will automatically be built and ready for testing in the docker context
-
-1. Log into docker image
-    ```bash
-    docker run -it beefc4f3
-    ```
-
-1. As `gpadmin` user run `installcheck-world`
-    ```bash
-    su gpadmin
-    cd /workspace/gpdb
-    make installcheck-world
-    ```
-
-### Caveats
-
-* No Space Left On Device
-    On macOS the docker-machine vm can periodically become full with unused images.
-    You can clear these images with a combination of docker commands.
-    ```bash
-    # assuming no currently running containers
-    # remove all stopped containers from cache
-    docker ps -aq | xargs -n 1 docker rm
-    # remove all untagged images
-    docker images -aq --filter dangling=true | xargs -n 1 docker rmi
-    ```
-
-* The Native macOS docker client available with docker 1.12+ (beta) or
-  Community Edition 17+ may also work
 
 ## Development with Vagrant
 
@@ -318,7 +271,7 @@ throughout the codebase, but a few larger additions worth noting:
 
 * __gpdb-doc/__
 
-  Constains the Greenplum documentation in DITA XML format. Refer to
+  Contains the Greenplum documentation in DITA XML format. Refer to
   `gpdb-doc/README.md` for information on how to build, and work with
   the documentation.
 

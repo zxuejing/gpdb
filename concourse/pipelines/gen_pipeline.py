@@ -164,8 +164,6 @@ if __name__ == "__main__":
         MSG += '    -v tf-bucket-path=dev/' + ARGS.pipeline_type + '/ \\\n'
         MSG += '    -v bucket-name=gpdb5-concourse-builds-dev'
 
-    print MSG
-
     if ARGS.pipeline_type == 'prod':
         print "======================================================================"
         print "Validate Pipeline Release Jobs"
@@ -178,3 +176,5 @@ if __name__ == "__main__":
                                   env=env)
         except subprocess.CalledProcessError:
             exit(1)
+
+    print MSG

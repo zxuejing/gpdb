@@ -129,7 +129,9 @@ fly -t gpdb-dev \
     -c gpdb-dpm-curry.yml \
     -l ~/workspace/continuous-integration/secrets/gpdb_common-ci-secrets.yml \
     -l ~/workspace/continuous-integration/secrets/gpdb_5X_STABLE-ci-secrets.yml \
-    -v bucket-name=gpdb5-concourse-builds-dev
+    -v bucket-name=gpdb5-concourse-builds-dev \
+    -v gpdb-git-remote=<https://github.com/<github-user>/gpdb> \
+    -v gpdb-git-branch=<branch-name>
 ```
 
 Use the following to generate a pipeline with `ICW` and `CS` test jobs
@@ -155,6 +157,7 @@ fly -t gpdb-dev \
     -c gpdb-cs-durant.yml \
     -l ~/workspace/continuous-integration/secrets/gpdb_common-ci-secrets.yml \
     -l ~/workspace/continuous-integration/secrets/gpdb_5X_STABLE-ci-secrets.yml \
-    -v bucket-name=gpdb5-concourse-builds-dev
-
+    -v bucket-name=gpdb5-concourse-builds-dev \
+    -v gpdb-git-remote=<https://github.com/<github-user>/gpdb> \
+    -v gpdb-git-branch=<branch-name>
 ```

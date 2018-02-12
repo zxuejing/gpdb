@@ -1787,7 +1787,8 @@ void
 FileRep_InsertConfigLogEntryInternal(char		*description,
 									 const char *fileName,
 									 int		lineNumber,
-									 const char *funcName)
+									 const char *funcName,
+									 bool printStack)
 {
 	char		temp[128];
 	char		buftime[128];
@@ -1819,7 +1820,8 @@ FileRep_InsertConfigLogEntryInternal(char		*description,
 						getpid(),
 						fileName,
 						lineNumber,
-						funcName)));
+						funcName),
+				errprintstack(printStack)));
 		return;
 	}
 
@@ -2437,7 +2439,14 @@ FileRep_SetSegmentState(SegmentState_e segmentState, FaultType_e faultType)
 		SendPostmasterSignal(PMSIGNAL_FILEREP_STATE_CHANGE);
 	}
 
-	FileRep_InsertConfigLogEntry("set segment state");
+	if (segmentState == SegmentStateFault)
+	{
+		FileRep_InsertConfigLogEntry_PrintStack("set segment state");
+	}
+	else
+	{
+		FileRep_InsertConfigLogEntry("set segment state");	
+	}
 }
 
 void

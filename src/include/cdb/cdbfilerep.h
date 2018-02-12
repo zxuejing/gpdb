@@ -1214,12 +1214,17 @@ extern	void FileRep_InsertLogEntry(
 									uint32					fileRepMessageCount);
 
 #define FileRep_InsertConfigLogEntry(description)	\
-			FileRep_InsertConfigLogEntryInternal(description, __FILE__, __LINE__, PG_FUNCNAME_MACRO)
+			FileRep_InsertConfigLogEntryInternal(description, __FILE__, __LINE__, PG_FUNCNAME_MACRO, false)
+
+#define FileRep_InsertConfigLogEntry_PrintStack(description)	\
+			FileRep_InsertConfigLogEntryInternal(description, __FILE__, __LINE__, PG_FUNCNAME_MACRO, true)
+
 
 extern void	FileRep_InsertConfigLogEntryInternal(char		*description,
 												 const char *fileName,
 												 int		lineNumber,
-												 const char *funcName);
+												 const char *funcName,
+												 bool printStack);
 
 extern void FileRep_Sleep1ms(int retry);
 extern void FileRep_Sleep10ms(int retry);

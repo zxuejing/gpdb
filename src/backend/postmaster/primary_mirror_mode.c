@@ -1185,7 +1185,7 @@ requestTransitionToPrimaryMirrorMode(PrimaryMirrorModeTransitionArguments *args,
 	assertModuleInitialized();
 	targetMode = args->mode;
 
-	elog(getPrimaryMirrorModeDebugLogLevel(true),
+	elog(LOG,
 		 "PrimaryMirrorTransitionRequest: to primary/mirror mode %s, "
 		 "data state %s, host %s, port %d, peer %s, peerPort %d%s%s",
 		 getMirrorModeLabel(targetMode), getDataStateLabel(args->dataState),

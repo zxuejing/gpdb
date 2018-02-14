@@ -792,6 +792,7 @@ CTranslatorRelcacheToDXL::Pdrgpmdcol
 										pmdnameCol,
 										att->attnum,
 										pmdidCol,
+										att->atttypmod,
 										!att->attnotnull,
 										att->attisdropped,
 										pdxlnDefault /* default value */,
@@ -1009,7 +1010,8 @@ CTranslatorRelcacheToDXL::AddSystemColumns
 										(
 										pmdnameCol, 
 										attno, 
-										CTranslatorUtils::PmdidSystemColType(pmp, attno), 
+										CTranslatorUtils::PmdidSystemColType(pmp, attno),
+										IDefaultTypeModifier,
 										false,	// fNullable
 										false,	// fDropped
 										NULL,	// default value
@@ -2077,6 +2079,7 @@ CTranslatorRelcacheToDXL::Pmdcheckconstraint
 										ul + 1 /*ulColId*/,
 										pmdcol->IAttno(),
 										pmdidColType,
+										pmdcol->ITypeModifier(),
 										false /* fColDropped */
 										);
 		pdrgpdxlcd->Append(pdxlcd);
@@ -2727,7 +2730,7 @@ CTranslatorRelcacheToDXL::PimdobjCast
 		case COERCION_PATH_ARRAYCOERCE:
 		{
 			coercePathType = IMDCast::EmdtArrayCoerce;
-			return GPOS_NEW(pmp) CMDArrayCoerceCastGPDB(pmp, pmdid, pmdname, pmdidSrc, pmdidDest, fBinaryCoercible, GPOS_NEW(pmp) CMDIdGPDB(oidCastFunc), IMDCast::EmdtArrayCoerce, -1, false, EdxlcfImplicitCast, -1);
+			return GPOS_NEW(pmp) CMDArrayCoerceCastGPDB(pmp, pmdid, pmdname, pmdidSrc, pmdidDest, fBinaryCoercible, GPOS_NEW(pmp) CMDIdGPDB(oidCastFunc), IMDCast::EmdtArrayCoerce, IDefaultTypeModifier, false, EdxlcfImplicitCast, -1);
 		}
 			break;
 		case COERCION_PATH_FUNC:
@@ -3408,6 +3411,7 @@ CTranslatorRelcacheToDXL::PmdpartcnstrIndex
 										ul + 1, // ulColId
 										pmdcol->IAttno(),
 										pmdidColType,
+										pmdcol->ITypeModifier(),
 										false // fColDropped
 										);
 		pdrgpdxlcd->Append(pdxlcd);
@@ -3496,6 +3500,7 @@ CTranslatorRelcacheToDXL::PmdpartcnstrRelation
 											ul + 1, // ulColId
 											pmdcol->IAttno(),
 											pmdidColType,
+											pmdcol->ITypeModifier(),
 											false // fColDropped
 											);
 			pdrgpdxlcd->Append(pdxlcd);

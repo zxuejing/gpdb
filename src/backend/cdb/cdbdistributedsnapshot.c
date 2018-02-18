@@ -70,6 +70,13 @@ localXidSatisfiesAnyDistributedSnapshot(TransactionId localXid)
 		return false;
 
 	/*
+	 * During upgrade, there is no distributed system to query, and no way a
+	 * distributed transaction could be looking at a tuple right now.
+	 */
+	if (IsBinaryUpgrade)
+		return false;
+
+	/*
 	 * If don't have snapshot, can't check the global visibility and hence
 	 * return not to perform clean the tuple.
 	 */

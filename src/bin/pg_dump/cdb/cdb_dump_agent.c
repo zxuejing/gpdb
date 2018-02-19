@@ -6196,7 +6196,7 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 			options = "";
 
 			if (command && strlen(command) > 0)
-				on_clause = command;
+				on_clause = urilocations;
 			else
 				on_clause = NULL;
 		}

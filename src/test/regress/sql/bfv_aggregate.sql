@@ -1378,7 +1378,11 @@ select array_agg(a order by b nulls last) from aggordertest;
 select array_agg(a order by b desc nulls first) from aggordertest;
 select array_agg(a order by b desc nulls last) from aggordertest;
 
-
+-- Test unsupported ORCA feature: agg(set returning function)
+CREATE TABLE tbl_agg_srf (foo int[]) DISTRIBUTED RANDOMLY;
+INSERT INTO tbl_agg_srf VALUES (array[1,2,3]);
+EXPLAIN SELECT count(unnest(foo)) FROM tbl_agg_srf;
+SELECT count(unnest(foo)) FROM tbl_agg_srf;
 -- CLEANUP
 set client_min_messages='warning';
 drop schema bfv_aggregate cascade;

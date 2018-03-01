@@ -40,6 +40,7 @@
 #include "port/atomics.h"
 #include "port/pg_crc32c.h"
 #include "storage/pmsignal.h"
+#include "postmaster/postmaster.h"
 
 #include "cdb/tupchunklist.h"
 #include "cdb/ml_ipc.h"
@@ -1153,6 +1154,7 @@ setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFami
 	int					fd = -1;
 	const char		   *fun;
 
+
 	/*
 	 * At the moment, we don't know which of IPv6 or IPv4 is wanted,
 	 * or even supported, so just ask getaddrinfo...
@@ -1186,7 +1188,7 @@ setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFami
 #endif
 
 	fun = "getaddrinfo";
-	s = getaddrinfo(NULL, service, &hints, &addrs);
+	s = getaddrinfo(BackendListenAddress, service, &hints, &addrs);
 	if (s != 0)
 		elog(ERROR, "getaddrinfo says %s", gai_strerror(s));
 

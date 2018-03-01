@@ -432,6 +432,8 @@ static char *gp_test_system_cache_flush_force_str;
 /* include file/line information to stack traces */
 bool		gp_log_stack_trace_lines;
 
+/* ignore INTO error-table clauses for backwards compatibility */
+bool		gp_ignore_error_table = false;
 
 /*
  * If set to true, we will silently insert into the correct leaf
@@ -3220,6 +3222,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 		&vmem_process_interrupt,
 		false, NULL, NULL
 	},
+
 	{
 		{"execute_pruned_plan", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Prune plan to discard unwanted plan nodes for each slice before execution"),
@@ -3229,6 +3232,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 		&execute_pruned_plan,
 		true, NULL, NULL
 	},
+
 	{
 		{"pljava_classpath_insecure", PGC_POSTMASTER, CUSTOM_OPTIONS,
 			gettext_noop("Allow pljava_classpath to be set by user per session"),
@@ -3238,6 +3242,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 		&pljava_classpath_insecure,
 		false, assign_pljava_classpath_insecure, NULL
 	},
+
 	{
 		{"gp_enable_segment_copy_checking", PGC_USERSET, CUSTOM_OPTIONS,
 			gettext_noop("Enable check the distribution key restriction on segment for command \"COPY FROM ON SEGMENT\"."),
@@ -3247,6 +3252,17 @@ struct config_bool ConfigureNamesBool_gp[] =
 		&gp_enable_segment_copy_checking,
 		true, NULL, NULL
 	},
+
+	{
+		{"gp_ignore_error_table", PGC_USERSET, COMPAT_OPTIONS_PREVIOUS,
+			gettext_noop("Ignore INTO error-table in external table and COPY."),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_GPDB_ADDOPT
+		},
+		&gp_ignore_error_table,
+		false, NULL, NULL
+	},
+
 	/* End-of-list marker */
 	{
 		{NULL, 0, 0, NULL, NULL}, NULL, false, NULL, NULL

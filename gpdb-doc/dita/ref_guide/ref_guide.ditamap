@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
 <map>
-	<topicref href="../../550/homenav.html" scope="external" navtitle="Greenplum Database Docs Home"
+	<topicref href="../../560/homenav.html" scope="external" navtitle="Greenplum Database Docs Home"
 		format="html"/>
 	<topicref href="ref_guide.xml" navtitle="Reference Guide">
 		<topicref href="sql_commands/sql_ref.xml">

@@ -5023,7 +5023,7 @@ OptLogErrorTable:
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 					 errmsg("Error table is not supported."),
 					 errhint("Set gp_ignore_error_table to ignore the [INTO error-table] clause for backward compatibility."),
-					 parser_errposition(@3)));
+					 scanner_errposition(@3)));
 			}
 			$$ = TRUE;
 		}

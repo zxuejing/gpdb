@@ -142,7 +142,7 @@ CdbDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 		/*
 		 * Wait for all QEs to finish.	Don't cancel.
 		 */
-		pr = cdbdisp_getDispatchResults(&ds, errmsgbuf);
+		pr = cdbdisp_getDispatchResults(&ds, errmsgbuf, NULL);
 
 		if (!GangOK(primaryGang))
 		{

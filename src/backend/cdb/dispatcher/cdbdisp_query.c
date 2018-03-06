@@ -446,9 +446,10 @@ cdbdisp_dispatchCommandInternal(const char *strCommand,
 								int flags,
 								CdbPgResults *cdb_pgresults)
 {
-	struct CdbDispatcherState ds = { NULL, NULL, NULL };
-	CdbDispatchResults* dispatchresults = NULL;
-	StringInfoData qeErrorMsg;
+	struct CdbDispatcherState ds = {NULL, NULL, NULL};
+	CdbDispatchResults *dispatchresults = NULL;
+	StringInfoData	qeErrorMsg;
+	int				qeErrorCode = 0;
 
 	DispatchCommandQueryParms *pQueryParms;
 	Gang *primaryGang;
@@ -527,32 +528,24 @@ cdbdisp_dispatchCommandInternal(const char *strCommand,
 		/*
 		 * Block until valid results is available or one or more QEs got errors.
 		 */
-		dispatchresults = cdbdisp_getDispatchResults(&ds, &qeErrorMsg);
+		dispatchresults = cdbdisp_getDispatchResults(&ds, &qeErrorMsg,
+													 &qeErrorCode);
 
 		/*
 		 * If QEs have errors, throw it up
 		 */
 		if (!dispatchresults)
 		{
-			/*
-			 * debug_string_query is not meaningful for utility statement
-			 */
-			/*
-			 * XXX: It would be nice to get more details from the segment, not
-			 * just the error message. In particular, an error code would be
-			 * nice. DATA_EXCEPTION is a pretty wild guess on the real cause.
-			 */
 			if (serializedQuerytree != NULL)
 				ereport(ERROR,
-						(errcode(ERRCODE_DATA_EXCEPTION),
-						errmsg("%s", qeErrorMsg.data)));
+						(errcode(qeErrorCode),
+						 errmsg("%s", qeErrorMsg.data)));
 			else
-
 				ereport(ERROR,
-						(errcode(ERRCODE_DATA_EXCEPTION),
-						errmsg("could not execute command on QE"),
-						errdetail("%s", qeErrorMsg.data),
-						errhint("command: '%s'",strCommand)));
+						(errcode(qeErrorCode),
+						 errmsg("could not execute command on QE"),
+						 errdetail("%s", qeErrorMsg.data),
+						 errhint("command: '%s'", strCommand)));
 		}
 
 		if (cdb_pgresults)

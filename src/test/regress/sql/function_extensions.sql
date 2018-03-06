@@ -132,3 +132,15 @@ drop function func3();
 drop function func4(int, int);
 drop function func5(int);
 drop function func1_mod_int_stb(int);
+
+-- Test error propagation from segments
+CREATE TABLE uniq_test(id int primary key);
+CREATE OR REPLACE FUNCTION trigger_unique() RETURNS void AS $$
+BEGIN
+	INSERT INTO uniq_test VALUES (1);
+	INSERT INTO uniq_test VALUES (1);
+	EXCEPTION WHEN unique_violation THEN
+		raise notice 'unique_violation';
+END;
+$$ LANGUAGE plpgsql volatile;
+SELECT trigger_unique();

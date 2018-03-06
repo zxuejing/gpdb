@@ -169,15 +169,25 @@ CdbCheckDispatchResult(struct CdbDispatcherState *ds,
  *
  * Return Values:
  *   Return NULL If one or more QEs got Error in which case qeErrorMsg contain
- *   QE error messages.
+ *   QE error messages and qeErrorCode the ERRCODE thrown.
  */
 struct CdbDispatchResults *
-cdbdisp_getDispatchResults(struct CdbDispatcherState *ds, StringInfoData *qeErrorMsg)
+cdbdisp_getDispatchResults(struct CdbDispatcherState *ds,
+						   StringInfoData *qeErrorMsg, int *qeErrorCode)
 {
     int errorcode;
 
-    if (!ds || !ds->primaryResults)
-        return NULL;
+	if (!ds || !ds->primaryResults)
+	{
+		/*
+		 * Fallback in case we have no dispatcher state.  Since the caller is
+		 * likely to output qeErrorMsg on NULL return, add an error message to
+		 * aid debugging.
+		 */
+		*qeErrorCode = ERRCODE_INTERNAL_ERROR;
+		appendStringInfoString(qeErrorMsg, "dispatcher error");
+		return NULL;
+	}
 
     /* wait QEs to return results or report errors*/
     CdbCheckDispatchResult(ds, DISPATCH_WAIT_NONE);
@@ -185,11 +195,13 @@ cdbdisp_getDispatchResults(struct CdbDispatcherState *ds, StringInfoData *qeErro
     /* check if any error reported */
     errorcode = ds->primaryResults->errcode;
 
-    if (errorcode)
-    {
-        cdbdisp_dumpDispatchResults(ds->primaryResults, qeErrorMsg);
-        return NULL;
-    }
+	if (errorcode)
+	{
+		if (qeErrorCode)
+			*qeErrorCode = errorcode;
+		cdbdisp_dumpDispatchResults(ds->primaryResults, qeErrorMsg);
+		return NULL;
+	}
 
     return ds->primaryResults;
 }
@@ -205,7 +217,8 @@ cdbdisp_getDispatchResults(struct CdbDispatcherState *ds, StringInfoData *qeErro
 void
 cdbdisp_finishCommand(struct CdbDispatcherState *ds)
 {
-	StringInfoData qeErrorMsg = {NULL, 0, 0, 0};
+	StringInfoData		qeErrorMsg = {NULL, 0, 0, 0};
+	int					qeErrorCode = 0;
 	CdbDispatchResults *pr = NULL;
 	/*
 	 * If cdbdisp_dispatchToGang() wasn't called, don't wait.
@@ -232,17 +245,12 @@ cdbdisp_finishCommand(struct CdbDispatcherState *ds)
 	{
 		initStringInfo(&qeErrorMsg);
 
-		pr = cdbdisp_getDispatchResults(ds, &qeErrorMsg);
-	
+		pr = cdbdisp_getDispatchResults(ds, &qeErrorMsg, &qeErrorCode);
+
 		if (!pr)
 		{
-			/*
-			 * XXX: It would be nice to get more details from the segment, not
-			 * just the error message. In particular, an error code would be
-			 * nice. DATA_EXCEPTION is a pretty wild guess on the real cause.
-			 */
 			ereport(ERROR,
-					(errcode(ERRCODE_DATA_EXCEPTION),
+					(errcode(qeErrorCode),
 					 errmsg("%s", qeErrorMsg.data)));
 		}
 

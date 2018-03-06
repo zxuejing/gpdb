@@ -55,8 +55,6 @@ SELECT * FROM sreh_copy ORDER BY a,b,c;
 DROP TABLE IF EXISTS sreh_copy; CREATE TABLE sreh_copy(a int, b int, c int) distributed by(a);
 COPY sreh_copy FROM '@abs_srcdir@/data/bad_data1.data' DELIMITER '|' LOG ERRORS INTO WHATEVER SEGMENT REJECT LIMIT 1000;
 ERROR:  Error table is not supported.
-LINE 1: ...ess/data/bad_data1.data' DELIMITER '|' LOG ERRORS INTO WHATE...
-                                                             ^
 HINT:  Set gp_ignore_error_table to ignore the [INTO error-table] clause for backward compatibility.
 SET gp_ignore_error_table=true;
 COPY sreh_copy FROM '@abs_srcdir@/data/bad_data1.data' DELIMITER '|' LOG ERRORS INTO WHATEVER SEGMENT REJECT LIMIT 1000;

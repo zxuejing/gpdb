@@ -38,7 +38,7 @@
               <li><cmdname>ROWCOMPARE</cmdname></li>
               <li><cmdname>FIELDSELECT</cmdname></li>
             </ul></li>
-          <li>Multiple <cmdname>DISTINCT</cmdname> qualified aggregate functions </li>
+          <li>Aggregate functions that take set operators as input arguments</li>
           <li>Inverse distribution functions</li>
         </ul></p>
     </body>
@@ -46,9 +46,9 @@
   <topic id="topic_u4t_vxl_vp">
     <title>Performance Regressions</title>
     <body>
-      <p>The following features are known performance regressions that occur with GPORCA
-          enabled:<ul id="ul_zp2_4yl_vp">
-           <li>Short running queries - For GPORCA, short running queries might encounter additional
+      <p>The following features are known performance regressions that occur with GPORCA enabled:<ul
+          id="ul_zp2_4yl_vp">
+          <li>Short running queries - For GPORCA, short running queries might encounter additional
             overhead due to GPORCA enhancements for determining an optimal query execution
             plan.</li>
           <li><cmdname>ANALYZE</cmdname> - For GPORCA, the <cmdname>ANALYZE</cmdname> command

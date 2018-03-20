@@ -880,11 +880,6 @@ anchors:
         path: 'sh'
         args: ['-c', 'sleep {{ccp_debug_sleep}}']
 
-- &pulse_properties
-  PULSE_URL: {{pulse_url}}
-  PULSE_USERNAME: {{pulse_username}}
-  PULSE_PASSWORD: {{pulse_password}}
-
 - &cs_ccp_aggregate_dpm_start
   - get: gpdb_src
     tags: ["ccp"]

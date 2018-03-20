@@ -856,7 +856,7 @@ PostmasterMain(int argc, char *argv[])
 	 * tcop/postgres.c (the option sets should not conflict) and with the
 	 * common help() function in main/main.c.
 	 */
-	while ((opt = getopt(argc, argv, "A:B:bc:D:d:EeFf:h:i:jk:lN:mM:nOo:Pp:r:S:sTt:UW:yx:-:")) != -1)
+	while ((opt = getopt(argc, argv, "A:B:bc:D:d:EeFf:h:ijk:lN:mM:nOo:Pp:r:S:sTt:UW:yx:-:")) != -1)
 	{
 		switch (opt)
 		{
@@ -917,13 +917,7 @@ PostmasterMain(int argc, char *argv[])
 				break;
 
 			case 'i':
-				/*
-				 * On segment, we need to override listen_addresses with '*' if it's
-				 * different from the hostname in gp_segment_configuration. Otherwise,
-				 * FTS prober can't talk to the segment.
-				 */
-				if (strcmp(optarg, ListenAddresses) != 0)
-					SetConfigOption("listen_addresses", "*", PGC_POSTMASTER, PGC_S_ARGV);
+				SetConfigOption("listen_addresses", "*", PGC_POSTMASTER, PGC_S_ARGV);
 				break;
 
 			case 'j':
@@ -1316,7 +1310,7 @@ PostmasterMain(int argc, char *argv[])
 		}
 
 		/* If there are more than one listen address, backend bind on all addresses*/
-		if (list_length(elemlist) > 1 || strcmp(ListenAddresses, "*") == 0)
+		if (list_length(elemlist) > 1)
 			BackendListenAddress = NULL;
 		else
 			BackendListenAddress = ListenAddresses;

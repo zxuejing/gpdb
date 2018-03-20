@@ -164,11 +164,11 @@ class PgCtlBackendOptions(CmdArgs):
     >>> str(PgCtlBackendOptions(5432, 1, 2))
     '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true'
     >>> str(PgCtlBackendOptions(5432, 1, 2).set_master(2, False, False))
-    '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true -M master --gp_contentid=-1 -x 2'
+    '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true -i -M master --gp_contentid=-1 -x 2'
     >>> str(PgCtlBackendOptions(5432, 1, 2).set_master(2, False, True))
-    '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true -M master --gp_contentid=-1 -x 2 -E'
-    >>> str(PgCtlBackendOptions(5432, 1, 2).set_segment('mirror', 1, 'sdw1'))
-    '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true -i sdw1 -M mirror --gp_contentid=1'
+    '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true -i -M master --gp_contentid=-1 -x 2 -E'
+    >>> str(PgCtlBackendOptions(5432, 1, 2).set_segment('mirror', 1))
+    '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true -i -M mirror --gp_contentid=1'
     >>> str(PgCtlBackendOptions(5432, 1, 2).set_special('upgrade'))
     '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true -U'
     >>> str(PgCtlBackendOptions(5432, 1, 2).set_special('maintenance'))
@@ -211,12 +211,12 @@ class PgCtlBackendOptions(CmdArgs):
         if seqserver: self.append("-E")
         return self
 
-    def set_segment(self, mode, content, host):
+    def set_segment(self, mode, content):
         """
         @param mode: mirroring mode
         @param content: content id
         """
-        self.extend(["-i", str(host), "-M", str(mode), "--gp_contentid="+str(content)])
+        self.extend(["-M", str(mode), "--gp_contentid="+str(content)])
         return self
 
     #
@@ -382,12 +382,11 @@ class SegmentStart(Command):
         dbid    = gpdb.getSegmentDbId()
         content = gpdb.getSegmentContentId()
         port    = gpdb.getSegmentPort()
-        host    = gpdb.getSegmentHostName()
         datadir = gpdb.getSegmentDataDirectory()
 
         # build backend options
         b = PgCtlBackendOptions(port, dbid, numContentsInCluster)
-        b.set_segment(mirrormode, content, host)
+        b.set_segment(mirrormode, content)
         b.set_utility(utilityMode)
         b.set_special(specialMode)
 
@@ -429,7 +428,7 @@ class SendFilerepTransitionMessage(Command):
     #
     def __init__(self, name, inputFile, port=None,ctxt=LOCAL, remoteHost=None, dataDir=None):
         if not remoteHost:
-             remoteHost = '${PGHOST:-"localhost"}'
+            remoteHost = "localhost"
         self.cmdStr='$GPHOME/bin/gp_primarymirror -h %s -p %s -i %s' % (remoteHost,port,inputFile)
         self.dataDir = dataDir
         Command.__init__(self,name,self.cmdStr,ctxt,remoteHost)
@@ -472,7 +471,7 @@ class SendFilerepTransitionMessage(Command):
 class SendFilerepTransitionStatusMessage(Command):
     def __init__(self, name, msg, dataDir=None, port=None,ctxt=LOCAL, remoteHost=None):
         if not remoteHost:
-             remoteHost = '${PGHOST:-"localhost"}' 
+            remoteHost = "localhost"
         self.cmdStr='$GPHOME/bin/gp_primarymirror -h %s -p %s' % (remoteHost,port)
         self.dataDir = dataDir
 

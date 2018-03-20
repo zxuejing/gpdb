@@ -742,7 +742,8 @@ resources:
 ##  \__,_|_| |_|\___|_| |_|\___/|_|  |___/
 ## ======================================================================
 
-ccp_jitter_delay_anchor: &ccp_jitter_delay
+anchors:
+- &ccp_jitter_delay
   do:
   - task: ccp jitter delay
     config:
@@ -755,17 +756,17 @@ ccp_jitter_delay_anchor: &ccp_jitter_delay
         path: 'sh'
         args: ['-c', 'sleep `expr $RANDOM % {{ccp_delay_jitter}} + 1`']
 
-ccp_default_params_anchor: &ccp_default_params
+- &ccp_default_params
   action: create
   delete_on_failure: true
   generate_random_name: true
   terraform_source: ccp_src/aws/
 
-ccp_vars_anchor: &ccp_default_vars
+- &ccp_default_vars
   aws_instance-node-instance_type: t2.medium
   platform: centos6
 
-ccp_destroy_anchor: &ccp_destroy
+- &ccp_destroy
   put: terraform
   tags: ["ccp"]
   params:
@@ -778,7 +779,7 @@ ccp_destroy_anchor: &ccp_destroy
   get_params:
     action: destroy
 
-ccp_destroy_two_clusters_anchor: &ccp_destroy_two_clusters
+- &ccp_destroy_two_clusters
   do:
   - *ccp_destroy
   - put: terraform2
@@ -793,7 +794,7 @@ ccp_destroy_two_clusters_anchor: &ccp_destroy_two_clusters
     get_params:
       action: destroy
 
-dpm_ccp_destroy_anchor: &dpm_ccp_destroy
+- &dpm_ccp_destroy
   put: terraform_for_dpm
   params:
     action: destroy
@@ -804,21 +805,21 @@ dpm_ccp_destroy_anchor: &dpm_ccp_destroy
   get_params:
     action: destroy
 
-ccp_gen_cluster_default_params_anchor: &ccp_gen_cluster_default_params
+- &ccp_gen_cluster_default_params
   AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
   AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
   AWS_DEFAULT_REGION: {{aws-region}}
   BUCKET_PATH: clusters/
   BUCKET_NAME: {{tf-bucket-name}}
 
-ccp_gpdb4_gen_cluster_default_params_anchor: &ccp_gpdb4_gen_cluster_default_params
+- &ccp_gpdb4_gen_cluster_default_params
   AWS_ACCESS_KEY_ID: {{gpdb4-tf-machine-access-key-id}}
   AWS_SECRET_ACCESS_KEY: {{gpdb4-tf-machine-secret-access-key}}
   AWS_DEFAULT_REGION: {{aws-region}}
   BUCKET_PATH: clusters/
   BUCKET_NAME: pivotal-pa-toolsmiths-pipeline-dynamic-terraform
 
-set_failed_anchor: &set_failed
+- &set_failed
   do:
   - task: on_failure_set_failed
     tags: ["ccp"]
@@ -841,7 +842,7 @@ set_failed_anchor: &set_failed
         BUCKET_PATH: clusters/
         BUCKET_NAME: {{tf-bucket-name}}
 
-set_failed_anchor_two_clusters: &set_failed_two_clusters
+- &set_failed_two_clusters
   do:
   - *set_failed
   - task: on_failure_set_failed
@@ -865,7 +866,7 @@ set_failed_anchor_two_clusters: &set_failed_two_clusters
         BUCKET_PATH: clusters/
         BUCKET_NAME: {{tf-bucket-name}}
 
-dpm_debug_sleep_anchor: &dpm_debug_sleep
+- &dpm_debug_sleep
   do:
   - task: debug_sleep
     config:
@@ -879,12 +880,12 @@ dpm_debug_sleep_anchor: &dpm_debug_sleep
         path: 'sh'
         args: ['-c', 'sleep {{ccp_debug_sleep}}']
 
-pulse_properties_anchor: &pulse_properties
+- &pulse_properties
   PULSE_URL: {{pulse_url}}
   PULSE_USERNAME: {{pulse_username}}
   PULSE_PASSWORD: {{pulse_password}}
 
-cs_ccp_aggregate_dpm_start_anchor: &cs_ccp_aggregate_dpm_start
+- &cs_ccp_aggregate_dpm_start
   - get: gpdb_src
     tags: ["ccp"]
     passed: [gate_dpm_start]
@@ -897,7 +898,7 @@ cs_ccp_aggregate_dpm_start_anchor: &cs_ccp_aggregate_dpm_start
   - get: centos-gpdb-dev-6
     tags: ["ccp"]
 
-cs_ccp_aggregate_mpp_start_anchor: &cs_ccp_aggregate_mpp_start
+- &cs_ccp_aggregate_mpp_start
   - get: gpdb_src
     tags: ["ccp"]
     passed: [gate_cs_start]
@@ -911,12 +912,12 @@ cs_ccp_aggregate_mpp_start_anchor: &cs_ccp_aggregate_mpp_start
   - get: centos-gpdb-dev-6
     tags: ["ccp"]
 
-cs_ccp_terraform_vars_anchor: &cs_ccp_terraform_vars
+- &cs_ccp_terraform_vars
   aws_instance-node-instance_type: m4.large
   aws_ebs_volume_type: gp2
   number_of_nodes: 1
 
-cs_ccp_terraform_params_anchor: &cs_ccp_terraform_params
+- &cs_ccp_terraform_params
   tags: ["ccp"]
   params:
     <<: *ccp_default_params
@@ -924,13 +925,13 @@ cs_ccp_terraform_params_anchor: &cs_ccp_terraform_params
       <<: *ccp_default_vars
       <<: *cs_ccp_terraform_vars
 
-cs_ccp_gen_cluster_params_anchor: &cs_ccp_gen_cluster_params
+- &cs_ccp_gen_cluster_params
   tags: ["ccp"]
   file: ccp_src/ci/tasks/gen_cluster.yml
   params:
     <<: *ccp_gen_cluster_default_params
 
-cs_ccp_run_tests_params_anchor: &cs_ccp_run_tests_params
+- &cs_ccp_run_tests_params
   tags: ["ccp"]
   file: gpdb_src/concourse/tasks/run_tinc.yml
   image: centos-gpdb-dev-6

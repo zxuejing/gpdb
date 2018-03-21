@@ -79,6 +79,7 @@ extern void freeGangsForPortal(char *portal_name);
 
 extern void DisconnectAndDestroyGang(Gang *gp);
 extern void DisconnectAndDestroyAllGangs(bool resetSession);
+extern void DisconnectAndDestroyUnusedGangs(void);
 
 extern void CheckForResetSession(void);
 

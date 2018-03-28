@@ -106,8 +106,20 @@ new_gpdb5_0_invalidate_indexes(migratorContext *ctx, bool check_mode,
 							   Cluster whichCluster)
 {
 	int			dbnum;
+	FILE	   *script = NULL;
+	char		output_path[MAXPGPATH];
 
 	prep_status(ctx, "Invalidating indexes in new cluster");
+
+	snprintf(output_path, sizeof(output_path), "%s/reindex_all.sql",
+			 ctx->cwd);
+
+	if (!check_mode)
+	{
+		if ((script = fopen(output_path, "w")) == NULL)
+			pg_log(ctx, PG_FATAL, "Could not create necessary file:  %s\n",
+				   output_path);
+	}
 
 	for (dbnum = 0; dbnum < ctx->old.dbarr.ndbs; dbnum++)
 	{
@@ -133,11 +145,34 @@ new_gpdb5_0_invalidate_indexes(migratorContext *ctx, bool check_mode,
 					 "UPDATE pg_index SET indisvalid = false WHERE indexrelid >= %u",
 					 FirstNormalObjectId);
 			PQclear(executeQueryOrDie(ctx, conn, query));
+
+			fprintf(script, "\\connect %s\n",
+					quote_identifier(ctx, olddb->db_name));
+			fprintf(script, "REINDEX DATABASE %s;\n",
+					quote_identifier(ctx, olddb->db_name));
 		}
 		PQfinish(conn);
 	}
 
-	check_ok(ctx);
+	if (!check_mode)
+		fclose(script);
+	report_status(ctx, PG_WARNING, "warning");
+	if (check_mode)
+		pg_log(ctx, PG_WARNING, "\n"
+			   "| All indexes have different internal formats\n"
+			   "| between your old and new clusters so they must\n"
+			   "| be reindexed with the REINDEX command. After\n"
+			   "| migration, you will be given REINDEX instructions.\n\n");
+	else
+		pg_log(ctx, PG_WARNING, "\n"
+			   "| All indexes have different internal formats\n"
+			   "| between your old and new clusters so they must\n"
+			   "| be reindexed with the REINDEX command.\n"
+			   "| The file:\n"
+			   "| \t%s\n"
+			   "| when executed by psql by the database super-user\n"
+			   "| will recreate all invalid indexes.\n\n",
+			   output_path);
 }
 
 /*

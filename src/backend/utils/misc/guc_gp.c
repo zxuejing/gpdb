@@ -579,6 +579,9 @@ bool		optimizer_enable_associativity;
 bool		optimizer_analyze_root_partition;
 bool		optimizer_analyze_midlevel_partition;
 
+/* GUCs for slice table*/
+int			gp_max_slices;
+
 /* System Information */
 static int	gp_server_version_num;
 static char *gp_server_version_string;
@@ -4718,6 +4721,16 @@ struct config_int ConfigureNamesInt_gp[] =
 		},
 		&gp_server_version_num,
 		GP_VERSION_NUM, GP_VERSION_NUM, GP_VERSION_NUM, NULL, NULL
+	},
+
+	{
+		{"gp_max_slices", PGC_USERSET, PRESET_OPTIONS,
+			gettext_noop("Maximum slices for a single query"),
+			NULL,
+			GUC_GPDB_ADDOPT | GUC_NOT_IN_SAMPLE
+		},
+		&gp_max_slices,
+		0, 0, INT_MAX, NULL, NULL
 	},
 
 	/* End-of-list marker */

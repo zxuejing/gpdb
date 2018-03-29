@@ -500,6 +500,9 @@ extern bool optimizer_analyze_midlevel_partition;
 extern bool optimizer_use_gpdb_allocators;
 
 
+/* GUCs for slice table*/
+extern int	gp_max_slices;
+
 /**
  * Enable logging of DPE match in optimizer.
  */

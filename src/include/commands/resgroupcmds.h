@@ -19,14 +19,6 @@
 #include "utils/resgroup.h"
 #include "utils/relcache.h"
 
-typedef enum ResGroupMemAuditorType
-{
-	RESGROUP_MEMORY_AUDITOR_VMTRACKER = 0,
-	RESGROUP_MEMORY_AUDITOR_CGROUP,
-
-	RESGROUP_MEMORY_AUDITOR_COUNT,
-} ResGroupMemAuditorType;
-
 extern void CreateResourceGroup(CreateResourceGroupStmt *stmt);
 extern void DropResourceGroup(DropResourceGroupStmt *stmt);
 extern void AlterResourceGroup(AlterResourceGroupStmt *stmt);
@@ -38,8 +30,4 @@ extern Oid GetResGroupIdForRole(Oid roleid);
 extern void GetResGroupCapabilities(Relation rel,
 									Oid groupId,
 									ResGroupCaps *resgroupCaps);
-extern void ResGroupCheckForRole(Oid groupId);
-
-extern int32 GetResGroupMemAuditorForId(Oid groupId, LOCKMODE lockmode);
-
 #endif   /* RESGROUPCMDS_H */

@@ -42,9 +42,6 @@
 #define RESGROUP_DEFAULT_MEM_SHARED_QUOTA (20)
 #define RESGROUP_DEFAULT_MEM_SPILL_RATIO (20)
 
-#define RESGROUP_DEFAULT_MEM_AUDITOR (RESGROUP_MEMORY_AUDITOR_VMTRACKER)
-#define RESGROUP_INVALID_MEM_AUDITOR (-1)
-
 #define RESGROUP_MIN_CONCURRENCY	(0)
 #define RESGROUP_MAX_CONCURRENCY	(MaxConnections)
 
@@ -61,30 +58,19 @@
 #define RESGROUP_MAX_MEMORY_SPILL_RATIO		(100)
 
 /*
- * The names must be in the same order as ResGroupMemAuditorType.
- */
-static const char *ResGroupMemAuditorName[] =
-{
-	"vmtracker",	// RESGROUP_MEMORY_AUDITOR_VMTRACKER
-	"cgroup"		// RESGROUP_MEMORY_AUDITOR_CGROUP
-};
-
-/*
  * The context to pass to callback in ALTER resource group
  */
 typedef struct {
 	Oid		groupid;
-	ResGroupLimitType	limittype;
+	int		limittype;
 	ResGroupCaps	caps;
-	ResGroupCap		memLimitGap;
 } ResourceGroupAlterCallbackContext;
 
 static int str2Int(const char *str, const char *prop);
 static ResGroupLimitType getResgroupOptionType(const char* defname);
-static ResGroupCap getResgroupOptionValue(DefElem *defel, int type);
+static ResGroupCap getResgroupOptionValue(DefElem *defel);
 static const char *getResgroupOptionName(ResGroupLimitType type);
 static void checkResgroupCapLimit(ResGroupLimitType type, ResGroupCap value);
-static void checkResgroupMemAuditor(ResGroupCaps *caps);
 static void parseStmtOptions(CreateResourceGroupStmt *stmt, ResGroupCaps *caps);
 static void validateCapabilities(Relation rel, Oid groupid, ResGroupCaps *caps, bool newGroup);
 static void insertResgroupCapabilityEntry(Relation rel, Oid groupid, uint16 type, char *value);
@@ -98,7 +84,6 @@ static void checkAuthIdForDrop(Oid groupId);
 static void createResgroupCallback(XactEvent event, void *arg);
 static void dropResgroupCallback(XactEvent event, void *arg);
 static void alterResgroupCallback(XactEvent event, void *arg);
-static int getResGroupMemAuditor(char *name);
 
 /*
  * CREATE RESOURCE GROUP
@@ -235,7 +220,6 @@ CreateResourceGroup(CreateResourceGroupStmt *stmt)
 		/* Create os dependent part for this resource group */
 		ResGroupOps_CreateGroup(groupid);
 		ResGroupOps_SetCpuRateLimit(groupid, caps.cpuRateLimit);
-		ResGroupOps_SetMemoryLimit(groupid, caps.memLimit);
 	}
 	else if (Gp_role == GP_ROLE_DISPATCH)
 		ereport(WARNING,
@@ -373,7 +357,7 @@ AlterResourceGroup(AlterResourceGroupStmt *stmt)
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 				 errmsg("option \"%s\" not recognized", defel->defname)));
 
-	value = getResgroupOptionValue(defel, limitType);
+	value = getResgroupOptionValue(defel);
 	checkResgroupCapLimit(limitType, value);
 
 	/*
@@ -412,8 +396,6 @@ AlterResourceGroup(AlterResourceGroupStmt *stmt)
 	oldValue = capArray[limitType];
 	capArray[limitType] = value;
 
-	checkResgroupMemAuditor(&caps);
-
 	if ((limitType == RESGROUP_LIMIT_TYPE_CPU ||
 		 limitType == RESGROUP_LIMIT_TYPE_MEMORY) &&
 		oldValue < value)
@@ -449,8 +431,6 @@ AlterResourceGroup(AlterResourceGroupStmt *stmt)
 		callbackCtx->groupid = groupid;
 		callbackCtx->limittype = limitType;
 		callbackCtx->caps = caps;
-		callbackCtx->memLimitGap = (limitType == RESGROUP_LIMIT_TYPE_MEMORY) ?
-			(oldValue - value) : 0;
 		RegisterXactCallbackOnce(alterResgroupCallback, (void *)callbackCtx);
 	}
 }
@@ -504,10 +484,8 @@ GetResGroupCapabilities(Relation rel, Oid groupId, ResGroupCaps *resgroupCaps)
 		type = (ResGroupLimitType) DatumGetInt16(typeDatum);
 
 		Assert(type > RESGROUP_LIMIT_TYPE_UNKNOWN);
+		Assert(type < RESGROUP_LIMIT_TYPE_COUNT);
 		Assert(!(mask & (1 << type)));
-
-		if (type >= RESGROUP_LIMIT_TYPE_COUNT)
-			continue;
 
 		mask |= 1 << type;
 
@@ -526,22 +504,6 @@ GetResGroupCapabilities(Relation rel, Oid groupId, ResGroupCaps *resgroupCaps)
 				 errmsg("Cannot find limit capabilities for resource group: %d",
 						groupId)));
 	}
-}
-
-
-/*
- * GetResGroupMemAuditorForId -- Return the resource group memory auditor
- * for a groupId
- */
-int32
-GetResGroupMemAuditorForId(Oid groupId, LOCKMODE lockmode)
-{
-	ResGroupCaps		caps;
-	Relation pg_resgroupcapability_rel = heap_open(
-			ResGroupCapabilityRelationId, lockmode);
-	GetResGroupCapabilities(pg_resgroupcapability_rel, groupId, &caps);
-	heap_close(pg_resgroupcapability_rel, lockmode);
-	return caps.memAuditor;
 }
 
 /*
@@ -682,29 +644,6 @@ GetResGroupNameForId(Oid oid, LOCKMODE lockmode)
 }
 
 /*
- * Check to see if the group can be assigned with role
- */
-void
-ResGroupCheckForRole(Oid groupId)
-{
-	Relation pg_resgroupcapability_rel;
-	ResGroupCaps caps;
-
-	pg_resgroupcapability_rel = heap_open(ResGroupCapabilityRelationId,
-										  AccessShareLock);
-
-	/* Load current resource group capabilities */
-	GetResGroupCapabilities(pg_resgroupcapability_rel, groupId, &caps);
-	if (caps.memAuditor == RESGROUP_MEMORY_AUDITOR_CGROUP)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("You cannot assign a role to this resource group because "
-					    "the memory_auditor property for this group is not the default.")));
-
-	heap_close(pg_resgroupcapability_rel, AccessShareLock);
-}
-
-/*
  * Get the option type from a name string.
  *
  * @param defname  the name string
@@ -724,8 +663,6 @@ getResgroupOptionType(const char* defname)
 		return RESGROUP_LIMIT_TYPE_MEMORY_SHARED_QUOTA;
 	else if (strcmp(defname, "memory_spill_ratio") == 0)
 		return RESGROUP_LIMIT_TYPE_MEMORY_SPILL_RATIO;
-	else if (strcmp(defname, "memory_auditor") == 0)
-		return RESGROUP_LIMIT_TYPE_MEMORY_AUDITOR;
 	else
 		return RESGROUP_LIMIT_TYPE_UNKNOWN;
 }
@@ -734,20 +671,9 @@ getResgroupOptionType(const char* defname)
  * Get capability value from DefElem, convert from int64 to int
  */
 static ResGroupCap
-getResgroupOptionValue(DefElem *defel, int type)
+getResgroupOptionValue(DefElem *defel)
 {
-	int64 value;
-
-	if (type == RESGROUP_LIMIT_TYPE_MEMORY_AUDITOR)
-	{
-		char *auditor_name = defGetString(defel);
-		value = getResGroupMemAuditor(auditor_name);
-	}
-	else
-	{
-		value = defGetInt64(defel);
-	}
-
+	int64 value = defGetInt64(defel);
 	if (value < INT_MIN || value > INT_MAX)
 		ereport(ERROR,
 				(errcode(ERRCODE_SYNTAX_ERROR),
@@ -839,35 +765,10 @@ checkResgroupCapLimit(ResGroupLimitType type, int value)
 								   RESGROUP_MAX_MEMORY_SPILL_RATIO)));
 				break;
 
-			case RESGROUP_LIMIT_TYPE_MEMORY_AUDITOR:
-				if (value != RESGROUP_MEMORY_AUDITOR_VMTRACKER &&
-					value != RESGROUP_MEMORY_AUDITOR_CGROUP)
-					ereport(ERROR,
-							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-							errmsg("memory_auditor should be \"%s\" or \"%s\"",
-								   ResGroupMemAuditorName[RESGROUP_MEMORY_AUDITOR_VMTRACKER],
-								   ResGroupMemAuditorName[RESGROUP_MEMORY_AUDITOR_CGROUP])));
-				break;
-
 			default:
 				Assert(!"unexpected options");
 				break;
 		}
-}
-
-/*
- * Check to see if concurrency is not zero for resource group
- * with cgroup memory auditor.
- */
-static void
-checkResgroupMemAuditor(ResGroupCaps *caps)
-{
-	if (caps->memAuditor == RESGROUP_MEMORY_AUDITOR_CGROUP &&
-		caps->concurrency != 0)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				errmsg("resource group concurrency must be 0 when group memory_auditor is %s",
-					ResGroupMemAuditorName[RESGROUP_MEMORY_AUDITOR_CGROUP])));
 }
 
 /*
@@ -902,7 +803,7 @@ parseStmtOptions(CreateResourceGroupStmt *stmt, ResGroupCaps *caps)
 		else
 			mask |= 1 << type;
 
-		value = getResgroupOptionValue(defel, type);
+		value = getResgroupOptionValue(defel);
 		checkResgroupCapLimit(type, value);
 
 		capArray[type] = value;
@@ -922,11 +823,6 @@ parseStmtOptions(CreateResourceGroupStmt *stmt, ResGroupCaps *caps)
 
 	if (!(mask & (1 << RESGROUP_LIMIT_TYPE_MEMORY_SPILL_RATIO)))
 		caps->memSpillRatio = RESGROUP_DEFAULT_MEM_SPILL_RATIO;
-
-	if (!(mask & (1 << RESGROUP_LIMIT_TYPE_MEMORY_AUDITOR)))
-		caps->memAuditor = RESGROUP_DEFAULT_MEM_AUDITOR;
-
-	checkResgroupMemAuditor(caps);
 }
 
 /*
@@ -979,8 +875,7 @@ alterResgroupCallback(XactEvent event, void *arg)
 		(ResourceGroupAlterCallbackContext *) arg;
 
 	if (event == XACT_EVENT_COMMIT)
-		ResGroupAlterOnCommit(ctx->groupid, ctx->limittype, &ctx->caps,
-				ctx->memLimitGap);
+		ResGroupAlterOnCommit(ctx->groupid, ctx->limittype, &ctx->caps);
 
 	pfree(arg);
 }
@@ -1023,10 +918,6 @@ insertResgroupCapabilities(Relation rel, Oid groupId, ResGroupCaps *caps)
 	sprintf(value, "%d", caps->memSpillRatio);
 	insertResgroupCapabilityEntry(rel, groupId,
 								  RESGROUP_LIMIT_TYPE_MEMORY_SPILL_RATIO, value);
-
-	sprintf(value, "%d", caps->memAuditor);
-	insertResgroupCapabilityEntry(rel, groupId,
-								  RESGROUP_LIMIT_TYPE_MEMORY_AUDITOR, value);
 }
 
 /*
@@ -1288,21 +1179,4 @@ str2Int(const char *str, const char *prop)
 				errmsg("%s requires a numeric value", prop)));
 
 	return floor(val);
-}
-
-/*
- * Get memory auditor from auditor name.
- */
-static int
-getResGroupMemAuditor(char *name)
-{
-	int index;
-
-	for (index = 0; index < RESGROUP_MEMORY_AUDITOR_COUNT; index ++)
-	{
-		if (strcmp(ResGroupMemAuditorName[index], name) == 0)
-			return index;
-	}
-
-	return RESGROUP_INVALID_MEM_AUDITOR;
 }

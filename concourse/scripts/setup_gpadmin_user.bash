@@ -138,4 +138,4 @@ _main() {
   workaround_before_concourse_stops_stripping_suid_bits
 }
 
-_main "$@"
+[ "${BASH_SOURCE[0]}" = "$0" ] && _main "$@"

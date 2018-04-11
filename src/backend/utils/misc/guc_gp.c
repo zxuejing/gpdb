@@ -96,6 +96,7 @@ static const char *assign_system_cache_flush_force(const char *newval, bool doit
 static const char *assign_gp_idf_deduplicate(const char *newval, bool doit,
 						  GucSource source);
 static const char *assign_explain_memory_verbosity(const char *newval, bool doit, GucSource source);
+static bool assign_verify_gpfdists_cert(bool newval, bool doit, GucSource source);
 static bool assign_dispatch_log_stats(bool newval, bool doit, GucSource source);
 static bool assign_gp_hashagg_default_nbatches(int newval, bool doit, GucSource source);
 
@@ -3284,6 +3285,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 		false, NULL, NULL
 	},
 
+	{
+		{"verify_gpfdists_cert", PGC_USERSET, EXTERNAL_TABLES,
+			gettext_noop("Verifies the authenticity of the gpfdist's certificate"),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_GPDB_ADDOPT
+		},
+		&verify_gpfdists_cert,
+		true, assign_verify_gpfdists_cert, NULL
+	},
+
 	/* End-of-list marker */
 	{
 		{NULL, 0, 0, NULL, NULL}, NULL, false, NULL, NULL
@@ -5893,6 +5904,15 @@ assign_optimizer(bool newval, bool doit, GucSource source)
 		}
 	}
 
+	return true;
+}
+
+static bool
+assign_verify_gpfdists_cert(bool newval, bool doit, GucSource source)
+{
+	if (!newval && Gp_role == GP_ROLE_DISPATCH)
+		elog(WARNING, "verify_gpfdists_cert=off. Greenplum Database will stop validating "
+				"the gpfidsts SSL certificate for connections between segments and gpfdists");
 	return true;
 }
 

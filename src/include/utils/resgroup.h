@@ -54,6 +54,7 @@ typedef struct ResGroupCaps
 	ResGroupCap		memLimit;
 	ResGroupCap		memSharedQuota;
 	ResGroupCap		memSpillRatio;
+	ResGroupCap		memAuditor;
 } ResGroupCaps;
 
 /*
@@ -68,6 +69,12 @@ extern int						memory_spill_ratio;
 extern int gp_resource_group_cpu_priority;
 extern double gp_resource_group_cpu_limit;
 extern double gp_resource_group_memory_limit;
+
+/*
+ * Non-GUC global variables.
+ */
+extern bool gp_resource_group_enable_cgroup_memory;
+extern bool gp_resource_group_enable_cgroup_swap;
 
 /*
  * Resource Group assignment hook.
@@ -127,7 +134,8 @@ extern void ResGroupDropFinish(Oid groupId, bool isCommit);
 extern void ResGroupCreateOnAbort(Oid groupId);
 extern void ResGroupAlterOnCommit(Oid groupId,
 								  ResGroupLimitType limittype,
-								  const ResGroupCaps *caps);
+								  const ResGroupCaps *caps,
+								  ResGroupCap memLimitGap);
 extern void ResGroupCheckForDrop(Oid groupId, char *name);
 
 extern int32 ResGroupGetVmemLimitChunks(void);
@@ -140,6 +148,8 @@ extern void ResGroupGetMemInfo(int *memLimit, int *slotQuota, int *sharedQuota);
 extern int64 ResourceGroupGetQueryMemoryLimit(void);
 
 extern void ResGroupDumpInfo(StringInfo str);
+
+extern int ResGroupGetSegmentNum(void);
 
 #define LOG_RESGROUP_DEBUG(...) \
 	do {if (Debug_resource_group) elog(__VA_ARGS__); } while(false);

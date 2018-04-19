@@ -20,16 +20,21 @@
  */
 
 extern const char * ResGroupOps_Name(void);
+extern bool ResGroupOps_Probe(void);
 extern void ResGroupOps_Bless(void);
 extern void ResGroupOps_Init(void);
 extern void ResGroupOps_AdjustGUCs(void);
 extern void ResGroupOps_CreateGroup(Oid group);
-extern void ResGroupOps_DestroyGroup(Oid group);
+extern void ResGroupOps_DestroyGroup(Oid group, bool migrate);
 extern void ResGroupOps_AssignGroup(Oid group, int pid);
-extern int ResGroupOps_LockGroup(Oid group, bool block);
+extern int ResGroupOps_LockGroup(Oid group, const char *comp, bool block);
 extern void ResGroupOps_UnLockGroup(Oid group, int fd);
 extern void ResGroupOps_SetCpuRateLimit(Oid group, int cpu_rate_limit);
+extern void ResGroupOps_SetMemoryLimit(Oid group, int memory_limit);
+extern void ResGroupOps_SetMemoryLimitByValue(Oid group, int32 memory_limit);
 extern int64 ResGroupOps_GetCpuUsage(Oid group);
+extern int32 ResGroupOps_GetMemoryUsage(Oid group);
+extern int32 ResGroupOps_GetMemoryLimit(Oid group);
 extern int ResGroupOps_GetCpuCores(void);
 extern int ResGroupOps_GetTotalMemory(void);
 

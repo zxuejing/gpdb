@@ -1919,6 +1919,9 @@ jobs:
     - get: bin_gpdb_centos7
       passed:
       - gate_compile_end
+    - get: binary_swap_gpdb_centos6
+      passed:
+      - gate_compile_end
 
 - name: mpp_interconnect
   plan:
@@ -1960,6 +1963,10 @@ jobs:
       trigger: [[ test_trigger ]]
     - get: ccp_src
     - get: centos-gpdb-dev-6
+    - get: binary_swap_gpdb
+      resource: binary_swap_gpdb_centos6
+      passed: [gate_mpp_start]
+      trigger: [[ test_trigger ]]
   - put: terraform
     params:
       <<: *ccp_default_params
@@ -1996,6 +2003,10 @@ jobs:
       trigger: [[ test_trigger ]]
     - get: ccp_src
     - get: centos-gpdb-dev-7
+    - get: binary_swap_gpdb
+      resource: binary_swap_gpdb_centos6
+      passed: [gate_mpp_start]
+      trigger: [[ test_trigger ]]
   - put: terraform
     params:
       <<: *ccp_default_params
@@ -2087,6 +2098,10 @@ jobs:
       trigger: [[ test_trigger ]]
     - get: ccp_src
     - get: centos-gpdb-dev-6
+    - get: binary_swap_gpdb
+      passed: [compile_gpdb_binary_swap_centos6]
+      resource: binary_swap_gpdb_centos6
+      trigger: [[ test_trigger ]]
   - put: terraform
     params:
       <<: *ccp_default_params
@@ -2124,6 +2139,10 @@ jobs:
       trigger: [[ test_trigger ]]
     - get: ccp_src
     - get: centos-gpdb-dev-6
+    - get: binary_swap_gpdb
+      passed: [compile_gpdb_binary_swap_centos6]
+      resource: binary_swap_gpdb_centos6
+      trigger: [[ test_trigger ]]
   - put: terraform
     params:
       <<: *ccp_default_params

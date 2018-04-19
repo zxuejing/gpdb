@@ -1240,7 +1240,14 @@ gpvars_assign_gp_resource_manager_policy(const char *newval, bool doit, GucSourc
 {
 	ResourceManagerPolicy newtype = RESOURCE_MANAGER_POLICY_QUEUE;
 
-	if (newval == NULL || newval[0] == 0 )
+	/*
+	 * Probe resgroup configurations even not in resgroup mode,
+	 * variables like gp_resource_group_enable_cgroup_memory need to
+	 * be properly set in all modes.
+	 */
+	ResGroupOps_Probe();
+
+	if (newval == NULL || newval[0] == 0)
 		newtype = RESOURCE_MANAGER_POLICY_QUEUE;
 	else if (!pg_strcasecmp("queue", newval))
 		newtype = RESOURCE_MANAGER_POLICY_QUEUE;

@@ -228,6 +228,9 @@ struct ResGroupControl
 	ResGroupData	groups[1];
 };
 
+bool gp_resource_group_enable_cgroup_memory = false;
+bool gp_resource_group_enable_cgroup_swap = false;
+
 /* hooks */
 resgroup_assign_hook_type resgroup_assign_hook = NULL;
 
@@ -637,9 +640,10 @@ ResGroupDropFinish(Oid groupId, bool isCommit)
 	{
 		savedInterruptHoldoffCount = InterruptHoldoffCount;
 
+		group = groupHashFind(groupId, true);
+
 		if (Gp_role == GP_ROLE_DISPATCH)
 		{
-			group = groupHashFind(groupId, true);
 			wakeupSlots(group, false);
 			unlockResGroupForDrop(group);
 		}
@@ -648,10 +652,10 @@ ResGroupDropFinish(Oid groupId, bool isCommit)
 		{
 			bool		migrate;
 
-			removeGroup(groupId);
-
 			/* Only migrate processes out of vmtracker groups */
 			migrate = group->caps.memAuditor == RESGROUP_MEMORY_AUDITOR_VMTRACKER;
+
+			removeGroup(groupId);
 
 			ResGroupOps_DestroyGroup(groupId, migrate);
 		}

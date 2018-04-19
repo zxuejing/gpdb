@@ -76,13 +76,7 @@ extern void pg_tzenumerate_end(pg_tzenum *dir);
 
 extern pg_tz *session_timezone;
 extern pg_tz *log_timezone;
-/*
- * GPDB_92_MERGE_FIXME: Remove when commit ca4af308c32 has been merged.
- * gmt_timezone has been made obsolete with log_timezone being set by
- * pg_timezone_initialize(), but in order to avoid merge conflicts in
- * the code the callers are still allowed to use gmt_timezone.
- */
-#define gmt_timezone log_timezone
+extern pg_tz *gmt_timezone;
 
 /*
  * GPDB_92_MERGE_FIXME: Remove when commit ca4af308c32 is merged. This

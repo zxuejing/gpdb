@@ -1,2 +1,3 @@
 test: pg_dumpall_current
+test: timezone_reset
 test: gpcheckcat

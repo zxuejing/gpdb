@@ -1,0 +1,4 @@
+-- start_ignore
+\! gpconfig -r timezone --skipvalidation
+20180424:16:40:14:089987 gpconfig:sdw6:gpadmin-[INFO]:-completed successfully with parameters '-r timezone --skipvalidation'
+-- end_ignore

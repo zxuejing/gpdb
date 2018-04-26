@@ -78,11 +78,6 @@ extern pg_tz *session_timezone;
 extern pg_tz *log_timezone;
 extern pg_tz *gmt_timezone;
 
-/*
- * GPDB_92_MERGE_FIXME: Remove when commit ca4af308c32 is merged. This
- * function was renamed but callers are left unchanged to avoid merge
- * conflicts.
- */
 #define tz_acceptable(X) pg_tz_acceptable(X)
 
 /* Maximum length of a timezone name (not including trailing null) */

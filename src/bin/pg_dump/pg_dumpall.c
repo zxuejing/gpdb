@@ -629,30 +629,24 @@ dumpResGroups(PGconn *conn)
 			i_concurrency,
 			i_memory_limit,
 			i_memory_shared_quota,
-			i_memory_spill_ratio;
+			i_memory_spill_ratio,
+			i_memory_auditor;
 
 	printfPQExpBuffer(buf, "SELECT g.rsgname AS groupname, "
 					  "t1.value AS concurrency, "
 					  "t2.value AS cpu_rate_limit, "
 					  "t3.value AS memory_limit, "
 					  "t4.value AS memory_shared_quota, "
-					  "t5.value AS memory_spill_ratio "
-					  "FROM pg_resgroup g, "
-					  "pg_resgroupcapability t1, "
-					  "pg_resgroupcapability t2, "
-					  "pg_resgroupcapability t3, "
-					  "pg_resgroupcapability t4, "
-					  "pg_resgroupcapability t5 "
-					  "WHERE g.oid = t1.resgroupid AND "
-					  "g.oid = t2.resgroupid AND "
-					  "g.oid = t3.resgroupid AND "
-					  "g.oid = t4.resgroupid AND "
-					  "g.oid = t5.resgroupid AND "
-					  "t1.reslimittype = 1 AND "
-					  "t2.reslimittype = 2 AND "
-					  "t3.reslimittype = 3 AND "
-					  "t4.reslimittype = 4 AND "
-					  "t5.reslimittype = 5;");
+					  "t5.value AS memory_spill_ratio, "
+					  "t6.value AS memory_auditor "
+					  "FROM pg_resgroup g "
+					  "     JOIN pg_resgroupcapability t1 ON g.oid = t1.resgroupid AND t1.reslimittype = 1 "
+					  "     JOIN pg_resgroupcapability t2 ON g.oid = t2.resgroupid AND t2.reslimittype = 2 "
+					  "     JOIN pg_resgroupcapability t3 ON g.oid = t3.resgroupid AND t3.reslimittype = 3 "
+					  "     JOIN pg_resgroupcapability t4 ON g.oid = t4.resgroupid AND t4.reslimittype = 4 "
+					  "     JOIN pg_resgroupcapability t5 ON g.oid = t5.resgroupid AND t5.reslimittype = 5 "
+					  "LEFT JOIN pg_resgroupcapability t6 ON g.oid = t6.resgroupid AND t6.reslimittype = 6 "
+					  ";");
 
 	res = executeQuery(conn, buf->data);
 
@@ -662,6 +656,7 @@ dumpResGroups(PGconn *conn)
 	i_memory_limit = PQfnumber(res, "memory_limit");
 	i_memory_shared_quota = PQfnumber(res, "memory_shared_quota");
 	i_memory_spill_ratio = PQfnumber(res, "memory_spill_ratio");
+	i_memory_auditor = PQfnumber(res, "memory_auditor");
 
 	if (PQntuples(res) > 0)
 		fprintf(OPF, "--\n-- Resource Group\n--\n\n");
@@ -683,6 +678,7 @@ dumpResGroups(PGconn *conn)
 		const char *memory_limit;
 		const char *memory_shared_quota;
 		const char *memory_spill_ratio;
+		const char *memory_auditor;
 
 		groupname = fmtId(PQgetvalue(res, i, i_groupname));
 		cpu_rate_limit = PQgetvalue(res, i, i_cpu_rate_limit);
@@ -690,12 +686,18 @@ dumpResGroups(PGconn *conn)
 		memory_limit = PQgetvalue(res, i, i_memory_limit);
 		memory_shared_quota = PQgetvalue(res, i, i_memory_shared_quota);
 		memory_spill_ratio = PQgetvalue(res, i, i_memory_spill_ratio);
+		memory_auditor = PQgetvalue(res, i, i_memory_auditor);
 
 		resetPQExpBuffer(buf);
 
 		/* DROP or CREATE default group, so ALTER it  */
 		if (0 == strcmp(groupname, "default_group") || 0 == strcmp(groupname, "admin_group"))
 		{
+			/*
+			 * Default resource groups must have memory_auditor == "vmtracker",
+			 * no need to ALTER it, and we do not support ALTER memory_auditor
+			 * at all.
+			 */
 			appendPQExpBuffer(buf, "ALTER RESOURCE GROUP %s SET concurrency %s;\n",
 							  groupname, concurrency);
 			appendPQExpBuffer(buf, "ALTER RESOURCE GROUP %s SET cpu_rate_limit %s;\n",
@@ -709,13 +711,27 @@ dumpResGroups(PGconn *conn)
 		}
 		else
 		{
+			const char *memory_auditor_name;
+
+			/*
+			 * Possible values of memory_auditor:
+			 * - "1": cgroup;
+			 * - "0": vmtracker;
+			 * - "": not set, e.g. created on an older version which does not
+			 *   support memory_auditor yet, consider it as vmtracker;
+			 */
+			if (strcmp(memory_auditor, "1") == 0)
+				memory_auditor_name = "cgroup";
+			else
+				memory_auditor_name = "vmtracker";
+
 			printfPQExpBuffer(buf, "CREATE RESOURCE GROUP %s WITH ("
 							  "concurrency=%s, cpu_rate_limit=%s, "
 							  "memory_limit=%s, memory_shared_quota=%s, "
-							  "memory_spill_ratio=%s);\n",
+							  "memory_spill_ratio=%s, memory_auditor=%s);\n",
 							  groupname, concurrency, cpu_rate_limit,
 							  memory_limit, memory_shared_quota,
-							  memory_spill_ratio);
+							  memory_spill_ratio, memory_auditor_name);
 		}
 
 		fprintf(OPF, "%s", buf->data);

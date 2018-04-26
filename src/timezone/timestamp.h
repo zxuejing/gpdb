@@ -1,10 +1,3 @@
-/*
- * GPDB_92_MERGE_FIXME: Remove this file completely when commit a7801b62f21b
- * has been merged. This file is a temporary copy of datatype/timestamp.h
- * required for the backport of timezone management, when 9.2 is merged we
- * should abandon this copy.
- */
-
 /*-------------------------------------------------------------------------
  *
  * timestamp.h

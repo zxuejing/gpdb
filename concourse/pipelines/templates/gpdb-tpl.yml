@@ -484,6 +484,15 @@ resources:
     secret_access_key: {{bucket-secret-access-key}}
     versioned_file: bin_gpdb_centos6/gpdb_branch_5X_STABLE/icw_green/bin_gpdb.tar.gz
 
+- name: bin_gpdb_centos7_icw_green
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: bin_gpdb_centos7/gpdb_branch_5X_STABLE/icw_green/bin_gpdb.tar.gz
+
 - name: bin_gpdb_sles11_icw_green
   type: s3
   source:
@@ -1654,6 +1663,7 @@ jobs:
       - QP_optimizer-functional
     - get: bin_gpdb_centos7
       passed:
+      - icw_planner_centos7
       - icw_gporca_centos7
     - get: bin_gpdb_sles11
       passed:
@@ -1663,6 +1673,9 @@ jobs:
     - put: bin_gpdb_centos6_icw_green
       params:
         file: bin_gpdb_centos6/bin_gpdb.tar.gz
+    - put: bin_gpdb_centos7_icw_green
+      params:
+        file: bin_gpdb_centos7/bin_gpdb.tar.gz
     - put: bin_gpdb_sles11_icw_green
       params:
         file: bin_gpdb_sles11/bin_gpdb.tar.gz

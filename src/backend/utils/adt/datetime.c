@@ -1597,8 +1597,15 @@ DetermineTimeZoneOffset(struct pg_tm * tm, pg_tz *tzp)
 	}
 
 	/*
-	 * It's an invalid or ambiguous time due to timezone transition. Prefer
-	 * the standard-time interpretation.
+	 * It's an invalid or ambiguous time due to timezone transition.  In a
+	 * spring-forward transition, prefer the "before" interpretation; in a
+	 * fall-back transition, prefer "after".  (We used to define and implement
+	 * this test as "prefer the standard-time interpretation", but that rule
+	 * does not help to resolve the behavior when both times are reported as
+	 * standard time; which does happen, eg Europe/Moscow in Oct 2014.  Also,
+	 * in some zones such as Europe/Dublin, there is widespread confusion
+	 * about which time offset is "standard" time, so it's fortunate that our
+	 * behavior doesn't depend on that.)
 	 */
 	if (after_isdst == 0)
 	{

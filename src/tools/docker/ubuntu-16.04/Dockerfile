@@ -4,6 +4,8 @@ FROM ubuntu:16.04
 
 EXPOSE 5432
 
+ARG LIB=gpdb_src/src/tools/docker/ubuntu-16.04
+
 # explicitly set user/group IDs
 RUN groupadd -r postgres --gid=999 && useradd -m -r -g postgres --uid=999 postgres
 
@@ -38,7 +40,7 @@ RUN useradd -md /home/gpadmin/ gpadmin \
 
 
 ## Add setup and start script to run when the container starts
-ADD install_and_start_gpdb.sh /home/gpadmin/install_and_start_gpdb.sh
+ADD ${LIB}/install_and_start_gpdb.sh /home/gpadmin/install_and_start_gpdb.sh
 RUN chown gpadmin:gpadmin /home/gpadmin/install_and_start_gpdb.sh \
  && chmod a+x /home/gpadmin/install_and_start_gpdb.sh
 

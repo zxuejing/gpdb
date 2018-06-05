@@ -235,6 +235,8 @@ typedef enum FaultInjectorIdentifier_e {
 
 	VacuumUpdateDatFrozenXid,
 
+	CreateResourceGroupFail,
+
 	/* INSERT has to be done before that line */
 	FaultInjectorIdMax,
 	

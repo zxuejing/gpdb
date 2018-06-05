@@ -351,6 +351,8 @@ FaultInjectorIdentifierEnumToString[] = {
 		/* inject fault to pretend copying from very high number of processed rows */
 	_("vacuum_update_dat_frozen_xid"),
 		/* inject fault after updating pg_database.datfrozenxid (but before committing) */
+	_("create_resource_group_fail"),
+		/* inject fault before create resource group committing */
 	_("not recognized"),
 };
 
@@ -1085,6 +1087,7 @@ FaultInjector_NewHashEntry(
 			case AppendOnlySkipCompression:
 			case CopyFromHighProcessed:
 			case VacuumUpdateDatFrozenXid:
+			case CreateResourceGroupFail:
 
 				break;
 			default:

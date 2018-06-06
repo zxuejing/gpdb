@@ -277,7 +277,6 @@ DropResourceGroup(DropResourceGroupStmt *stmt)
 	ScanKeyData	 scankey;
 	SysScanDesc	 sscan;
 	Oid			 groupid;
-	ResGroupCaps		caps;
 	ResourceGroupCallbackContext	*callbackCtx;
 
 	/* Permission check - only superuser can drop resource groups. */
@@ -479,7 +478,7 @@ AlterResourceGroup(AlterResourceGroupStmt *stmt)
 			caps.memAuditor = value;
 			break;
 		case RESGROUP_LIMIT_TYPE_CPUSET:
-			strncpy(caps.cpuset, cpuset, sizeof(caps.cpuset));
+			StrNCpy(caps.cpuset, cpuset, sizeof(caps.cpuset));
 			caps.cpuRateLimit = CPU_RATE_LIMIT_DISABLED;
 			break;
 		default:
@@ -626,7 +625,7 @@ GetResGroupCapabilities(Relation rel, Oid groupId, ResGroupCaps *resgroupCaps)
 												   getResgroupOptionName(type));
 				break;
 			case RESGROUP_LIMIT_TYPE_CPUSET:
-				strncpy(resgroupCaps->cpuset, proposed, sizeof(resgroupCaps->cpuset));
+				StrNCpy(resgroupCaps->cpuset, proposed, sizeof(resgroupCaps->cpuset));
 				break;
 			default:
 				break;
@@ -1036,7 +1035,7 @@ parseStmtOptions(CreateResourceGroupStmt *stmt, ResGroupCaps *caps)
 		{
 			const char *cpuset = defGetString(defel);
 			checkCpusetSyntax(cpuset);
-			strncpy(caps->cpuset, cpuset, sizeof(caps->cpuset));
+			StrNCpy(caps->cpuset, cpuset, sizeof(caps->cpuset));
 			caps->cpuRateLimit = CPU_RATE_LIMIT_DISABLED;
 		}
 		else 
@@ -1253,7 +1252,7 @@ updateResgroupCapabilityEntry(Relation rel,
 
 	if (limitType == RESGROUP_LIMIT_TYPE_CPUSET)
 	{
-		strncpy(stringBuffer, strValue, sizeof(stringBuffer));
+		StrNCpy(stringBuffer, strValue, sizeof(stringBuffer));
 	}
 	else
 	{

@@ -3120,9 +3120,9 @@ jobs:
       - DPM_backup-restore_ddboost_part1
       - DPM_backup-restore_ddboost_part2
       - DPM_backup-restore_ddboost_part3
-      - DPM_backup-restore_netbackup_part1
-      - DPM_backup-restore_netbackup_part2
-      - DPM_backup-restore_netbackup_part3
+      # - DPM_backup-restore_netbackup_part1
+      # - DPM_backup-restore_netbackup_part2
+      # - DPM_backup-restore_netbackup_part3
       - DPM_backup_43_restore_5
       - gptransfer-43x-to-5x
       - gptransfer-5x-to-5x
@@ -3132,9 +3132,9 @@ jobs:
       - DPM_backup-restore_ddboost_part1
       - DPM_backup-restore_ddboost_part2
       - DPM_backup-restore_ddboost_part3
-      - DPM_backup-restore_netbackup_part1
-      - DPM_backup-restore_netbackup_part2
-      - DPM_backup-restore_netbackup_part3
+      # - DPM_backup-restore_netbackup_part1
+      # - DPM_backup-restore_netbackup_part2
+      # - DPM_backup-restore_netbackup_part3
       - DPM_backup_43_restore_5
       - gptransfer-43x-to-5x
       - gptransfer-5x-to-5x

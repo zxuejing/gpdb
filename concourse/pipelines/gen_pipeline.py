@@ -53,7 +53,8 @@ JOBS_THAT_ARE_GATES = ['gate_compile_start', 'gate_compile_end', 'gate_icw_start
                     'gate_dpm_end', 'gate_ud_start', 'gate_ud_end', 'gate_advanced_analytics_start',
                     'gate_advanced_analytics_end', 'gate_filerep_start', 'gate_filerep_end', 
                     'gate_release_candidate_start']
-JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE = ['compile_gpdb_binary_swap_centos6'] + RELEASE_VALIDATOR_JOB + JOBS_THAT_ARE_GATES
+JOBS_THAT_ARE_PAUSED = ['DPM_backup-restore_netbackup_part1', 'DPM_backup-restore_netbackup_part2', 'DPM_backup-restore_netbackup_part3']
+JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE = ['compile_gpdb_binary_swap_centos6'] + RELEASE_VALIDATOR_JOB + JOBS_THAT_ARE_GATES + JOBS_THAT_ARE_PAUSED
 
 
 def render_template(template_filename, context):

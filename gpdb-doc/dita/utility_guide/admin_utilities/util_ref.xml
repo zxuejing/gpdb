@@ -134,7 +134,13 @@
             <xref href="gptransfer.xml#topic1"/>
           </p>
           <p>
-            <xref href="pgbouncer-ref.xml#topic1"/>
+            <xref href="pgbouncer.xml#topic1"/>
+          </p>
+          <p>
+            <xref href="pgbouncer-ini.xml#topic1"/>
+          </p>
+          <p>
+            <xref href="pgbouncer-admin.xml#topic1"/>
           </p>
         </stentry>
       </strow>

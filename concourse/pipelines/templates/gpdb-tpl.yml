@@ -30,11 +30,11 @@
                          'Orca_centos7',
                         ] %}
 ## ======================================================================
-##   __ _ _ __ ___  _   _ _ __  ___ 
+##   __ _ _ __ ___  _   _ _ __  ___
 ##  / _` | '__/ _ \| | | | '_ \/ __|
 ## | (_| | | | (_) | |_| | |_) \__ \
 ##  \__, |_|  \___/ \__,_| .__/|___/
-##  |___/                |_|        
+##  |___/                |_|
 ## ======================================================================
 
 groups:
@@ -136,7 +136,7 @@ groups:
   - Postgis_Test_[[ test_name ]]
 {% endfor %}
   - gate_advanced_analytics_end
-  
+
 {% endif %}
 {% if "FileRep" in test_sections %}
   ## --------------------------------------------------------------------
@@ -298,12 +298,12 @@ groups:
 
 {% endif %}
 ## ======================================================================
-##                                           _                         
-##  _ __ ___  ___  ___  _   _ _ __ ___ ___  | |_ _   _ _ __   ___  ___ 
+##                                           _
+##  _ __ ___  ___  ___  _   _ _ __ ___ ___  | |_ _   _ _ __   ___  ___
 ## | '__/ _ \/ __|/ _ \| | | | '__/ __/ _ \ | __| | | | '_ \ / _ \/ __|
 ## | | |  __/\__ \ (_) | |_| | | | (_|  __/ | |_| |_| | |_) |  __/\__ \
 ## |_|  \___||___/\___/ \__,_|_|  \___\___|  \__|\__, | .__/ \___||___/
-##                                               |___/|_|              
+##                                               |___/|_|
 ## ======================================================================
 
 resource_types:
@@ -313,7 +313,7 @@ resource_types:
     repository: ljfranklin/terraform-resource
 
 ## ======================================================================
-##  _ __ ___  ___  ___  _   _ _ __ ___ ___  ___ 
+##  _ __ ___  ___  ___  _   _ _ __ ___ ___  ___
 ## | '__/ _ \/ __|/ _ \| | | | '__/ __/ _ \/ __|
 ## | | |  __/\__ \ (_) | |_| | | | (_|  __/\__ \
 ## |_|  \___||___/\___/ \__,_|_|  \___\___||___/
@@ -791,8 +791,8 @@ resources:
     stop: {{reduced-frequency-trigger-stop}}
 
 ## ======================================================================
-##                   _                    
-##   __ _ _ __   ___| |__   ___  _ __ ___ 
+##                   _
+##   __ _ _ __   ___| |__   ___  _ __ ___
 ##  / _` | '_ \ / __| '_ \ / _ \| '__/ __|
 ## | (_| | | | | (__| | | | (_) | |  \__ \
 ##  \__,_|_| |_|\___|_| |_|\___/|_|  |___/
@@ -1004,23 +1004,23 @@ cs_ccp_run_tests_params_anchor: &cs_ccp_run_tests_params
     <<: *ccp_destroy
 
 ## ======================================================================
-##    _       _         
-##   (_) ___ | |__  ___ 
+##    _       _
+##   (_) ___ | |__  ___
 ##   | |/ _ \| '_ \/ __|
 ##   | | (_) | |_) \__ \
 ##  _/ |\___/|_.__/|___/
-## |__/                 
+## |__/
 ## ======================================================================
 
 jobs:
 
 ## ======================================================================
-##   ____                      _ _      
-##  / ___|___  _ __ ___  _ __ (_) | ___ 
+##   ____                      _ _
+##  / ___|___  _ __ ___  _ __ (_) | ___
 ## | |   / _ \| '_ ` _ \| '_ \| | |/ _ \
 ## | |__| (_) | | | | | | |_) | | |  __/
 ##  \____\___/|_| |_| |_| .__/|_|_|\___|
-##                      |_|             
+##                      |_|
 ## ======================================================================
 
 - name: gate_compile_start
@@ -1050,14 +1050,22 @@ jobs:
       passed: [gate_compile_start]
     - get: centos-gpdb-dev-6
       passed: [gate_compile_start]
-  - task: compile_gpdb
-    file: gpdb_src/concourse/tasks/compile_gpdb.yml
+  - task: sync_tools
+    file: gpdb_src/concourse/tasks/sync_tools.yml
     image: centos-gpdb-dev-6
     params:
       IVYREPO_HOST: {{ivyrepo_host}}
       IVYREPO_REALM: {{ivyrepo_realm}}
       IVYREPO_USER: {{ivyrepo_user}}
       IVYREPO_PASSWD: {{ivyrepo_passwd}}
+      TARGET_OS: centos
+      TARGET_OS_VERSION: 6
+      TASK_OS: centos
+      TASK_OS_VERSION: 6
+  - task: compile_gpdb
+    file: gpdb_src/concourse/tasks/compile_gpdb.yml
+    image: centos-gpdb-dev-6
+    params:
       CONFIGURE_FLAGS: {{configure_flags}}
       TARGET_OS: centos
       TARGET_OS_VERSION: 6
@@ -1085,14 +1093,22 @@ jobs:
       passed: [gate_compile_start]
     - get: centos-gpdb-dev-7
       passed: [gate_compile_start]
-  - task: compile_gpdb
+  - task: sync_tools
+    file: gpdb_src/concourse/tasks/sync_tools.yml
     image: centos-gpdb-dev-7
-    file: gpdb_src/concourse/tasks/compile_gpdb.yml
     params:
       IVYREPO_HOST: {{ivyrepo_host}}
       IVYREPO_REALM: {{ivyrepo_realm}}
       IVYREPO_USER: {{ivyrepo_user}}
       IVYREPO_PASSWD: {{ivyrepo_passwd}}
+      TARGET_OS: centos
+      TARGET_OS_VERSION: 7
+      TASK_OS: centos
+      TASK_OS_VERSION: 7
+  - task: compile_gpdb
+    image: centos-gpdb-dev-7
+    file: gpdb_src/concourse/tasks/compile_gpdb.yml
+    params:
       CONFIGURE_FLAGS: {{configure_flags}}
       TARGET_OS: centos
       TARGET_OS_VERSION: 7
@@ -1118,13 +1134,23 @@ jobs:
       trigger: ((gpdb_src-trigger-flag))
     - get: gpaddon_src
       passed: [gate_compile_start]
-  - task: compile_gpdb
-    file: gpdb_src/concourse/tasks/compile_gpdb_sles11.yml
+    - get: centos-gpdb-dev-7
+      passed: [gate_compile_start]
+  - task: sync_tools
+    file: gpdb_src/concourse/tasks/sync_tools.yml
+    image: centos-gpdb-dev-7
     params:
       IVYREPO_HOST: {{ivyrepo_host}}
       IVYREPO_REALM: {{ivyrepo_realm}}
       IVYREPO_USER: {{ivyrepo_user}}
       IVYREPO_PASSWD: {{ivyrepo_passwd}}
+      TARGET_OS: sles
+      TARGET_OS_VERSION:
+      TASK_OS: centos
+      TASK_OS_VERSION: 7
+  - task: compile_gpdb
+    file: gpdb_src/concourse/tasks/compile_gpdb_sles11.yml
+    params:
       CONFIGURE_FLAGS: {{configure_flags}}
       TARGET_OS: sles
       TARGET_OS_VERSION:
@@ -1236,18 +1262,30 @@ jobs:
     - get: centos-mingw
       tags: ["wix"]
       passed: [gate_compile_start]
+    - get: centos-gpdb-dev-7
+      tags: ["wix"]
+      passed: [gate_compile_start]
+  - task: sync_tools
+    file: gpdb_src/concourse/tasks/sync_tools.yml
+    image: centos-gpdb-dev-7
+    params:
+      IVYREPO_HOST: {{ivyrepo_host}}
+      IVYREPO_REALM: {{ivyrepo_realm}}
+      IVYREPO_USER: {{ivyrepo_user}}
+      IVYREPO_PASSWD: {{ivyrepo_passwd}}
+      TARGET_OS: win32
+      TARGET_OS_VERSION:
+      TASK_OS: centos
+      TASK_OS_VERSION: 7
   - task: compile_gpdb
     tags: ["wix"]
     image: centos-mingw
     file: gpdb_src/concourse/tasks/compile_gpdb.yml
     params:
+      CONFIGURE_FLAGS: {{configure_flags}}
       TARGET_OS: win32
       TARGET_OS_VERSION:
-      BLD_TARGETS: clients loaders
-      IVYREPO_HOST: {{ivyrepo_host}}
-      IVYREPO_REALM: {{ivyrepo_realm}}
-      IVYREPO_USER: {{ivyrepo_user}}
-      IVYREPO_PASSWD: {{ivyrepo_passwd}}
+      BLD_TARGETS: "clients loaders"
   - aggregate:
     - put: bin_gpdb_windows_clients
       tags: ["wix"]
@@ -1375,9 +1413,9 @@ jobs:
 ## ======================================================================
 ##  ___ ______        __
 ## |_ _/ ___\ \      / /
-##  | | |    \ \ /\ / / 
-##  | | |___  \ V  V /  
-## |___\____|  \_/\_/   
+##  | | |    \ \ /\ / /
+##  | | |___  \ V  V /
+## |___\____|  \_/\_/
 ## ======================================================================
 
 - name: gate_icw_start
@@ -1715,11 +1753,11 @@ jobs:
 {% endif %}
 {% if "CS" in test_sections %}
 ## ======================================================================
-##   ____ ____  
-##  / ___/ ___| 
-## | |   \___ \ 
+##   ____ ____
+##  / ___/ ___|
+## | |   \___ \
 ## | |___ ___) |
-##  \____|____/ 
+##  \____|____/
 ## ======================================================================
 
 - name: gate_cs_start
@@ -1951,11 +1989,11 @@ jobs:
 {% endif %}
 {% if "MPP" in test_sections %}
 ## ======================================================================
-##  __  __ ____  ____  
-## |  \/  |  _ \|  _ \ 
+##  __  __ ____  ____
+## |  \/  |  _ \|  _ \
 ## | |\/| | |_) | |_) |
-## | |  | |  __/|  __/ 
-## |_|  |_|_|   |_|    
+## | |  | |  __/|  __/
+## |_|  |_|_|   |_|
 ## ======================================================================
 
 - name: gate_mpp_start
@@ -2118,7 +2156,7 @@ jobs:
 {% endif %}
 {% if "MM" in test_sections %}
 ## ======================================================================
-##  __  __ __  __ 
+##  __  __ __  __
 ## |  \/  |  \/  |
 ## | |\/| | |\/| |
 ## | |  | | |  | |
@@ -2382,7 +2420,7 @@ jobs:
 {% endif %}
 {% if "DPM" in test_sections %}
 ## ======================================================================
-##  ____  ____  __  __ 
+##  ____  ____  __  __
 ## |  _ \|  _ \|  \/  |
 ## | | | | |_) | |\/| |
 ## | |_| |  __/| |  | |
@@ -3145,11 +3183,11 @@ jobs:
 {% endif %}
 {% if "UD" in test_sections %}
 ## ======================================================================
-##  _   _ ____  
-## | | | |  _ \ 
+##  _   _ ____
+## | | | |  _ \
 ## | | | | | | |
 ## | |_| | |_| |
-##  \___/|____/ 
+##  \___/|____/
 ## ======================================================================
 
 - name: gate_ud_start
@@ -3267,10 +3305,10 @@ jobs:
 {% endif %}
 {% if "AA" in test_sections %}
 ## ======================================================================
-##     _        _    
-##    / \      / \   
-##   / _ \    / _ \  
-##  / ___ \  / ___ \ 
+##     _        _
+##    / \      / \
+##   / _ \    / _ \
+##  / ___ \  / ___ \
 ## /_/   \_\/_/   \_\
 ## ======================================================================
 
@@ -3389,12 +3427,12 @@ jobs:
 {% endif %}
 {% if "FileRep" in test_sections %}
 ## ======================================================================
-##  _____ _ _      ____            
-## |  ___(_) | ___|  _ \ ___ _ __  
-## | |_  | | |/ _ \ |_) / _ \ '_ \ 
+##  _____ _ _      ____
+## |  ___(_) | ___|  _ \ ___ _ __
+## | |_  | | |/ _ \ |_) / _ \ '_ \
 ## |  _| | | |  __/  _ <  __/ |_) |
-## |_|   |_|_|\___|_| \_\___| .__/ 
-##                          |_|    
+## |_|   |_|_|\___|_| \_\___| .__/
+##                          |_|
 ## ======================================================================
 
 - name: gate_filerep_start
@@ -3479,8 +3517,8 @@ jobs:
 {% endif %}
 {% if pipeline_type == "prod" %}
 ## ======================================================================
-##  ____      _                     
-## |  _ \ ___| | ___  __ _ ___  ___ 
+##  ____      _
+## |  _ \ ___| | ___  __ _ ___  ___
 ## | |_) / _ \ |/ _ \/ _` / __|/ _ \
 ## |  _ <  __/ |  __/ (_| \__ \  __/
 ## |_| \_\___|_|\___|\__,_|___/\___|

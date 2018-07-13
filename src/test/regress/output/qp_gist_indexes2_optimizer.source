@@ -3,6 +3,21 @@
 -- ----------------------------------------------------------------------
 create schema qp_gist_indexes2;
 set search_path to qp_gist_indexes2;
+ -- start_ignore
+create language plpythonu;
+-- end_ignore
+create or replace function count_index_scans(explain_query text) returns int as
+$$
+rv = plpy.execute(explain_query)
+search_text = 'Index Scan'
+result = 0
+for i in range(len(rv)):
+    cur_line = rv[i]['QUERY PLAN']
+    if search_text.lower() in cur_line.lower():
+        result = result+1
+return result
+$$
+language plpythonu;
 -- ----------------------------------------------------------------------
 -- Test: test01create_table.sql
 -- ----------------------------------------------------------------------
@@ -28,6 +43,7 @@ INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
  VALUES (66, 'Miller', 'Lubbock or leave it', '((3, 1300), (33, 1330))',
    '( (66,660), (67, 650), (68, 660) )', '( (66, 66), 66)' );
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 -- We should be able to search the column that uses a geometric data type, 
 -- and of course we should find the right rows.  We should be able to search 
 -- using different "formats" (e.g. spacing) of the data, and in some cases 
@@ -59,20 +75,19 @@ SELECT owner, property FROM GistTable1
   Patty  | (7052,250),(6050,20)
 (2 rows)
 
--- start_ignore
 EXPLAIN 
 SELECT owner, property FROM GistTable1
  WHERE property ~= '( (6050, 20), (7052, 250) )';
-                                  QUERY PLAN                                   
--------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=8 width=47)
-   ->  Table Scan on gisttable1  (cost=0.00..431.00 rows=3 width=47)
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..14.40 rows=8 width=47)
+   ->  Index Scan using propertyboxindex on gisttable1  (cost=0.00..14.40 rows=3 width=47)
+         Index Cond: property ~= '(7052,250),(6050,20)'::box
          Filter: property ~= '(7052,250),(6050,20)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(5 rows)
+ Settings:  enable_seqscan=off
+ Optimizer status: PQO version 2.65.1
+(6 rows)
 
--- end_ignore
 SELECT id, property FROM GistTable1 
  WHERE property IS NULL 
  ORDER BY id;
@@ -107,20 +122,19 @@ SELECT owner, property FROM GistTable1
   Patty  | (7052,250),(6050,20)
 (2 rows)
 
--- start_ignore
 EXPLAIN
 SELECT owner, property FROM GistTable1
  WHERE property ~= '( (6050, 20), (7052, 250) )';
-                                  QUERY PLAN                                   
--------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=8 width=47)
-   ->  Table Scan on gisttable1  (cost=0.00..431.00 rows=3 width=47)
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..14.40 rows=8 width=47)
+   ->  Index Scan using propertyboxindex on gisttable1  (cost=0.00..14.40 rows=3 width=47)
+         Index Cond: property ~= '(7052,250),(6050,20)'::box
          Filter: property ~= '(7052,250),(6050,20)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(5 rows)
+ Settings:  enable_seqscan=off
+ Optimizer status: PQO version 2.65.1
+(6 rows)
 
--- end_ignore
 SELECT id, property FROM GistTable1 
  WHERE property IS NULL 
  ORDER BY id;
@@ -146,6 +160,7 @@ INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
 -- PURPOSE: Sanity test GiST indexes.
 -- ----------------------------------------------------------------------------
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 SELECT id, owner, description, property, poli, bullseye FROM GistTable1
  WHERE property IS NOT NULL
  ORDER BY id;
@@ -176,6 +191,7 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 -- Test: test06IllegalonAO.sql
 -- ----------------------------------------------------------------------
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
 ALTER INDEX propertyBoxIndex RENAME TO propIndex;
 UPDATE GistTable1
@@ -292,6 +308,7 @@ DELETE FROM GistTable1 WHERE bullseye = '( (76, 76), 76)';
 -- Test: test07select.sql
 -- ----------------------------------------------------------------------
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 SELECT id, owner, description, property, poli, bullseye FROM GistTable1
  WHERE property IS NOT NULL
  ORDER BY id;
@@ -325,6 +342,7 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 --     Test multi-column indexes.
 -- ----------------------------------------------------------------------------
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 -- Insert 2 more records, but insert them with the same value for BULLSEYE.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
  VALUES (212, 'Fahrenheit', 'Slightly north of Hades', '( (212, 212), (32, 32) )', '( (212, 212), (600, 600), (70, 70) )', '( (100,100), 212 )' );
@@ -374,6 +392,7 @@ INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
  VALUES (99, 'FelDon Adams', 'Washingtoon D.C.',NULL,
    '( (99, 99), (97, 98), (98, 97) )', '( (99, 99), 99)' );
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 -- We should be able to search the column that uses a geometric data type, 
 -- and of course we should find the right rows.  We should be able to search 
 -- using different "formats" (e.g. spacing) of the data, and in some cases 
@@ -381,8 +400,10 @@ SET enable_seqscan = FALSE;
 -- canonical form, as it is for the BOX data type and perhaps some other 
 -- data types), as long as data in all of those formats should be converted 
 -- to the same internal representation.
+set optimizer_trace_fallback = TRUE;
 SELECT owner, property FROM GistTable1 
  WHERE property IS NULL;
+INFO:  GPORCA failed to produce a plan, falling back to planner
             owner            | property 
 -----------------------------+----------
  A. Gent                     | 
@@ -391,33 +412,43 @@ SELECT owner, property FROM GistTable1
  S. T. "Rip" Sunset          | 
 (4 rows)
 
--- start_ignore
+SELECT count_index_scans('EXPLAIN SELECT owner, property FROM GistTable1 WHERE property IS NULL ORDER BY id;');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to planner
+CONTEXT:  SQL statement "EXPLAIN SELECT owner, property FROM GistTable1 WHERE property IS NULL ORDER BY id;"
+PL/Python function "count_index_scans"
+ count_index_scans 
+-------------------
+                 1
+(1 row)
+
+--start_ignore
 EXPLAIN 
 SELECT owner, property FROM GistTable1 
  WHERE property IS NULL
  ORDER BY id
  ;
-                                      QUERY PLAN                                       
----------------------------------------------------------------------------------------
- Result  (cost=0.00..431.00 rows=3 width=47)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=8 width=47)
-         Merge Key: id
-         ->  Result  (cost=0.00..431.00 rows=3 width=51)
-               ->  Sort  (cost=0.00..431.00 rows=3 width=51)
-                     Sort Key: id
-                     ->  Table Scan on gisttable1  (cost=0.00..431.00 rows=3 width=51)
-                           Filter: property IS NULL
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(10 rows)
+INFO:  GPORCA failed to produce a plan, falling back to planner
+                                             QUERY PLAN                                              
+-----------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=700.38..700.38 rows=2 width=51)
+   Merge Key: id
+   ->  Sort  (cost=700.38..700.38 rows=1 width=51)
+         Sort Key: id
+         ->  Index Scan using propertyisnullindex on gisttable1  (cost=0.00..700.37 rows=1 width=51)
+               Index Cond: property IS NULL
+ Settings:  enable_seqscan=off
+ Optimizer status: legacy query optimizer
+(8 rows)
 
--- end_ignore
+--end_ignore
 -- Alter the table and see if we get the same results.
 ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
 SELECT id, property FROM GistTable1 
  WHERE property IS NULL 
  ORDER BY id
  ;
+INFO:  GPORCA failed to produce a plan, falling back to planner
  id | property 
 ----+----------
   8 | 
@@ -426,25 +457,37 @@ SELECT id, property FROM GistTable1
  99 | 
 (4 rows)
 
--- start_ignore
+SELECT count_index_scans('EXPLAIN SELECT id, property FROM GistTable1 WHERE property IS NULL ORDER BY id;');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to planner
+CONTEXT:  SQL statement "EXPLAIN SELECT id, property FROM GistTable1 WHERE property IS NULL ORDER BY id;"
+PL/Python function "count_index_scans"
+ count_index_scans 
+-------------------
+                 1
+(1 row)
+
+--start_ignore
 EXPLAIN
 SELECT id, property FROM GistTable1 
  WHERE property IS NULL 
  ORDER BY id
  ;
-                                  QUERY PLAN                                   
--------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=8 width=36)
+INFO:  GPORCA failed to produce a plan, falling back to planner
+                                             QUERY PLAN                                              
+-----------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=700.38..700.38 rows=2 width=36)
    Merge Key: id
-   ->  Sort  (cost=0.00..431.00 rows=3 width=36)
+   ->  Sort  (cost=700.38..700.38 rows=1 width=36)
          Sort Key: id
-         ->  Table Scan on gisttable1  (cost=0.00..431.00 rows=3 width=36)
-               Filter: property IS NULL
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
+         ->  Index Scan using propertyisnullindex on gisttable1  (cost=0.00..700.37 rows=1 width=36)
+               Index Cond: property IS NULL
+ Settings:  enable_seqscan=off
+ Optimizer status: legacy query optimizer
 (8 rows)
 
--- end_ignore
+--end_ignore
+reset optimizer_trace_fallback;
 -- ----------------------------------------------------------------------
 -- Test: test13Vacuum.sql
 -- ----------------------------------------------------------------------
@@ -510,6 +553,7 @@ SELECT insertManyIntoGistTable13(1, 1000);
 -- Create the index.
 CREATE INDEX GistIndex13 ON GistTable13 USING GiST (property);
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 -- Add more rows after we create the index.
 SELECT insertManyIntoGistTable13(1001, 2000);
  insertmanyintogisttable13 
@@ -530,14 +574,15 @@ SELECT id, property AS "ProperTee" FROM GistTable13
 
 EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
-                                   QUERY PLAN                                    
----------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.31 rows=800 width=36)
-   ->  Table Scan on gisttable13  (cost=0.00..431.20 rows=267 width=36)
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1600.60 rows=800 width=36)
+   ->  Index Scan using gistindex13 on gisttable13  (cost=0.00..1600.48 rows=267 width=36)
+         Index Cond: property ~= '(999,999),(998,998)'::box
          Filter: property ~= '(999,999),(998,998)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(5 rows)
+ Settings:  enable_seqscan=off
+ Optimizer status: PQO version 2.65.1
+(6 rows)
 
 VACUUM GistTable13;
 ANALYZE GistTable13;
@@ -550,13 +595,14 @@ SELECT id, property AS "ProperTee" FROM GistTable13
 
 EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
-                                   QUERY PLAN                                    
----------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.31 rows=800 width=36)
-   ->  Table Scan on gisttable13  (cost=0.00..431.20 rows=267 width=36)
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1600.60 rows=800 width=36)
+   ->  Index Scan using gistindex13 on gisttable13  (cost=0.00..1600.48 rows=267 width=36)
+         Index Cond: property ~= '(999,999),(998,998)'::box
          Filter: property ~= '(999,999),(998,998)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
+ Settings:  enable_seqscan=off
+ Optimizer status: PQO version 2.64.0
 (5 rows)
 
 TRUNCATE TABLE GistTable13;
@@ -580,13 +626,14 @@ SELECT id, property AS "ProperTee" FROM GistTable13
 
 EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
-                                   QUERY PLAN                                    
----------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.15 rows=400 width=36)
-   ->  Table Scan on gisttable13  (cost=0.00..431.10 rows=134 width=36)
+                                        QUERY PLAN                                        
+------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..800.30 rows=400 width=36)
+   ->  Index Scan using gistindex13 on gisttable13  (cost=0.00..800.24 rows=134 width=36)
+         Index Cond: property ~= '(999,999),(998,998)'::box
          Filter: property ~= '(999,999),(998,998)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
+ Settings:  enable_seqscan=off
+ Optimizer status: PQO version 2.64.0
 (5 rows)
 
 -- ----------------------------------------------------------------------
@@ -602,6 +649,7 @@ EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13
 --     or something similar in order to verify that the index was used.
 -- ----------------------------------------------------------------------------
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
@@ -612,23 +660,23 @@ SELECT id FROM GistTable1
  82
 (3 rows)
 
--- start_ignore
 EXPLAIN SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
-                                  QUERY PLAN                                  
-------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=8 width=4)
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..14.40 rows=8 width=4)
    Merge Key: id
-   ->  Sort  (cost=0.00..431.00 rows=3 width=4)
-         Sort Key: id
-         ->  Table Scan on gisttable1  (cost=0.00..431.00 rows=3 width=4)
-               Filter: property ~= '(3,4),(1,2)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
+   ->  Result  (cost=0.00..14.40 rows=3 width=4)
+         ->  Sort  (cost=0.00..14.40 rows=3 width=4)
+               Sort Key: id
+               ->  Index Scan using propertyboxindex on gisttable1  (cost=0.00..14.40 rows=3 width=4)
+                     Index Cond: property ~= '(3,4),(1,2)'::box
+                     Filter: property ~= '(3,4),(1,2)'::box
+ Settings:  enable_seqscan=off
+ Optimizer status: PQO version 2.64.0
 (8 rows)
 
--- end_ignore
 REINDEX INDEX propertyBoxIndex;
 SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
@@ -640,25 +688,26 @@ SELECT id FROM GistTable1
  82
 (3 rows)
 
--- start_ignore
 EXPLAIN SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
-                                  QUERY PLAN                                  
-------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=8 width=4)
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..14.40 rows=8 width=4)
    Merge Key: id
-   ->  Sort  (cost=0.00..431.00 rows=3 width=4)
-         Sort Key: id
-         ->  Table Scan on gisttable1  (cost=0.00..431.00 rows=3 width=4)
-               Filter: property ~= '(3,4),(1,2)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
+   ->  Result  (cost=0.00..14.40 rows=3 width=4)
+         ->  Sort  (cost=0.00..14.40 rows=3 width=4)
+               Sort Key: id
+               ->  Index Scan using propertyboxindex on gisttable1  (cost=0.00..14.40 rows=3 width=4)
+                     Index Cond: property ~= '(3,4),(1,2)'::box
+                     Filter: property ~= '(3,4),(1,2)'::box
+ Settings:  enable_seqscan=off
+ Optimizer status: PQO version 2.64.0
 (8 rows)
 
--- end_ignore
 DROP INDEX propertyBoxIndex;
 -- Obviously, this shouldn't use the index now that the index is gone.
+set optimizer_enable_tablescan = TRUE;
 SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
@@ -669,7 +718,6 @@ SELECT id FROM GistTable1
  82
 (3 rows)
 
--- start_ignore
 EXPLAIN SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
@@ -681,11 +729,10 @@ EXPLAIN SELECT id FROM GistTable1
          Sort Key: id
          ->  Table Scan on gisttable1  (cost=0.00..431.00 rows=3 width=4)
                Filter: property ~= '(3,4),(1,2)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
+ Settings:  enable_seqscan=off
+ Optimizer status: PQO version 2.64.0
 (8 rows)
 
--- end_ignore
 -- ----------------------------------------------------------------------
 -- Test: teardown.sql
 -- ----------------------------------------------------------------------
@@ -694,6 +741,7 @@ drop schema qp_gist_indexes2 cascade;
 NOTICE:  drop cascades to function insertmanyintogisttable13(integer,integer)
 NOTICE:  drop cascades to function insertintogisttable13(integer)
 NOTICE:  drop cascades to function to_box(text)
+NOTICE:  drop cascades to table gisttable13
 NOTICE:  drop cascades to table gisttable1
 -- end_ignore
 -- ----------------------------------------------------------------------
@@ -729,6 +777,7 @@ INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
  VALUES (66, 'Miller', 'Lubbock or leave it', '((3, 1300), (33, 1330))',
    '( (66,660), (67, 650), (68, 660) )', '( (66, 66), 66)' );
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 -- We should be able to search the column that uses a geometric data type, 
 -- and of course we should find the right rows.  We should be able to search 
 -- using different "formats" (e.g. spacing) of the data, and in some cases 
@@ -760,20 +809,20 @@ SELECT owner, property FROM GistTable1
  Hypatia | (7052,250),(6050,20)
 (2 rows)
 
--- start_ignore
 EXPLAIN 
 SELECT owner, property FROM GistTable1
  WHERE property ~= '( (6050, 20), (7052, 250) )';
-                                  QUERY PLAN                                   
--------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=8 width=47)
-   ->  Table Scan on gisttable1  (cost=0.00..431.00 rows=3 width=47)
-         Filter: property ~= '(7052,250),(6050,20)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(5 rows)
+                                     QUERY PLAN                                      
+-------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1471.57 rows=8 width=47)
+   ->  Bitmap Table Scan on gisttable1  (cost=0.00..1471.57 rows=3 width=47)
+         Recheck Cond: property ~= '(7052,250),(6050,20)'::box
+         ->  Bitmap Index Scan on propertyboxindex  (cost=0.00..0.00 rows=0 width=0)
+               Index Cond: property ~= '(7052,250),(6050,20)'::box
+ Settings:  enable_seqscan=off
+ Optimizer status: PQO version 2.64.0
+(7 rows)
 
--- end_ignore
 SELECT id, property FROM GistTable1 
  WHERE property IS NULL 
  ORDER BY id;
@@ -799,6 +848,7 @@ INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
 -- PURPOSE: Sanity test GiST indexes.
 -- ----------------------------------------------------------------------------
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 SELECT id, owner, description, property, poli, bullseye FROM GistTable1
  WHERE property IS NOT NULL
  ORDER BY id;
@@ -829,6 +879,7 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 -- Test: test06IllegalonAO.sql
 -- ----------------------------------------------------------------------
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 ALTER INDEX propertyBoxIndex RENAME TO propIndex;
 UPDATE GistTable1
  SET description = 'Where''s Johnny?', bullseye = NULL
@@ -944,6 +995,7 @@ DELETE FROM GistTable1 WHERE bullseye = '( (76, 76), 76)';
 -- Test: test07select.sql
 -- ----------------------------------------------------------------------
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 SELECT id, owner, description, property, poli, bullseye FROM GistTable1
  WHERE property IS NOT NULL
  ORDER BY id;
@@ -977,6 +1029,7 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 --     Test multi-column indexes.
 -- ----------------------------------------------------------------------------
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 -- Insert 2 more records, but insert them with the same value for BULLSEYE.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
  VALUES (212, 'Fahrenheit', 'Slightly north of Hades', '( (212, 212), (32, 32) )', '( (212, 212), (600, 600), (70, 70) )', '( (100,100), 212 )' );
@@ -1026,6 +1079,7 @@ INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
  VALUES (99, 'FelDon Adams', 'Washingtoon D.C.',NULL,
    '( (99, 99), (97, 98), (98, 97) )', '( (99, 99), 99)' );
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 -- We should be able to search the column that uses a geometric data type, 
 -- and of course we should find the right rows.  We should be able to search 
 -- using different "formats" (e.g. spacing) of the data, and in some cases 
@@ -1043,27 +1097,25 @@ SELECT owner, property FROM GistTable1
  A. Gent                     | 
 (4 rows)
 
--- start_ignore
 EXPLAIN 
 SELECT owner, property FROM GistTable1 
  WHERE property IS NULL
  ORDER BY id
  ;
-                                      QUERY PLAN                                       
----------------------------------------------------------------------------------------
- Result  (cost=0.00..431.00 rows=3 width=47)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=8 width=47)
-         Merge Key: id
-         ->  Result  (cost=0.00..431.00 rows=3 width=51)
-               ->  Sort  (cost=0.00..431.00 rows=3 width=51)
-                     Sort Key: id
-                     ->  Table Scan on gisttable1  (cost=0.00..431.00 rows=3 width=51)
-                           Filter: property IS NULL
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
+                                              QUERY PLAN                                               
+-------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=700.38..700.38 rows=2 width=51)
+   Merge Key: id
+   ->  Sort  (cost=700.38..700.38 rows=1 width=51)
+         Sort Key: id
+         ->  Bitmap Append-Only Row-Oriented Scan on gisttable1  (cost=600.36..700.37 rows=1 width=51)
+               Recheck Cond: property IS NULL
+               ->  Bitmap Index Scan on propertyisnullindex  (cost=0.00..600.36 rows=1 width=0)
+                     Index Cond: property IS NULL
+ Settings:  enable_seqscan=off
+ Optimizer status: legacy query optimizer
 (10 rows)
 
--- end_ignore
 -- ----------------------------------------------------------------------
 -- Test: test13Vacuum.sql
 -- ----------------------------------------------------------------------
@@ -1130,6 +1182,7 @@ SELECT insertManyIntoGistTable13(1, 1000);
 -- Create the index.
 CREATE INDEX GistIndex13 ON GistTable13 USING GiST (property);
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 -- Add more rows after we create the index.
 SELECT insertManyIntoGistTable13(1001, 2000);
  insertmanyintogisttable13 
@@ -1150,14 +1203,16 @@ SELECT id, property AS "ProperTee" FROM GistTable13
 
 EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
-                                   QUERY PLAN                                    
----------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.31 rows=800 width=36)
-   ->  Table Scan on gisttable13  (cost=0.00..431.20 rows=267 width=36)
-         Filter: property ~= '(999,999),(998,998)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(5 rows)
+                                    QUERY PLAN                                     
+-----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..66595.18 rows=800 width=36)
+   ->  Bitmap Table Scan on gisttable13  (cost=0.00..66595.06 rows=267 width=36)
+         Recheck Cond: property ~= '(999,999),(998,998)'::box
+         ->  Bitmap Index Scan on gistindex13  (cost=0.00..0.00 rows=0 width=0)
+               Index Cond: property ~= '(999,999),(998,998)'::box
+ Settings:  enable_seqscan=off
+ Optimizer status: PQO version 2.64.0
+(7 rows)
 
 VACUUM GistTable13;
 ANALYZE GistTable13;
@@ -1170,14 +1225,16 @@ SELECT id, property AS "ProperTee" FROM GistTable13
 
 EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
-                                   QUERY PLAN                                    
----------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.31 rows=800 width=36)
-   ->  Table Scan on gisttable13  (cost=0.00..431.20 rows=267 width=36)
-         Filter: property ~= '(999,999),(998,998)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(5 rows)
+                                    QUERY PLAN                                     
+-----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..66595.18 rows=800 width=36)
+   ->  Bitmap Table Scan on gisttable13  (cost=0.00..66595.06 rows=267 width=36)
+         Recheck Cond: property ~= '(999,999),(998,998)'::box
+         ->  Bitmap Index Scan on gistindex13  (cost=0.00..0.00 rows=0 width=0)
+               Index Cond: property ~= '(999,999),(998,998)'::box
+ Settings:  enable_seqscan=off
+ Optimizer status: PQO version 2.64.0
+(7 rows)
 
 TRUNCATE TABLE GistTable13;
 -- Add some rows.
@@ -1200,14 +1257,16 @@ SELECT id, property AS "ProperTee" FROM GistTable13
 
 EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
-                                   QUERY PLAN                                    
----------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.15 rows=400 width=36)
-   ->  Table Scan on gisttable13  (cost=0.00..431.10 rows=134 width=36)
-         Filter: property ~= '(999,999),(998,998)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(5 rows)
+                                    QUERY PLAN                                     
+-----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..33281.85 rows=400 width=36)
+   ->  Bitmap Table Scan on gisttable13  (cost=0.00..33281.78 rows=134 width=36)
+         Recheck Cond: property ~= '(999,999),(998,998)'::box
+         ->  Bitmap Index Scan on gistindex13  (cost=0.00..0.00 rows=0 width=0)
+               Index Cond: property ~= '(999,999),(998,998)'::box
+ Settings:  enable_seqscan=off
+ Optimizer status: PQO version 2.64.0
+(7 rows)
 
 -- ----------------------------------------------------------------------
 -- Test: test15ReindexDropIndex.sql
@@ -1222,6 +1281,7 @@ EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13
 --     or something similar in order to verify that the index was used.
 -- ----------------------------------------------------------------------------
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
@@ -1232,23 +1292,24 @@ SELECT id FROM GistTable1
  82
 (3 rows)
 
--- start_ignore
 EXPLAIN SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
-                                  QUERY PLAN                                  
-------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=8 width=4)
+                                           QUERY PLAN                                            
+-------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1471.55 rows=8 width=4)
    Merge Key: id
-   ->  Sort  (cost=0.00..431.00 rows=3 width=4)
-         Sort Key: id
-         ->  Table Scan on gisttable1  (cost=0.00..431.00 rows=3 width=4)
-               Filter: property ~= '(3,4),(1,2)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(8 rows)
+   ->  Result  (cost=0.00..1471.55 rows=3 width=4)
+         ->  Sort  (cost=0.00..1471.55 rows=3 width=4)
+               Sort Key: id
+               ->  Bitmap Table Scan on gisttable1  (cost=0.00..1471.55 rows=3 width=4)
+                     Recheck Cond: property ~= '(3,4),(1,2)'::box
+                     ->  Bitmap Index Scan on propertyboxindex  (cost=0.00..0.00 rows=0 width=0)
+                           Index Cond: property ~= '(3,4),(1,2)'::box
+ Settings:  enable_seqscan=off
+ Optimizer status: PQO version 2.64.0
+(11 rows)
 
--- end_ignore
 REINDEX INDEX propertyBoxIndex;
 SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
@@ -1260,25 +1321,27 @@ SELECT id FROM GistTable1
  82
 (3 rows)
 
--- start_ignore
 EXPLAIN SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
-                                  QUERY PLAN                                  
-------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=8 width=4)
+                                           QUERY PLAN                                            
+-------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1471.55 rows=8 width=4)
    Merge Key: id
-   ->  Sort  (cost=0.00..431.00 rows=3 width=4)
-         Sort Key: id
-         ->  Table Scan on gisttable1  (cost=0.00..431.00 rows=3 width=4)
-               Filter: property ~= '(3,4),(1,2)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(8 rows)
+   ->  Result  (cost=0.00..1471.55 rows=3 width=4)
+         ->  Sort  (cost=0.00..1471.55 rows=3 width=4)
+               Sort Key: id
+               ->  Bitmap Table Scan on gisttable1  (cost=0.00..1471.55 rows=3 width=4)
+                     Recheck Cond: property ~= '(3,4),(1,2)'::box
+                     ->  Bitmap Index Scan on propertyboxindex  (cost=0.00..0.00 rows=0 width=0)
+                           Index Cond: property ~= '(3,4),(1,2)'::box
+ Settings:  enable_seqscan=off
+ Optimizer status: PQO version 2.64.0
+(11 rows)
 
--- end_ignore
 DROP INDEX propertyBoxIndex;
 -- Obviously, this shouldn't use the index now that the index is gone.
+SET optimizer_enable_tablescan = TRUE; 
 SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
@@ -1289,7 +1352,6 @@ SELECT id FROM GistTable1
  82
 (3 rows)
 
--- start_ignore
 EXPLAIN SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
@@ -1301,11 +1363,10 @@ EXPLAIN SELECT id FROM GistTable1
          Sort Key: id
          ->  Table Scan on gisttable1  (cost=0.00..431.00 rows=3 width=4)
                Filter: property ~= '(3,4),(1,2)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
+ Settings:  enable_seqscan=off
+ Optimizer status: PQO version 2.64.0
 (8 rows)
 
--- end_ignore
 -- ----------------------------------------------------------------------
 -- Test: teardown.sql
 -- ----------------------------------------------------------------------
@@ -1314,6 +1375,7 @@ drop schema qp_gist_indexes2 cascade;
 NOTICE:  drop cascades to function insertmanyintogisttable13(integer,integer)
 NOTICE:  drop cascades to function insertintogisttable13(integer)
 NOTICE:  drop cascades to function to_box(text)
+NOTICE:  drop cascades to append only table gisttable13
 NOTICE:  drop cascades to append only table gisttable1
 -- end_ignore
 -- ----------------------------------------------------------------------
@@ -1349,6 +1411,7 @@ INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
  VALUES (66, 'Miller', 'Lubbock or leave it', '((3, 1300), (33, 1330))',
    '( (66,660), (67, 650), (68, 660) )', '( (66, 66), 66)' );
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 -- We should be able to search the column that uses a geometric data type, 
 -- and of course we should find the right rows.  We should be able to search 
 -- using different "formats" (e.g. spacing) of the data, and in some cases 
@@ -1380,20 +1443,20 @@ SELECT owner, property FROM GistTable1
   Patty  | (7052,250),(6050,20)
 (2 rows)
 
--- start_ignore
 EXPLAIN 
 SELECT owner, property FROM GistTable1
  WHERE property ~= '( (6050, 20), (7052, 250) )';
-                                  QUERY PLAN                                   
--------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=8 width=47)
-   ->  Table Scan on gisttable1  (cost=0.00..431.00 rows=3 width=47)
-         Filter: property ~= '(7052,250),(6050,20)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(5 rows)
+                                     QUERY PLAN                                      
+-------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1471.57 rows=8 width=47)
+   ->  Bitmap Table Scan on gisttable1  (cost=0.00..1471.57 rows=3 width=47)
+         Recheck Cond: property ~= '(7052,250),(6050,20)'::box
+         ->  Bitmap Index Scan on propertyboxindex  (cost=0.00..0.00 rows=0 width=0)
+               Index Cond: property ~= '(7052,250),(6050,20)'::box
+ Settings:  enable_seqscan=off
+ Optimizer status: PQO version 2.64.0
+(7 rows)
 
--- end_ignore
 SELECT id, property FROM GistTable1 
  WHERE property IS NULL 
  ORDER BY id;
@@ -1419,6 +1482,7 @@ INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
 -- PURPOSE: Sanity test GiST indexes.
 -- ----------------------------------------------------------------------------
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 SELECT id, owner, description, property, poli, bullseye FROM GistTable1
  WHERE property IS NOT NULL
  ORDER BY id;
@@ -1449,6 +1513,7 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 -- Test: test06IllegalonAO.sql
 -- ----------------------------------------------------------------------
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 ALTER INDEX propertyBoxIndex RENAME TO propIndex;
 UPDATE GistTable1
  SET description = 'Where''s Johnny?', bullseye = NULL
@@ -1564,6 +1629,7 @@ DELETE FROM GistTable1 WHERE bullseye = '( (76, 76), 76)';
 -- Test: test07select.sql
 -- ----------------------------------------------------------------------
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 SELECT id, owner, description, property, poli, bullseye FROM GistTable1
  WHERE property IS NOT NULL
  ORDER BY id;
@@ -1597,6 +1663,7 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 --     Test multi-column indexes.
 -- ----------------------------------------------------------------------------
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 -- Insert 2 more records, but insert them with the same value for BULLSEYE.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
  VALUES (212, 'Fahrenheit', 'Slightly north of Hades', '( (212, 212), (32, 32) )', '( (212, 212), (600, 600), (70, 70) )', '( (100,100), 212 )' );
@@ -1646,6 +1713,7 @@ INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
  VALUES (99, 'FelDon Adams', 'Washingtoon D.C.',NULL,
    '( (99, 99), (97, 98), (98, 97) )', '( (99, 99), 99)' );
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 -- We should be able to search the column that uses a geometric data type, 
 -- and of course we should find the right rows.  We should be able to search 
 -- using different "formats" (e.g. spacing) of the data, and in some cases 
@@ -1663,27 +1731,25 @@ SELECT owner, property FROM GistTable1
  FelDon Adams                | 
 (4 rows)
 
--- start_ignore
 EXPLAIN 
 SELECT owner, property FROM GistTable1 
  WHERE property IS NULL
  ORDER BY id
  ;
-                                      QUERY PLAN                                       
----------------------------------------------------------------------------------------
- Result  (cost=0.00..431.00 rows=3 width=47)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=8 width=47)
-         Merge Key: id
-         ->  Result  (cost=0.00..431.00 rows=3 width=51)
-               ->  Sort  (cost=0.00..431.00 rows=3 width=51)
-                     Sort Key: id
-                     ->  Table Scan on gisttable1  (cost=0.00..431.00 rows=3 width=51)
-                           Filter: property IS NULL
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
+                                              QUERY PLAN                                               
+-------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=700.38..700.38 rows=2 width=51)
+   Merge Key: id
+   ->  Sort  (cost=700.38..700.38 rows=1 width=51)
+         Sort Key: id
+         ->  Bitmap Append-Only Row-Oriented Scan on gisttable1  (cost=600.36..700.37 rows=1 width=51)
+               Recheck Cond: property IS NULL
+               ->  Bitmap Index Scan on propertyisnullindex  (cost=0.00..600.36 rows=1 width=0)
+                     Index Cond: property IS NULL
+ Settings:  enable_seqscan=off
+ Optimizer status: legacy query optimizer
 (10 rows)
 
--- end_ignore
 -- ----------------------------------------------------------------------
 -- Test: test13Vacuum.sql
 -- ----------------------------------------------------------------------
@@ -1750,6 +1816,7 @@ SELECT insertManyIntoGistTable13(1, 1000);
 -- Create the index.
 CREATE INDEX GistIndex13 ON GistTable13 USING GiST (property);
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 -- Add more rows after we create the index.
 SELECT insertManyIntoGistTable13(1001, 2000);
  insertmanyintogisttable13 
@@ -1770,14 +1837,16 @@ SELECT id, property AS "ProperTee" FROM GistTable13
 
 EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
-                                   QUERY PLAN                                    
----------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.31 rows=800 width=36)
-   ->  Table Scan on gisttable13  (cost=0.00..431.20 rows=267 width=36)
-         Filter: property ~= '(999,999),(998,998)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(5 rows)
+                                    QUERY PLAN                                     
+-----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..66595.18 rows=800 width=36)
+   ->  Bitmap Table Scan on gisttable13  (cost=0.00..66595.06 rows=267 width=36)
+         Recheck Cond: property ~= '(999,999),(998,998)'::box
+         ->  Bitmap Index Scan on gistindex13  (cost=0.00..0.00 rows=0 width=0)
+               Index Cond: property ~= '(999,999),(998,998)'::box
+ Settings:  enable_seqscan=off
+ Optimizer status: PQO version 2.64.0
+(7 rows)
 
 VACUUM GistTable13;
 ANALYZE GistTable13;
@@ -1790,14 +1859,16 @@ SELECT id, property AS "ProperTee" FROM GistTable13
 
 EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
-                                   QUERY PLAN                                    
----------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.31 rows=800 width=36)
-   ->  Table Scan on gisttable13  (cost=0.00..431.20 rows=267 width=36)
-         Filter: property ~= '(999,999),(998,998)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(5 rows)
+                                    QUERY PLAN                                     
+-----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..66595.18 rows=800 width=36)
+   ->  Bitmap Table Scan on gisttable13  (cost=0.00..66595.06 rows=267 width=36)
+         Recheck Cond: property ~= '(999,999),(998,998)'::box
+         ->  Bitmap Index Scan on gistindex13  (cost=0.00..0.00 rows=0 width=0)
+               Index Cond: property ~= '(999,999),(998,998)'::box
+ Settings:  enable_seqscan=off
+ Optimizer status: PQO version 2.64.0
+(7 rows)
 
 TRUNCATE TABLE GistTable13;
 -- Add some rows.
@@ -1820,14 +1891,16 @@ SELECT id, property AS "ProperTee" FROM GistTable13
 
 EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
-                                   QUERY PLAN                                    
----------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.15 rows=400 width=36)
-   ->  Table Scan on gisttable13  (cost=0.00..431.10 rows=134 width=36)
-         Filter: property ~= '(999,999),(998,998)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(5 rows)
+                                    QUERY PLAN                                     
+-----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..33281.85 rows=400 width=36)
+   ->  Bitmap Table Scan on gisttable13  (cost=0.00..33281.78 rows=134 width=36)
+         Recheck Cond: property ~= '(999,999),(998,998)'::box
+         ->  Bitmap Index Scan on gistindex13  (cost=0.00..0.00 rows=0 width=0)
+               Index Cond: property ~= '(999,999),(998,998)'::box
+ Settings:  enable_seqscan=off
+ Optimizer status: PQO version 2.64.0
+(7 rows)
 
 -- ----------------------------------------------------------------------
 -- Test: test15ReindexDropIndex.sql
@@ -1842,6 +1915,7 @@ EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13
 --     or something similar in order to verify that the index was used.
 -- ----------------------------------------------------------------------------
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
@@ -1852,23 +1926,24 @@ SELECT id FROM GistTable1
  82
 (3 rows)
 
--- start_ignore
 EXPLAIN SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
-                                  QUERY PLAN                                  
-------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=8 width=4)
+                                           QUERY PLAN                                            
+-------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1471.55 rows=8 width=4)
    Merge Key: id
-   ->  Sort  (cost=0.00..431.00 rows=3 width=4)
-         Sort Key: id
-         ->  Table Scan on gisttable1  (cost=0.00..431.00 rows=3 width=4)
-               Filter: property ~= '(3,4),(1,2)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(8 rows)
+   ->  Result  (cost=0.00..1471.55 rows=3 width=4)
+         ->  Sort  (cost=0.00..1471.55 rows=3 width=4)
+               Sort Key: id
+               ->  Bitmap Table Scan on gisttable1  (cost=0.00..1471.55 rows=3 width=4)
+                     Recheck Cond: property ~= '(3,4),(1,2)'::box
+                     ->  Bitmap Index Scan on propertyboxindex  (cost=0.00..0.00 rows=0 width=0)
+                           Index Cond: property ~= '(3,4),(1,2)'::box
+ Settings:  enable_seqscan=off
+ Optimizer status: PQO version 2.64.0
+(11 rows)
 
--- end_ignore
 REINDEX INDEX propertyBoxIndex;
 SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
@@ -1880,25 +1955,27 @@ SELECT id FROM GistTable1
  82
 (3 rows)
 
--- start_ignore
 EXPLAIN SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
-                                  QUERY PLAN                                  
-------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=8 width=4)
+                                           QUERY PLAN                                            
+-------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1471.55 rows=8 width=4)
    Merge Key: id
-   ->  Sort  (cost=0.00..431.00 rows=3 width=4)
-         Sort Key: id
-         ->  Table Scan on gisttable1  (cost=0.00..431.00 rows=3 width=4)
-               Filter: property ~= '(3,4),(1,2)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(8 rows)
+   ->  Result  (cost=0.00..1471.55 rows=3 width=4)
+         ->  Sort  (cost=0.00..1471.55 rows=3 width=4)
+               Sort Key: id
+               ->  Bitmap Table Scan on gisttable1  (cost=0.00..1471.55 rows=3 width=4)
+                     Recheck Cond: property ~= '(3,4),(1,2)'::box
+                     ->  Bitmap Index Scan on propertyboxindex  (cost=0.00..0.00 rows=0 width=0)
+                           Index Cond: property ~= '(3,4),(1,2)'::box
+ Settings:  enable_seqscan=off
+ Optimizer status: PQO version 2.64.0
+(11 rows)
 
--- end_ignore
 DROP INDEX propertyBoxIndex;
 -- Obviously, this shouldn't use the index now that the index is gone.
+set optimizer_enable_tablescan = TRUE;
 SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
@@ -1909,7 +1986,6 @@ SELECT id FROM GistTable1
  82
 (3 rows)
 
--- start_ignore
 EXPLAIN SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
@@ -1921,11 +1997,10 @@ EXPLAIN SELECT id FROM GistTable1
          Sort Key: id
          ->  Table Scan on gisttable1  (cost=0.00..431.00 rows=3 width=4)
                Filter: property ~= '(3,4),(1,2)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
+ Settings:  enable_seqscan=off
+ Optimizer status: PQO version 2.64.0
 (8 rows)
 
--- end_ignore
 -- ----------------------------------------------------------------------
 -- Test: teardown.sql
 -- ----------------------------------------------------------------------
@@ -1934,6 +2009,7 @@ drop schema qp_gist_indexes2 cascade;
 NOTICE:  drop cascades to function insertmanyintogisttable13(integer,integer)
 NOTICE:  drop cascades to function insertintogisttable13(integer)
 NOTICE:  drop cascades to function to_box(text)
+NOTICE:  drop cascades to append only table gisttable13
 NOTICE:  drop cascades to append only table gisttable1
 -- end_ignore
 -- ----------------------------------------------------------------------
@@ -1969,6 +2045,7 @@ INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
  VALUES (66, 'Miller', 'Lubbock or leave it', '((3, 1300), (33, 1330))',
    '( (66,660), (67, 650), (68, 660) )', '( (66, 66), 66)' );
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 -- We should be able to search the column that uses a geometric data type, 
 -- and of course we should find the right rows.  We should be able to search 
 -- using different "formats" (e.g. spacing) of the data, and in some cases 
@@ -2000,20 +2077,20 @@ SELECT owner, property FROM GistTable1
   Patty  | (7052,250),(6050,20)
 (2 rows)
 
--- start_ignore
 EXPLAIN 
 SELECT owner, property FROM GistTable1
  WHERE property ~= '( (6050, 20), (7052, 250) )';
-                                  QUERY PLAN                                   
--------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=8 width=47)
-   ->  Table Scan on gisttable1  (cost=0.00..431.00 rows=3 width=47)
-         Filter: property ~= '(7052,250),(6050,20)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(5 rows)
+                                     QUERY PLAN                                      
+-------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1471.57 rows=8 width=47)
+   ->  Bitmap Table Scan on gisttable1  (cost=0.00..1471.57 rows=3 width=47)
+         Recheck Cond: property ~= '(7052,250),(6050,20)'::box
+         ->  Bitmap Index Scan on propertyboxindex  (cost=0.00..0.00 rows=0 width=0)
+               Index Cond: property ~= '(7052,250),(6050,20)'::box
+ Settings:  enable_seqscan=off
+ Optimizer status: PQO version 2.64.0
+(7 rows)
 
--- end_ignore
 SELECT id, property FROM GistTable1 
  WHERE property IS NULL 
  ORDER BY id;
@@ -2039,6 +2116,7 @@ INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
 -- PURPOSE: Sanity test GiST indexes.
 -- ----------------------------------------------------------------------------
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 SELECT id, owner, description, property, poli, bullseye FROM GistTable1
  WHERE property IS NOT NULL
  ORDER BY id;
@@ -2069,6 +2147,7 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 -- Test: test06IllegalonAO.sql
 -- ----------------------------------------------------------------------
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 ALTER INDEX propertyBoxIndex RENAME TO propIndex;
 UPDATE GistTable1
  SET description = 'Where''s Johnny?', bullseye = NULL
@@ -2184,6 +2263,7 @@ DELETE FROM GistTable1 WHERE bullseye = '( (76, 76), 76)';
 -- Test: test07select.sql
 -- ----------------------------------------------------------------------
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 SELECT id, owner, description, property, poli, bullseye FROM GistTable1
  WHERE property IS NOT NULL
  ORDER BY id;
@@ -2217,6 +2297,7 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 --     Test multi-column indexes.
 -- ----------------------------------------------------------------------------
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 -- Insert 2 more records, but insert them with the same value for BULLSEYE.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
  VALUES (212, 'Fahrenheit', 'Slightly north of Hades', '( (212, 212), (32, 32) )', '( (212, 212), (600, 600), (70, 70) )', '( (100,100), 212 )' );
@@ -2266,6 +2347,7 @@ INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
  VALUES (99, 'FelDon Adams', 'Washingtoon D.C.',NULL,
    '( (99, 99), (97, 98), (98, 97) )', '( (99, 99), 99)' );
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 -- We should be able to search the column that uses a geometric data type, 
 -- and of course we should find the right rows.  We should be able to search 
 -- using different "formats" (e.g. spacing) of the data, and in some cases 
@@ -2283,27 +2365,25 @@ SELECT owner, property FROM GistTable1
  FelDon Adams                | 
 (4 rows)
 
--- start_ignore
 EXPLAIN 
 SELECT owner, property FROM GistTable1 
  WHERE property IS NULL
  ORDER BY id
  ;
-                                      QUERY PLAN                                       
----------------------------------------------------------------------------------------
- Result  (cost=0.00..431.00 rows=3 width=47)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=8 width=47)
-         Merge Key: id
-         ->  Result  (cost=0.00..431.00 rows=3 width=51)
-               ->  Sort  (cost=0.00..431.00 rows=3 width=51)
-                     Sort Key: id
-                     ->  Table Scan on gisttable1  (cost=0.00..431.00 rows=3 width=51)
-                           Filter: property IS NULL
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
+                                                QUERY PLAN                                                
+----------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=700.38..700.38 rows=2 width=51)
+   Merge Key: id
+   ->  Sort  (cost=700.38..700.38 rows=1 width=51)
+         Sort Key: id
+         ->  Bitmap Append-Only Column-Oriented Scan on gisttable1  (cost=600.36..700.37 rows=1 width=51)
+               Recheck Cond: property IS NULL
+               ->  Bitmap Index Scan on propertyisnullindex  (cost=0.00..600.36 rows=1 width=0)
+                     Index Cond: property IS NULL
+ Settings:  enable_seqscan=off
+ Optimizer status: legacy query optimizer
 (10 rows)
 
--- end_ignore
 -- ----------------------------------------------------------------------
 -- Test: test13Vacuum.sql
 -- ----------------------------------------------------------------------
@@ -2370,6 +2450,7 @@ SELECT insertManyIntoGistTable13(1, 1000);
 -- Create the index.
 CREATE INDEX GistIndex13 ON GistTable13 USING GiST (property);
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 -- Add more rows after we create the index.
 SELECT insertManyIntoGistTable13(1001, 2000);
  insertmanyintogisttable13 
@@ -2390,14 +2471,16 @@ SELECT id, property AS "ProperTee" FROM GistTable13
 
 EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
-                                   QUERY PLAN                                    
----------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.31 rows=800 width=36)
-   ->  Table Scan on gisttable13  (cost=0.00..431.20 rows=267 width=36)
-         Filter: property ~= '(999,999),(998,998)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(5 rows)
+                                    QUERY PLAN                                     
+-----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..66595.18 rows=800 width=36)
+   ->  Bitmap Table Scan on gisttable13  (cost=0.00..66595.06 rows=267 width=36)
+         Recheck Cond: property ~= '(999,999),(998,998)'::box
+         ->  Bitmap Index Scan on gistindex13  (cost=0.00..0.00 rows=0 width=0)
+               Index Cond: property ~= '(999,999),(998,998)'::box
+ Settings:  enable_seqscan=off
+ Optimizer status: PQO version 2.64.0
+(7 rows)
 
 VACUUM GistTable13;
 ANALYZE GistTable13;
@@ -2410,14 +2493,16 @@ SELECT id, property AS "ProperTee" FROM GistTable13
 
 EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
-                                   QUERY PLAN                                    
----------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.31 rows=800 width=36)
-   ->  Table Scan on gisttable13  (cost=0.00..431.20 rows=267 width=36)
-         Filter: property ~= '(999,999),(998,998)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(5 rows)
+                                    QUERY PLAN                                     
+-----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..66595.18 rows=800 width=36)
+   ->  Bitmap Table Scan on gisttable13  (cost=0.00..66595.06 rows=267 width=36)
+         Recheck Cond: property ~= '(999,999),(998,998)'::box
+         ->  Bitmap Index Scan on gistindex13  (cost=0.00..0.00 rows=0 width=0)
+               Index Cond: property ~= '(999,999),(998,998)'::box
+ Settings:  enable_seqscan=off
+ Optimizer status: PQO version 2.64.0
+(7 rows)
 
 TRUNCATE TABLE GistTable13;
 -- Add some rows.
@@ -2440,14 +2525,16 @@ SELECT id, property AS "ProperTee" FROM GistTable13
 
 EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
-                                   QUERY PLAN                                    
----------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.15 rows=400 width=36)
-   ->  Table Scan on gisttable13  (cost=0.00..431.10 rows=134 width=36)
-         Filter: property ~= '(999,999),(998,998)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(5 rows)
+                                    QUERY PLAN                                     
+-----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..33281.85 rows=400 width=36)
+   ->  Bitmap Table Scan on gisttable13  (cost=0.00..33281.78 rows=134 width=36)
+         Recheck Cond: property ~= '(999,999),(998,998)'::box
+         ->  Bitmap Index Scan on gistindex13  (cost=0.00..0.00 rows=0 width=0)
+               Index Cond: property ~= '(999,999),(998,998)'::box
+ Settings:  enable_seqscan=off
+ Optimizer status: PQO version 2.64.0
+(7 rows)
 
 -- ----------------------------------------------------------------------
 -- Test: test15ReindexDropIndex.sql
@@ -2462,6 +2549,7 @@ EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13
 --     or something similar in order to verify that the index was used.
 -- ----------------------------------------------------------------------------
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
@@ -2472,23 +2560,24 @@ SELECT id FROM GistTable1
  82
 (3 rows)
 
--- start_ignore
 EXPLAIN SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
-                                  QUERY PLAN                                  
-------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=8 width=4)
+                                           QUERY PLAN                                            
+-------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1471.55 rows=8 width=4)
    Merge Key: id
-   ->  Sort  (cost=0.00..431.00 rows=3 width=4)
-         Sort Key: id
-         ->  Table Scan on gisttable1  (cost=0.00..431.00 rows=3 width=4)
-               Filter: property ~= '(3,4),(1,2)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(8 rows)
+   ->  Result  (cost=0.00..1471.55 rows=3 width=4)
+         ->  Sort  (cost=0.00..1471.55 rows=3 width=4)
+               Sort Key: id
+               ->  Bitmap Table Scan on gisttable1  (cost=0.00..1471.55 rows=3 width=4)
+                     Recheck Cond: property ~= '(3,4),(1,2)'::box
+                     ->  Bitmap Index Scan on propertyboxindex  (cost=0.00..0.00 rows=0 width=0)
+                           Index Cond: property ~= '(3,4),(1,2)'::box
+ Settings:  enable_seqscan=off
+ Optimizer status: PQO version 2.64.0
+(11 rows)
 
--- end_ignore
 REINDEX INDEX propertyBoxIndex;
 SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
@@ -2500,25 +2589,27 @@ SELECT id FROM GistTable1
  82
 (3 rows)
 
--- start_ignore
 EXPLAIN SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
-                                  QUERY PLAN                                  
-------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=8 width=4)
+                                           QUERY PLAN                                            
+-------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1471.55 rows=8 width=4)
    Merge Key: id
-   ->  Sort  (cost=0.00..431.00 rows=3 width=4)
-         Sort Key: id
-         ->  Table Scan on gisttable1  (cost=0.00..431.00 rows=3 width=4)
-               Filter: property ~= '(3,4),(1,2)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(8 rows)
+   ->  Result  (cost=0.00..1471.55 rows=3 width=4)
+         ->  Sort  (cost=0.00..1471.55 rows=3 width=4)
+               Sort Key: id
+               ->  Bitmap Table Scan on gisttable1  (cost=0.00..1471.55 rows=3 width=4)
+                     Recheck Cond: property ~= '(3,4),(1,2)'::box
+                     ->  Bitmap Index Scan on propertyboxindex  (cost=0.00..0.00 rows=0 width=0)
+                           Index Cond: property ~= '(3,4),(1,2)'::box
+ Settings:  enable_seqscan=off
+ Optimizer status: PQO version 2.64.0
+(11 rows)
 
--- end_ignore
 DROP INDEX propertyBoxIndex;
 -- Obviously, this shouldn't use the index now that the index is gone.
+set optimizer_enable_tablescan = TRUE;
 SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
@@ -2529,7 +2620,6 @@ SELECT id FROM GistTable1
  82
 (3 rows)
 
--- start_ignore
 EXPLAIN SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
@@ -2541,11 +2631,10 @@ EXPLAIN SELECT id FROM GistTable1
          Sort Key: id
          ->  Table Scan on gisttable1  (cost=0.00..431.00 rows=3 width=4)
                Filter: property ~= '(3,4),(1,2)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
+ Settings:  enable_seqscan=off
+ Optimizer status: PQO version 2.64.0
 (8 rows)
 
--- end_ignore
 -- ----------------------------------------------------------------------
 -- Test: teardown.sql
 -- ----------------------------------------------------------------------
@@ -2554,6 +2643,7 @@ drop schema qp_gist_indexes2 cascade;
 NOTICE:  drop cascades to function insertmanyintogisttable13(integer,integer)
 NOTICE:  drop cascades to function insertintogisttable13(integer)
 NOTICE:  drop cascades to function to_box(text)
+NOTICE:  drop cascades to append only columnar table gisttable13
 NOTICE:  drop cascades to append only columnar table gisttable1
 -- end_ignore
 -- ----------------------------------------------------------------------
@@ -2589,6 +2679,7 @@ INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
  VALUES (66, 'Miller', 'Lubbock or leave it', '((3, 1300), (33, 1330))',
    '( (66,660), (67, 650), (68, 660) )', '( (66, 66), 66)' );
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 -- We should be able to search the column that uses a geometric data type, 
 -- and of course we should find the right rows.  We should be able to search 
 -- using different "formats" (e.g. spacing) of the data, and in some cases 
@@ -2620,20 +2711,20 @@ SELECT owner, property FROM GistTable1
   Patty  | (7052,250),(6050,20)
 (2 rows)
 
--- start_ignore
 EXPLAIN 
 SELECT owner, property FROM GistTable1
  WHERE property ~= '( (6050, 20), (7052, 250) )';
-                                  QUERY PLAN                                   
--------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=8 width=47)
-   ->  Table Scan on gisttable1  (cost=0.00..431.00 rows=3 width=47)
-         Filter: property ~= '(7052,250),(6050,20)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(5 rows)
+                                     QUERY PLAN                                      
+-------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1471.57 rows=8 width=47)
+   ->  Bitmap Table Scan on gisttable1  (cost=0.00..1471.57 rows=3 width=47)
+         Recheck Cond: property ~= '(7052,250),(6050,20)'::box
+         ->  Bitmap Index Scan on propertyboxindex  (cost=0.00..0.00 rows=0 width=0)
+               Index Cond: property ~= '(7052,250),(6050,20)'::box
+ Settings:  enable_seqscan=off
+ Optimizer status: PQO version 2.64.0
+(7 rows)
 
--- end_ignore
 SELECT id, property FROM GistTable1 
  WHERE property IS NULL 
  ORDER BY id;
@@ -2659,6 +2750,7 @@ INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
 -- PURPOSE: Sanity test GiST indexes.
 -- ----------------------------------------------------------------------------
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 SELECT id, owner, description, property, poli, bullseye FROM GistTable1
  WHERE property IS NOT NULL
  ORDER BY id;
@@ -2689,6 +2781,7 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 -- Test: test06IllegalonAO.sql
 -- ----------------------------------------------------------------------
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 ALTER INDEX propertyBoxIndex RENAME TO propIndex;
 UPDATE GistTable1
  SET description = 'Where''s Johnny?', bullseye = NULL
@@ -2804,6 +2897,7 @@ DELETE FROM GistTable1 WHERE bullseye = '( (76, 76), 76)';
 -- Test: test07select.sql
 -- ----------------------------------------------------------------------
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 SELECT id, owner, description, property, poli, bullseye FROM GistTable1
  WHERE property IS NOT NULL
  ORDER BY id;
@@ -2837,6 +2931,7 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 --     Test multi-column indexes.
 -- ----------------------------------------------------------------------------
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 -- Insert 2 more records, but insert them with the same value for BULLSEYE.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
  VALUES (212, 'Fahrenheit', 'Slightly north of Hades', '( (212, 212), (32, 32) )', '( (212, 212), (600, 600), (70, 70) )', '( (100,100), 212 )' );
@@ -2886,6 +2981,7 @@ INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
  VALUES (99, 'FelDon Adams', 'Washingtoon D.C.',NULL,
    '( (99, 99), (97, 98), (98, 97) )', '( (99, 99), 99)' );
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 -- We should be able to search the column that uses a geometric data type, 
 -- and of course we should find the right rows.  We should be able to search 
 -- using different "formats" (e.g. spacing) of the data, and in some cases 
@@ -2903,27 +2999,25 @@ SELECT owner, property FROM GistTable1
  FelDon Adams                | 
 (4 rows)
 
--- start_ignore
 EXPLAIN 
 SELECT owner, property FROM GistTable1 
  WHERE property IS NULL
  ORDER BY id
  ;
-                                      QUERY PLAN                                       
----------------------------------------------------------------------------------------
- Result  (cost=0.00..431.00 rows=3 width=47)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=8 width=47)
-         Merge Key: id
-         ->  Result  (cost=0.00..431.00 rows=3 width=51)
-               ->  Sort  (cost=0.00..431.00 rows=3 width=51)
-                     Sort Key: id
-                     ->  Table Scan on gisttable1  (cost=0.00..431.00 rows=3 width=51)
-                           Filter: property IS NULL
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
+                                                QUERY PLAN                                                
+----------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=700.38..700.38 rows=2 width=51)
+   Merge Key: id
+   ->  Sort  (cost=700.38..700.38 rows=1 width=51)
+         Sort Key: id
+         ->  Bitmap Append-Only Column-Oriented Scan on gisttable1  (cost=600.36..700.37 rows=1 width=51)
+               Recheck Cond: property IS NULL
+               ->  Bitmap Index Scan on propertyisnullindex  (cost=0.00..600.36 rows=1 width=0)
+                     Index Cond: property IS NULL
+ Settings:  enable_seqscan=off
+ Optimizer status: legacy query optimizer
 (10 rows)
 
--- end_ignore
 -- ----------------------------------------------------------------------
 -- Test: test13Vacuum.sql
 -- ----------------------------------------------------------------------
@@ -2990,6 +3084,7 @@ SELECT insertManyIntoGistTable13(1, 1000);
 -- Create the index.
 CREATE INDEX GistIndex13 ON GistTable13 USING GiST (property);
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 -- Add more rows after we create the index.
 SELECT insertManyIntoGistTable13(1001, 2000);
  insertmanyintogisttable13 
@@ -3010,14 +3105,16 @@ SELECT id, property AS "ProperTee" FROM GistTable13
 
 EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
-                                   QUERY PLAN                                    
----------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.31 rows=800 width=36)
-   ->  Table Scan on gisttable13  (cost=0.00..431.20 rows=267 width=36)
-         Filter: property ~= '(999,999),(998,998)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(5 rows)
+                                    QUERY PLAN                                     
+-----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..66595.18 rows=800 width=36)
+   ->  Bitmap Table Scan on gisttable13  (cost=0.00..66595.06 rows=267 width=36)
+         Recheck Cond: property ~= '(999,999),(998,998)'::box
+         ->  Bitmap Index Scan on gistindex13  (cost=0.00..0.00 rows=0 width=0)
+               Index Cond: property ~= '(999,999),(998,998)'::box
+ Settings:  enable_seqscan=off
+ Optimizer status: PQO version 2.64.0
+(7 rows)
 
 VACUUM GistTable13;
 ANALYZE GistTable13;
@@ -3030,14 +3127,16 @@ SELECT id, property AS "ProperTee" FROM GistTable13
 
 EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
-                                   QUERY PLAN                                    
----------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.31 rows=800 width=36)
-   ->  Table Scan on gisttable13  (cost=0.00..431.20 rows=267 width=36)
-         Filter: property ~= '(999,999),(998,998)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(5 rows)
+                                    QUERY PLAN                                     
+-----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..66595.18 rows=800 width=36)
+   ->  Bitmap Table Scan on gisttable13  (cost=0.00..66595.06 rows=267 width=36)
+         Recheck Cond: property ~= '(999,999),(998,998)'::box
+         ->  Bitmap Index Scan on gistindex13  (cost=0.00..0.00 rows=0 width=0)
+               Index Cond: property ~= '(999,999),(998,998)'::box
+ Settings:  enable_seqscan=off
+ Optimizer status: PQO version 2.64.0
+(7 rows)
 
 TRUNCATE TABLE GistTable13;
 -- Add some rows.
@@ -3060,14 +3159,16 @@ SELECT id, property AS "ProperTee" FROM GistTable13
 
 EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
-                                   QUERY PLAN                                    
----------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.15 rows=400 width=36)
-   ->  Table Scan on gisttable13  (cost=0.00..431.10 rows=134 width=36)
-         Filter: property ~= '(999,999),(998,998)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(5 rows)
+                                    QUERY PLAN                                     
+-----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..33281.85 rows=400 width=36)
+   ->  Bitmap Table Scan on gisttable13  (cost=0.00..33281.78 rows=134 width=36)
+         Recheck Cond: property ~= '(999,999),(998,998)'::box
+         ->  Bitmap Index Scan on gistindex13  (cost=0.00..0.00 rows=0 width=0)
+               Index Cond: property ~= '(999,999),(998,998)'::box
+ Settings:  enable_seqscan=off
+ Optimizer status: PQO version 2.64.0
+(7 rows)
 
 -- ----------------------------------------------------------------------
 -- Test: test15ReindexDropIndex.sql
@@ -3082,6 +3183,7 @@ EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13
 --     or something similar in order to verify that the index was used.
 -- ----------------------------------------------------------------------------
 SET enable_seqscan = FALSE;
+set optimizer_enable_tablescan = FALSE;
 SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
@@ -3092,23 +3194,24 @@ SELECT id FROM GistTable1
  82
 (3 rows)
 
--- start_ignore
 EXPLAIN SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
-                                  QUERY PLAN                                  
-------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=8 width=4)
+                                           QUERY PLAN                                            
+-------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1471.55 rows=8 width=4)
    Merge Key: id
-   ->  Sort  (cost=0.00..431.00 rows=3 width=4)
-         Sort Key: id
-         ->  Table Scan on gisttable1  (cost=0.00..431.00 rows=3 width=4)
-               Filter: property ~= '(3,4),(1,2)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(8 rows)
+   ->  Result  (cost=0.00..1471.55 rows=3 width=4)
+         ->  Sort  (cost=0.00..1471.55 rows=3 width=4)
+               Sort Key: id
+               ->  Bitmap Table Scan on gisttable1  (cost=0.00..1471.55 rows=3 width=4)
+                     Recheck Cond: property ~= '(3,4),(1,2)'::box
+                     ->  Bitmap Index Scan on propertyboxindex  (cost=0.00..0.00 rows=0 width=0)
+                           Index Cond: property ~= '(3,4),(1,2)'::box
+ Settings:  enable_seqscan=off
+ Optimizer status: PQO version 2.64.0
+(11 rows)
 
--- end_ignore
 REINDEX INDEX propertyBoxIndex;
 SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
@@ -3120,25 +3223,27 @@ SELECT id FROM GistTable1
  82
 (3 rows)
 
--- start_ignore
 EXPLAIN SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
-                                  QUERY PLAN                                  
-------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=8 width=4)
+                                           QUERY PLAN                                            
+-------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1471.55 rows=8 width=4)
    Merge Key: id
-   ->  Sort  (cost=0.00..431.00 rows=3 width=4)
-         Sort Key: id
-         ->  Table Scan on gisttable1  (cost=0.00..431.00 rows=3 width=4)
-               Filter: property ~= '(3,4),(1,2)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
-(8 rows)
+   ->  Result  (cost=0.00..1471.55 rows=3 width=4)
+         ->  Sort  (cost=0.00..1471.55 rows=3 width=4)
+               Sort Key: id
+               ->  Bitmap Table Scan on gisttable1  (cost=0.00..1471.55 rows=3 width=4)
+                     Recheck Cond: property ~= '(3,4),(1,2)'::box
+                     ->  Bitmap Index Scan on propertyboxindex  (cost=0.00..0.00 rows=0 width=0)
+                           Index Cond: property ~= '(3,4),(1,2)'::box
+ Settings:  enable_seqscan=off
+ Optimizer status: PQO version 2.64.0
+(11 rows)
 
--- end_ignore
 DROP INDEX propertyBoxIndex;
 -- Obviously, this shouldn't use the index now that the index is gone.
+set optimizer_enable_tablescan = TRUE;
 SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
@@ -3149,7 +3254,6 @@ SELECT id FROM GistTable1
  82
 (3 rows)
 
--- start_ignore
 EXPLAIN SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
@@ -3161,11 +3265,10 @@ EXPLAIN SELECT id FROM GistTable1
          Sort Key: id
          ->  Table Scan on gisttable1  (cost=0.00..431.00 rows=3 width=4)
                Filter: property ~= '(3,4),(1,2)'::box
- Settings:  enable_seqscan=off; optimizer=on
- Optimizer status: PQO version 1.624
+ Settings:  enable_seqscan=off
+ Optimizer status: PQO version 2.64.0
 (8 rows)
 
--- end_ignore
 -- ----------------------------------------------------------------------
 -- Test: teardown.sql
 -- ----------------------------------------------------------------------
@@ -3174,5 +3277,6 @@ drop schema qp_gist_indexes2 cascade;
 NOTICE:  drop cascades to function insertmanyintogisttable13(integer,integer)
 NOTICE:  drop cascades to function insertintogisttable13(integer)
 NOTICE:  drop cascades to function to_box(text)
+NOTICE:  drop cascades to append only columnar table gisttable13
 NOTICE:  drop cascades to append only columnar table gisttable1
 -- end_ignore

@@ -2277,6 +2277,16 @@ CTranslatorRelcacheToDXL::PimdobjRelStats
 		else
 		{
 			rows = rel->rd_rel->reltuples;
+
+			if (rows == 0 && gp_enable_relsize_collection)
+			{
+				RelOptInfo *relOptInfo = makeNode(RelOptInfo);
+				relOptInfo->cdbpolicy = gpdb::Pdistrpolicy(rel);
+				bool default_stats_used = false;
+				gpdb::CdbEstimateRelationSize(relOptInfo, rel, NULL, &pages, &rows, &default_stats_used);
+				pfree(relOptInfo);
+
+			}
 		}
 
 		pmdidRelStats->AddRef();

@@ -63,15 +63,6 @@ estimate_tuple_width(Relation   rel,
                      double    *tuples_per_page);
 
 static void
-cdb_estimate_rel_size(RelOptInfo   *relOptInfo,
-                      Relation      baserel,
-                      Relation      rel,
-                      int32        *attr_widths,
-				      BlockNumber  *pages,
-                      double       *tuples,
-                      bool         *default_stats_used);
-
-static void
 cdb_default_stats_warning_for_index(Oid reloid, Oid indexoid);
 
 static void get_external_relation_info(Relation relation, RelOptInfo *rel);

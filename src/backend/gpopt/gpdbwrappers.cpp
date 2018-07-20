@@ -2353,6 +2353,25 @@ gpdb::EstimateRelationSize
 }
 
 void
+gpdb::CdbEstimateRelationSize
+	(
+	RelOptInfo   *relOptInfo,
+	Relation rel,
+	int32 *attr_widths,
+	BlockNumber *pages,
+	double *tuples,
+	bool *default_stats_used
+	)
+{
+	GP_WRAP_START;
+	{
+		cdb_estimate_rel_size(relOptInfo, rel, rel, attr_widths, pages, tuples, default_stats_used);
+		return;
+	}
+	GP_WRAP_END;
+}
+
+void
 gpdb::CloseRelation
 	(
 	Relation rel

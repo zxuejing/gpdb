@@ -2596,6 +2596,23 @@ CREATE TABLE qp_misc_jiras.ctas_dup_dk_src (col1 int, col2 int);
 CREATE TABLE qp_misc_jiras.ctas_dup_dk as SELECT distinct col2 as c1, col2 as c2 from qp_misc_jiras.ctas_dup_dk_src;
 SELECT distinct col2 c1, col2 c2 into qp_misc_jiras.ctas_dup_dk_1 from qp_misc_jiras.ctas_dup_dk_src;
 
+--
+-- Test gp_enable_relsize_collection's effect on ORCA plan generation
+--
+create table tbl_z(x int) distributed by (x);
+set optimizer_metadata_caching to off;
+insert into tbl_z select i from generate_series(1,100) i;
+
+-- plan with no relsize collection
+explain select 1 as t1 where 1 <= ALL (select x from tbl_z);
+set gp_enable_relsize_collection = on;
+-- plan with relsize collection
+explain select 1 as t1 where 1 <= ALL (select x from tbl_z);
+
+drop table if exists tbl_z;
+reset optimizer_metadata_caching;
+reset gp_enable_relsize_collection;
+
 -- start_ignore
 drop schema qp_misc_jiras cascade;
 -- end_ignore

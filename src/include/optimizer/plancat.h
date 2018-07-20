@@ -33,6 +33,14 @@ extern void get_relation_info(PlannerInfo *root, Oid relationObjectId,
 extern void estimate_rel_size(Relation rel, int32 *attr_widths,
 				  BlockNumber *pages, double *tuples);
 
+extern void cdb_estimate_rel_size(RelOptInfo   *relOptInfo,
+								  Relation      baserel,
+								  Relation      rel,
+								  int32        *attr_widths,
+								  BlockNumber  *pages,
+								  double       *tuples,
+								  bool         *default_stats_used);
+
 extern bool relation_excluded_by_constraints(PlannerInfo *root,
 								 RelOptInfo *rel, RangeTblEntry *rte);
 

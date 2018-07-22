@@ -88,6 +88,25 @@ function build_gppkg() {
   popd
 }
 
+function git_info() {
+  pushd ${GPDB_SRC_PATH}
+
+  "${CWDIR}/git_info.bash" | tee ${GREENPLUM_INSTALL_DIR}/etc/git-info.json
+
+  PREV_TAG=$(git describe --tags --abbrev=0 @^)
+
+  cat > ${GREENPLUM_INSTALL_DIR}/etc/git-current-changelog.txt <<-EOF
+	======================================================================
+	Git log since previous release tag (${PREV_TAG})
+	----------------------------------------------------------------------
+
+	EOF
+
+  git log --abbrev-commit --date=relative "${PREV_TAG}..@" | tee -a ${GREENPLUM_INSTALL_DIR}/etc/git-current-changelog.txt
+
+  popd
+}
+
 function unittest_check_gpdb() {
   pushd ${GPDB_SRC_PATH}
     source ${GREENPLUM_INSTALL_DIR}/greenplum_path.sh
@@ -172,6 +191,7 @@ function _main() {
   # the source tree and hence needs to be copied over.
   rsync -au gpaddon_src/ ${GPDB_SRC_PATH}/gpAux/${ADDON_DIR}
   build_gpdb "${BLD_TARGET_OPTION[@]}"
+  git_info
   build_gppkg
   if [ "${TARGET_OS}" != "win32" ] ; then
       # Don't unit test when cross compiling. Tests don't build because they

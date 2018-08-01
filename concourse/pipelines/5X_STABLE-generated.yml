@@ -3565,6 +3565,7 @@ jobs:
       trigger: true
     - get: pxf_tarball
       trigger: true
+      version: {version_id: Iex4xYPSamHvDCiKiaYtQ6zrRw6Faja6}
     - get: pxf_infra_src
     - get: centos6-gpdb-dev-pxf-hdp
   - task: test_pxf

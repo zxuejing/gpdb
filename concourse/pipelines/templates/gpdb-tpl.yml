@@ -56,15 +56,17 @@ groups:
   ## --------------------------------------------------------------------
   - gate_icw_start
   - icw_planner_centos6
+  - icw_planner_ictcp_centos6
   - icw_gporca_centos6
-  - icw_gporca_centos7
   - icw_planner_centos7
+  - icw_gporca_centos7
+  - icw_planner_oracle7
+  - icw_gporca_oracle7
   - icw_gporca_sles11
   - icw_planner_ubuntu16
   - icw_gporca_conan_ubuntu16
   - icw_extensions_gpcloud
   - test_gpdb_debian_package
-  - icw_planner_ictcp_centos6
   - gate_icw_end
   - QP_memory-accounting
   - QP_optimizer-functional
@@ -180,12 +182,14 @@ groups:
   - gate_icw_start
   - icw_planner_centos6
   - icw_gporca_centos6
-  - icw_gporca_centos7
+  - icw_planner_ictcp_centos6
   - icw_planner_centos7
+  - icw_gporca_centos7
+  - icw_planner_oracle7
+  - icw_gporca_oracle7
   - icw_gporca_sles11
   - icw_planner_ubuntu16
   - icw_gporca_conan_ubuntu16
-  - icw_planner_ictcp_centos6
   - icw_extensions_gpcloud
   - test_gpdb_debian_package
   - QP_memory-accounting
@@ -451,6 +455,12 @@ resources:
   source:
     repository: pivotaldata/centos-gpdb-dev
     tag: 7-gcc6.2-llvm3.7
+
+- name: oracle-gpdb-test-7
+  type: docker-image
+  source:
+    repository: toolsmiths/oracle7-test
+    tag: gpdb5-latest
 
 - name: ubuntu-gpdb-dev-16
   type: docker-image
@@ -1467,6 +1477,24 @@ jobs:
       TEST_OS: centos
       CONFIGURE_FLAGS: {{configure_flags}}
 
+- name: icw_planner_ictcp_centos6
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [gate_icw_start]
+    - get: bin_gpdb
+      resource: bin_gpdb_centos6
+      passed: [gate_icw_start]
+      trigger: [[ test_trigger ]]
+    - get: centos-gpdb-dev-6
+  - task: ic_gpdb
+    file: gpdb_src/concourse/tasks/ic_gpdb.yml
+    image: centos-gpdb-dev-6
+    params:
+      MAKE_TEST_COMMAND: PGOPTIONS='-c gp_interconnect_type=tcp -c optimizer=off' installcheck-world
+      BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
+      TEST_OS: centos
+
 - name: icw_gporca_centos6
   plan:
   - aggregate:
@@ -1520,6 +1548,44 @@ jobs:
     image: centos-gpdb-dev-7
     params:
       MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off' installcheck-world
+      BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
+      TEST_OS: centos
+      CONFIGURE_FLAGS: {{configure_flags}}
+
+- name: icw_planner_oracle7
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [gate_icw_start]
+    - get: bin_gpdb
+      resource: bin_gpdb_centos7
+      passed: [gate_icw_start]
+      trigger: [[ test_trigger ]]
+    - get: oracle-gpdb-test-7
+  - task: ic_gpdb
+    file: gpdb_src/concourse/tasks/ic_gpdb.yml
+    image: oracle-gpdb-test-7
+    params:
+      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off' installcheck-world
+      BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
+      TEST_OS: centos
+      CONFIGURE_FLAGS: {{configure_flags}}
+
+- name: icw_gporca_oracle7
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [gate_icw_start]
+    - get: bin_gpdb
+      resource: bin_gpdb_centos7
+      passed: [gate_icw_start]
+      trigger: [[ test_trigger ]]
+    - get: oracle-gpdb-test-7
+  - task: ic_gpdb
+    file: gpdb_src/concourse/tasks/ic_gpdb.yml
+    image: oracle-gpdb-test-7
+    params:
+      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on' installcheck-world
       BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
       TEST_OS: centos
       CONFIGURE_FLAGS: {{configure_flags}}
@@ -1591,24 +1657,6 @@ jobs:
     image: ubuntu-gpdb-debian-dev-16
     params:
       DEBIAN_PACKAGE: {{deb_package_ubuntu16_versioned_file}}
-
-- name: icw_planner_ictcp_centos6
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [gate_icw_start]
-    - get: bin_gpdb
-      resource: bin_gpdb_centos6
-      passed: [gate_icw_start]
-      trigger: [[ test_trigger ]]
-    - get: centos-gpdb-dev-6
-  - task: ic_gpdb
-    file: gpdb_src/concourse/tasks/ic_gpdb.yml
-    image: centos-gpdb-dev-6
-    params:
-      MAKE_TEST_COMMAND: PGOPTIONS='-c gp_interconnect_type=tcp -c optimizer=off' installcheck-world
-      BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
-      TEST_OS: centos
 
 - name: icw_extensions_gpcloud
   plan:
@@ -1713,11 +1761,14 @@ jobs:
       passed:
       - icw_planner_centos6
       - icw_gporca_centos6
+      - icw_planner_ictcp_centos6
       - icw_gporca_centos7
+      - icw_planner_centos7
+      - icw_gporca_oracle7
+      - icw_planner_oracle7
       - icw_gporca_sles11
       - icw_planner_ubuntu16
       - icw_gporca_conan_ubuntu16
-      - icw_planner_ictcp_centos6
       - icw_extensions_gpcloud
       - QP_memory-accounting
       - QP_optimizer-functional
@@ -1734,6 +1785,8 @@ jobs:
       passed:
       - icw_planner_centos7
       - icw_gporca_centos7
+      - icw_gporca_oracle7
+      - icw_planner_oracle7
     - get: bin_gpdb_sles11
       passed:
       - icw_gporca_sles11
@@ -3539,13 +3592,15 @@ jobs:
       - compile_gpdb_aix7_remote
       - icw_planner_centos6
       - icw_gporca_centos6
-      - icw_gporca_centos7
+      - icw_planner_ictcp_centos6
       - icw_planner_centos7
+      - icw_gporca_centos7
+      - icw_planner_oracle7
+      - icw_gporca_oracle7
       - icw_gporca_sles11
       - icw_planner_ubuntu16
       - icw_gporca_conan_ubuntu16
       - test_gpdb_debian_package
-      - icw_planner_ictcp_centos6
       - icw_extensions_gpcloud
       - client_loader_remote_test_aix
       - mpp_resource_group_centos6

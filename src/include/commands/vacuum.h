@@ -95,6 +95,7 @@ typedef struct VacAttrStats
 	int			numvalues[STATISTIC_NUM_SLOTS];
 	Datum	   *stavalues[STATISTIC_NUM_SLOTS];
 
+	bytea *stahll;			/* storing hyperloglog counter for sampled data */
 	/*
 	 * These fields are private to the main ANALYZE code and should not be
 	 * looked at by type-specific functions.
@@ -105,6 +106,7 @@ typedef struct VacAttrStats
 	Datum	   *exprvals;		/* access info for index fetch function */
 	bool	   *exprnulls;
 	int			rowstride;
+	bool		merge_stats;
 } VacAttrStats;
 
 typedef struct VacuumStatsContext

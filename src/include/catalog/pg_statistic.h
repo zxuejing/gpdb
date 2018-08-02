@@ -345,5 +345,11 @@ typedef FormData_pg_statlastshop *Form_pg_statlastshop;
 #define Anum_pg_statlastshop_stausename		5
 #define Anum_pg_statlastshop_stasubtype		6
 #define Anum_pg_statlastshop_statime		7
+/*
+ * A "hyperloglog" slot stores the hyperloglog_counter created for sampled data.
+ * This hyperloglog_counter data structure is converted into a bytea and stored
+ * in "stavalues4" slot of pg_statistic catalog table
+ */
+#define STATISTIC_KIND_HLL  99
 
 #endif   /* PG_STATISTIC_H */

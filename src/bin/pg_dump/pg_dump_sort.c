@@ -85,7 +85,6 @@ static const int newObjectTypePriority[] =
 	24,							/* DO_FK_CONSTRAINT */
 	2,							/* DO_PROCLANG */
 	8,							/* DO_CAST */
-	8,							/* DO_EXTPROTOCOL */
 	17,							/* DO_TABLE_DATA */
 	15,							/* DO_DUMMY_TYPE */
 	10,							/* DO_TSPARSER */
@@ -94,7 +93,9 @@ static const int newObjectTypePriority[] =
 	13,							/* DO_TSCONFIG */
 	18,							/* DO_BLOBS */
 	19,							/* DO_BLOB_COMMENTS */
-	19							/* DO_TYPE_STORAGE_OPTIONS */
+	8,							/* DO_EXTPROTOCOL */
+	19,							/* DO_TYPE_STORAGE_OPTIONS */
+	19							/* DO_TYPE_CACHE */
 };
 
 

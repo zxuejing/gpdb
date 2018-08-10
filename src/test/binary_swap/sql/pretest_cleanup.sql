@@ -10,3 +10,10 @@
 \connect regression
 
 DROP VIEW IF EXISTS distinct_windowagg_view;
+
+-- start_ignore
+-- This table exists to make sure that toast tables of different chunk sizes are
+-- handled by GPDB. Early versions of the 5.x server will fail to dump this
+-- correctly.
+DROP TABLE IF EXISTS public.toast_chunk_test;
+-- end_ignore

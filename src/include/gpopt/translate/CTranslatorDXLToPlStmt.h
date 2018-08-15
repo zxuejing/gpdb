@@ -121,7 +121,7 @@ namespace gpdxl
 					m_md_index(md_index)
 				{
 					GPOS_ASSERT(NULL != md_rel);
-					GPOS_ASSERT(NULL != index);
+					GPOS_ASSERT(NULL != md_index);
 				}
 			}; // SContextIndexVarAttno
 

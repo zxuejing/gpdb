@@ -89,11 +89,15 @@
                                         </pt>
                                         <pd>The name of the index method to be used. Choices are
                                                   <codeph>btree</codeph>, <codeph>bitmap</codeph>,
-                                                and <codeph>gist</codeph>. The default method is
-                                                  <codeph>btree</codeph>. </pd>
-                                        <pd>GPORCA supports only B-tree and bitmap indexes. GPORCA
-                                                ignores indexes created with unsupported indexing
-                                                methods.</pd>
+                                                  and <codeph>gist</codeph>.
+                                                The default method is <codeph>btree</codeph>. </pd>
+                                        <pd>Currently, only the B-tree and GiST index methods
+                                                support multicolumn indexes. Up to 32 fields can be
+                                                specified by default. Only B-tree currently supports
+                                                unique indexes.</pd>
+                                        <pd>GPORCA supports only B-tree, bitmap, and GiST indexes.
+                                                GPORCA ignores indexes created with unsupported
+                                                indexing methods.</pd>
                                 </plentry>
                                 <plentry>
                                         <pt>

@@ -281,7 +281,7 @@ ExecHashTableCreate(HashState *hashState, HashJoinState *hjstate, List *hashOper
 	ListCell   *ho;
 	MemoryContext oldcxt;
 
-	START_MEMORY_ACCOUNT(hashState->ps.plan->memoryAccountId);
+	START_MEMORY_ACCOUNT(hashState->ps.memoryAccountId);
 	{
 	Hash *node = (Hash *) hashState->ps.plan;
 
@@ -666,7 +666,7 @@ ExecHashTableDestroy(HashState *hashState, HashJoinTable hashtable)
 	Assert(hashtable);
 	Assert(!hashtable->eagerlyReleased);
 
-	START_MEMORY_ACCOUNT(hashState->ps.plan->memoryAccountId);
+	START_MEMORY_ACCOUNT(hashState->ps.memoryAccountId);
 	{
 
 	/*
@@ -945,7 +945,7 @@ ExecHashTableInsert(HashState *hashState, HashJoinTable hashtable,
 	int			batchno;
 	int			hashTupleSize;
 
-	START_MEMORY_ACCOUNT(hashState->ps.plan->memoryAccountId);
+	START_MEMORY_ACCOUNT(hashState->ps.memoryAccountId);
 	{
 	PlanState *ps = &hashState->ps;
 
@@ -1044,7 +1044,7 @@ ExecHashGetHashValue(HashState *hashState, HashJoinTable hashtable,
 	MemoryContext oldContext;
 	bool		result = true;
 
-	START_MEMORY_ACCOUNT(hashState->ps.plan->memoryAccountId);
+	START_MEMORY_ACCOUNT(hashState->ps.memoryAccountId);
 	{
 
 	Assert(hashkeys_null);
@@ -1181,7 +1181,7 @@ ExecScanHashBucket(HashState *hashState, HashJoinState *hjstate,
 	HashJoinTuple hashTuple = hjstate->hj_CurTuple;
 	uint32		hashvalue = hjstate->hj_CurHashValue;
 
-	START_MEMORY_ACCOUNT(hashState->ps.plan->memoryAccountId);
+	START_MEMORY_ACCOUNT(hashState->ps.memoryAccountId);
 	{
 	/*
 	 * hj_CurTuple is NULL to start scanning a new bucket, or the address of
@@ -1240,7 +1240,7 @@ ExecHashTableReset(HashState *hashState, HashJoinTable hashtable)
 	MemoryContext oldcxt;
 	int			nbuckets = hashtable->nbuckets;
 
-	START_MEMORY_ACCOUNT(hashState->ps.plan->memoryAccountId);
+	START_MEMORY_ACCOUNT(hashState->ps.memoryAccountId);
 	{
 	Assert(!hashtable->eagerlyReleased);
 
@@ -1290,7 +1290,7 @@ ExecHashTableExplainInit(HashState *hashState, HashJoinState *hjstate,
 	MemoryContext oldcxt;
 	int			nbatch = Max(hashtable->nbatch, 1);
 
-    START_MEMORY_ACCOUNT(hashState->ps.plan->memoryAccountId);
+    START_MEMORY_ACCOUNT(hashState->ps.memoryAccountId);
     {
     /* Switch to a memory context that survives until ExecutorEnd. */
     oldcxt = MemoryContextSwitchTo(hjstate->js.ps.state->es_query_cxt);
@@ -1577,7 +1577,7 @@ ExecHashTableExplainBatchEnd(HashState *hashState, HashJoinTable hashtable)
     HashJoinBatchData  *batch = NULL;
     int                 i;
     
-    START_MEMORY_ACCOUNT(hashState->ps.plan->memoryAccountId);
+    START_MEMORY_ACCOUNT(hashState->ps.memoryAccountId);
     {
     Assert(!hashtable->eagerlyReleased);
     Assert(hashtable->batches);

@@ -834,7 +834,7 @@ ExecProcNode(PlanState *node)
 {
 	TupleTableSlot *result = NULL;
 
-	START_MEMORY_ACCOUNT(node->plan->memoryAccountId);
+	START_MEMORY_ACCOUNT(node->memoryAccountId);
 	{
 
 	CHECK_FOR_INTERRUPTS();
@@ -1112,7 +1112,7 @@ MultiExecProcNode(PlanState *node)
 
 	Assert(NULL != node->plan);
 
-	START_MEMORY_ACCOUNT(node->plan->memoryAccountId);
+	START_MEMORY_ACCOUNT(node->memoryAccountId);
 {
 	PG_TRACE4(execprocnode__enter, Gp_segment, currentSliceId, nodeTag(node), node->plan->plan_node_id);
 

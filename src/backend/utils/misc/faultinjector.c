@@ -357,6 +357,8 @@ FaultInjectorIdentifierEnumToString[] = {
 		/* inject fault after updating pg_database.datfrozenxid (but before committing) */
 	_("create_resource_group_fail"),
 		/* inject fault before create resource group committing */
+	_("create_gang_in_progress"),
+		/* inject fault during gang creation, before check for interrupts */
 	_("not recognized"),
 };
 
@@ -1061,6 +1063,7 @@ FaultInjector_NewHashEntry(
 			case VacuumUpdateDatFrozenXid:
 			case AutoVacWorkerBeforeDoAutovacuum:
 			case CreateResourceGroupFail:
+			case CreateGangInProgress:
 
 				break;
 			default:

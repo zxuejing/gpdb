@@ -241,6 +241,7 @@ typedef enum FaultInjectorIdentifier_e {
 	AutoVacWorkerBeforeDoAutovacuum,
 
 	CreateResourceGroupFail,
+	CreateGangInProgress,
 
 	/* INSERT has to be done before that line */
 	FaultInjectorIdMax,

@@ -139,6 +139,14 @@ select btdrelpages > 0 as btdrelpages_over_0,
 from gp_toolkit.gp_bloat_expected_pages where btdrelid = 'toolkit_skew'::regclass;
 select * from gp_toolkit.gp_bloat_diag where bdirelid = 'toolkit_skew'::regclass;
 
+-- Make sure gp_toolkit.gp_bloat_expected_pages does not report partition roots
+create table do_not_report_partition_root (i int, j int) distributed by (i)
+partition by range(j)
+(start(1) end(2) every(1));
+insert into do_not_report_partition_root values (1,1);
+analyze do_not_report_partition_root;
+select count(*) from gp_toolkit.gp_bloat_expected_pages where btdrelid = 'do_not_report_partition_root'::regclass::oid;
+
 -- MPP-5871 : ERROR: GetSnapshotData timed out waiting for Writer to set the shared snapshot.
 set client_min_messages='warning';
 CREATE TABLE mpp5871_statistics (

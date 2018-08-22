@@ -4589,6 +4589,8 @@ opt_comma: ',' { $$ = true; }
 list_subparts: TabSubPartitionBy { $$ = $1; }
 			| list_subparts opt_comma TabSubPartitionBy
 				{
+					if (!IsA($1, PartitionBy))
+						yyerror("SUBPARTITION TEMPLATE need to be nested under a SUBPARTITION BY");
 					PartitionBy *pby = (PartitionBy *)$1;
 					$$ = $1;
 

@@ -3791,3 +3791,17 @@ ALTER TABLE test_split_part SPLIT DEFAULT PARTITION START (201) INCLUSIVE END (3
 select typname, typtype from pg_type where typname like '%test_split_part%' and typtype = 'b';
 select array_agg(test_split_part) from test_split_part where log_id = 500;
 select array_agg(test_split_part_1_prt_other_log_ids) from test_split_part_1_prt_other_log_ids where log_id = 500;
+
+-- MPP-26829
+-- This should fail
+CREATE TABLE MPP_26829
+(a integer, b integer NOT NULL, c integer)
+DISTRIBUTED BY (a)
+PARTITION BY RANGE (b)
+SUBPARTITION TEMPLATE (START (1) END (12) EVERY (1), DEFAULT SUBPARTITION other_months )
+SUBPARTITION BY LIST (c)
+SUBPARTITION TEMPLATE (
+SUBPARTITION p027 VALUES ('027'),
+SUBPARTITION p141 VALUES ('141'),
+SUBPARTITION p037 VALUES ('037'));
+-- MPP-26829

@@ -32,7 +32,7 @@ cdbpath_motion_for_join(PlannerInfo    *root,
                         JoinType        jointype,           /* JOIN_INNER/FULL/LEFT/RIGHT/IN */
                         Path          **p_outer_path,       /* INOUT */
                         Path          **p_inner_path,       /* INOUT */
-                        List           *mergeclause_list,   /* equijoin RestrictInfo list */
+                        List           *redistribution_clauses,   /* equijoin RestrictInfo list */
                         List           *outer_pathkeys,
                         List           *inner_pathkeys,
                         bool            outer_require_existing_order,
@@ -68,5 +68,10 @@ cdbpath_rows(PlannerInfo *root, Path *path)
 
     return rows;
 }                               /* cdbpath_rows */
+
+/*
+ * Return true if the RestrictInfo is hashable internally in Greenplum Database.
+ */
+extern bool has_redistributable_clause(RestrictInfo *restrictinfo);
 
 #endif   /* CDBPATH_H */

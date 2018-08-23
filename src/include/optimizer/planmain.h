@@ -237,6 +237,7 @@ extern RestrictInfo *build_implied_join_equality(Oid opno,
 							Expr *item2,
 							Relids qualscope,
 							Relids nullable_relids);
+extern bool has_redistributable_clause(RestrictInfo *restrictinfo);
 
 /*
  * prototypes for plan/setrefs.c

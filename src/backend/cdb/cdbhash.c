@@ -17,6 +17,7 @@
 
 #include "access/tuptoaster.h"
 #include "utils/builtins.h"
+#include "catalog/pg_operator.h"
 #include "catalog/pg_type.h"
 #include "parser/parse_type.h"
 #include "utils/numeric.h"
@@ -29,6 +30,7 @@
 #include "utils/nabstime.h"
 #include "utils/varbit.h"
 #include "utils/uuid.h"
+#include "optimizer/clauses.h"
 #include "fmgr.h"
 #include "utils/fmgroids.h"
 #include "utils/lsyscache.h"
@@ -713,6 +715,10 @@ typeIsEnumType(Oid typeoid)
 	return res;
 }
 
+/*
+ * isGreenplumDbHashable
+ * return true if a type is hashable in cdb hash
+ */
 bool
 isGreenplumDbHashable(Oid typid)
 {
@@ -777,6 +783,61 @@ isGreenplumDbHashable(Oid typid)
 		case UUIDOID:
 		case COMPLEXOID:
 			return true;
+		default:
+			return false;
+	}
+}
+
+/*
+ * isGreenplumDbOprHashable
+ * return true if a operator is redistributable
+ */
+bool isGreenplumDbOprRedistributable(Oid oprid)
+{
+	switch(oprid)
+	{
+		case Int2EqualOperator:
+		case Int4EqualOperator:
+		case Int8EqualOperator:
+		case Int24EqualOperator:
+		case Int28EqualOperator:
+		case Int42EqualOperator:
+		case Int48EqualOperator:
+		case Int82EqualOperator:
+		case Int84EqualOperator:
+		case Float4EqualOperator:
+		case Float8EqualOperator:
+		case NumericEqualOperator:
+		case CharEqualOperator:
+		case BPCharEqualOperator:
+		case TextEqualOperator:
+		case ByteaEqualOperator:
+		case NameEqualOperator:
+		case OidEqualOperator:
+		case TIDEqualOperator:
+		case TimestampEqualOperator:
+		case TimestampTZEqualOperator:
+		case DateEqualOperator:
+		case TimeEqualOperator:
+		case TimeTZEqualOperator:
+		case IntervalEqualOperator:
+		case AbsTimeEqualOperator:
+		case RelTimeEqualOperator:
+		case TIntervalEqualOperator:
+		case InetEqualOperator:
+		case MacAddrEqualOperator:
+		case BitEqualOperator:
+		case VarbitEqualOperator:
+		case BooleanEqualOperator:
+		case OidVectEqualOperator:
+		case CashEqualOperator:
+		case UuidEqualOperator:
+		case ComplexEqualOperator:
+			return true;
+		case ARRAY_EQ_OP:
+		case Float48EqualOperator:
+		case Float84EqualOperator:
+			return false;
 		default:
 			return false;
 	}

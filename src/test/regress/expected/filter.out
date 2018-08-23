@@ -643,6 +643,27 @@ ERROR:  function maxodd(integer) is not defined as STRICT
 LINE 1: SELECT j, maxodd(i) FILTER (WHERE TRUE) from filter_test gro...
                   ^
 HINT:  The filter clause is only supported over functions defined as STRICT.
+-- A more realistic case where the STRICTness makes a difference
+create or replace function countnulls_trans(c int, newval int) returns int as $$
+  SELECT CASE WHEN $2 IS NULL THEN $1 + 1 ELSE $1 END;
+$$ language sql;
+create aggregate countnulls(sfunc = countnulls_trans, basetype = int, stype = int, initcond = 0);
+select countnulls(j) from filter_test;
+ countnulls 
+------------
+          2
+(1 row)
+
+select countnulls(j) filter (where i < 10) from filter_test;
+ERROR:  function countnulls(integer) is not defined as STRICT
+LINE 1: select countnulls(j) filter (where i < 10) from filter_test;
+               ^
+HINT:  The filter clause is only supported over functions defined as STRICT.
+select countnulls(j) filter (where i < 10) over (partition by 'foo') from filter_test;
+ERROR:  function countnulls(integer) is not defined as STRICT
+LINE 1: select countnulls(j) filter (where i < 10) over (partition b...
+               ^
+HINT:  The filter clause is only supported over functions defined as STRICT.
 -- TEST view deparsing of FILTER expressions.
 CREATE VIEW filter_view AS SELECT count(*) FILTER (WHERE TRUE) FROM filter_test;
 SELECT definition from pg_views WHERE viewname='filter_view';

@@ -173,6 +173,17 @@ SELECT maxodd(i) FILTER (WHERE TRUE) from filter_test;
 SELECT j, maxodd(i) FROM filter_test group by j order by j;
 SELECT j, maxodd(i) FILTER (WHERE TRUE) from filter_test group by j order by j;
 
+-- A more realistic case where the STRICTness makes a difference
+create or replace function countnulls_trans(c int, newval int) returns int as $$
+  SELECT CASE WHEN $2 IS NULL THEN $1 + 1 ELSE $1 END;
+$$ language sql;
+create aggregate countnulls(sfunc = countnulls_trans, basetype = int, stype = int, initcond = 0);
+
+select countnulls(j) from filter_test;
+select countnulls(j) filter (where i < 10) from filter_test;
+select countnulls(j) filter (where i < 10) over (partition by 'foo') from filter_test;
+
+
 -- TEST view deparsing of FILTER expressions.
 CREATE VIEW filter_view AS SELECT count(*) FILTER (WHERE TRUE) FROM filter_test;
 SELECT definition from pg_views WHERE viewname='filter_view';

@@ -1005,12 +1005,12 @@ parse_hba_line(List *line, int line_num, HbaLine *parsedline)
 		token = lfirst(line_item);
 
 		/* Is it equal to 'samehost' or 'samenet'? */
-		if (strcmp(token, "samehost") == 0)
+		if (strcmp(token, "samehost\n") == 0)
 		{
 			/* Any IP on this host is allowed to connect */
 			parsedline->ip_cmp_method = ipCmpSameHost;
 		}
-		else if (strcmp(token, "samenet") == 0)
+		else if (strcmp(token, "samenet\n") == 0)
 		{
 			/* Any IP on the host's subnets is allowed to connect */
 			parsedline->ip_cmp_method = ipCmpSameNet;

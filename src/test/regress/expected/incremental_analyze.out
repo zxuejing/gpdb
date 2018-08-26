@@ -1020,18 +1020,15 @@ ALTER TABLE foo ADD partition new_part START (6) INCLUSIVE END (9) EXCLUSIVE;
 NOTICE:  CREATE TABLE will create partition "foo_1_prt_new_part" for table "foo"
 INSERT INTO foo SELECT i, i%3+6 FROM generate_series(1,500)i;
 ANALYZE foo_1_prt_new_part;
+SET log_statement='none';
 SET client_min_messages = 'log';
 -- Insert a new column that is not analyzed in the leaf partitions.
 -- Analyzing root partition will use merging statistics for the first 2 columns, 
 -- will create a sample for the root to analyze the newly added columns since 
 -- the leaf partitions does not have any stats for it, yet
 ALTER TABLE foo ADD COLUMN c int;
-LOG:  statement: ALTER TABLE foo ADD COLUMN c int;
 INSERT INTO foo SELECT i, i%9, i%100 FROM generate_series(1,500)i;
-LOG:  statement: INSERT INTO foo SELECT i, i%9, i%100 FROM generate_series(1,500)i;
-LOG:  statement: INSERT INTO foo SELECT i, i%9, i%100 FROM generate_series(1,500)i;  (entry db 127.0.0.1:15432 pid=34427)
 ANALYZE rootpartition foo;
-LOG:  statement: ANALYZE rootpartition foo;
 LOG:  Needs sample for foo
 LOG:  Merging leaf stats
 LOG:  Merging leaf stats

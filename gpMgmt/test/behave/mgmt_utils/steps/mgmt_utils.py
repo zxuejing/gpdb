@@ -3689,6 +3689,10 @@ def impl(context, file, path):
 
     raise Exception('File was not found in :' + path)
 
+@given('a checkpoint is taken')
+def impl(context):
+    with dbconn.connect(dbconn.DbURL(dbname='postgres')) as conn:
+        dbconn.execSQL(conn, 'CHECKPOINT')
 
 @given('the database is restarted')
 def impl(context):

@@ -2135,6 +2135,9 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 			 *
 			 * For now we use the scalar equalfn field of AggStatePerAggData
 			 * for DQAs instead of treating DQAs more generally.
+			 *
+			 * We should've checked this in parse analysis already, but better
+			 * safe than sorry.
 			 */
 			if (numArguments != 1)
 				ereport(ERROR,

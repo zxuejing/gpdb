@@ -441,8 +441,8 @@ count_agg_clauses_walker(Node *node, AggClauseCounts *counts)
 			Node *arg;
 			
 			counts->numDistinctAggs++;
-			
-			/* This check anticipates the one in ExecInitAgg(). */
+
+			/* we checked this in parse analysis already, but better safe than sorry. */
 			if ( list_length(aggref->args) != 1 )
 				ereport(ERROR,
 						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),

@@ -2124,18 +2124,18 @@ INSERT 0 9
 vacuum analyze mpp3487;
 VACUUM
 select  schemaname, tablename, attname, null_frac, avg_width, n_distinct, most_common_freqs, histogram_bounds, correlation from pg_stats where tablename like 'mpp3487%' order by 2;
-   schemaname   |    tablename    | attname | null_frac | avg_width | n_distinct | most_common_freqs |  histogram_bounds   | correlation 
-----------------+-----------------+---------+-----------+-----------+------------+-------------------+---------------------+-------------
- partition_ddl3 | mpp3487         | i       |         0 |         4 |         -1 |                   |                     |            
- partition_ddl3 | mpp3487_1_prt_1 | i       |         0 |         4 |         -1 |                   |                     |            
- partition_ddl3 | mpp3487_1_prt_2 | i       |         0 |         4 |         -1 |                   |                     |            
- partition_ddl3 | mpp3487_1_prt_3 | i       |         0 |         4 |         -1 |                   |                     |            
- partition_ddl3 | mpp3487_1_prt_4 | i       |         0 |         4 |         -1 |                   |                     |            
- partition_ddl3 | mpp3487_1_prt_5 | i       |         0 |         4 |         -1 |                   |                     |            
- partition_ddl3 | mpp3487_1_prt_6 | i       |         0 |         4 |         -1 |                   |                     |            
- partition_ddl3 | mpp3487_1_prt_7 | i       |         0 |         4 |         -1 |                   |                     |            
- partition_ddl3 | mpp3487_1_prt_8 | i       |         0 |         4 |         -1 |                   |                     |            
- partition_ddl3 | mpp3487_1_prt_9 | i       |         0 |         4 |         -1 |                   |                     |            
+   schemaname   |    tablename    | attname | null_frac | avg_width | n_distinct | most_common_freqs | histogram_bounds | correlation 
+----------------+-----------------+---------+-----------+-----------+------------+-------------------+------------------+-------------
+ partition_ddl3 | mpp3487         | i       |         0 |         4 |         -1 |                   |                  |            
+ partition_ddl3 | mpp3487_1_prt_1 | i       |         0 |         4 |         -1 |                   |                  |            
+ partition_ddl3 | mpp3487_1_prt_2 | i       |         0 |         4 |         -1 |                   |                  |            
+ partition_ddl3 | mpp3487_1_prt_3 | i       |         0 |         4 |         -1 |                   |                  |            
+ partition_ddl3 | mpp3487_1_prt_4 | i       |         0 |         4 |         -1 |                   |                  |            
+ partition_ddl3 | mpp3487_1_prt_5 | i       |         0 |         4 |         -1 |                   |                  |            
+ partition_ddl3 | mpp3487_1_prt_6 | i       |         0 |         4 |         -1 |                   |                  |            
+ partition_ddl3 | mpp3487_1_prt_7 | i       |         0 |         4 |         -1 |                   |                  |            
+ partition_ddl3 | mpp3487_1_prt_8 | i       |         0 |         4 |         -1 |                   |                  |            
+ partition_ddl3 | mpp3487_1_prt_9 | i       |         0 |         4 |         -1 |                   |                  |            
 (10 rows)
 
 drop table mpp3487;

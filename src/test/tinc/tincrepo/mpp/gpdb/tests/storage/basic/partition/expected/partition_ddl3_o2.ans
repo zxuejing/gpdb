@@ -2126,7 +2126,7 @@ VACUUM
 select  schemaname, tablename, attname, null_frac, avg_width, n_distinct, most_common_freqs, histogram_bounds, correlation from pg_stats where tablename like 'mpp3487%' order by 2;
    schemaname   |    tablename    | attname | null_frac | avg_width | n_distinct | most_common_freqs |  histogram_bounds   | correlation 
 ----------------+-----------------+---------+-----------+-----------+------------+-------------------+---------------------+-------------
- partition_ddl3 | mpp3487         | i       |         0 |         4 |         -1 |                   | {1,2,3,4,5,6,7,8,9} |         0.5
+ partition_ddl3 | mpp3487         | i       |         0 |         4 |         -1 |                   |                     |            
  partition_ddl3 | mpp3487_1_prt_1 | i       |         0 |         4 |         -1 |                   |                     |            
  partition_ddl3 | mpp3487_1_prt_2 | i       |         0 |         4 |         -1 |                   |                     |            
  partition_ddl3 | mpp3487_1_prt_3 | i       |         0 |         4 |         -1 |                   |                     |            

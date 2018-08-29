@@ -144,13 +144,13 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
 COPY copy_regression_oids from stdin with oids delimiter '|';
 COPY copy_regression_oids from stdin with oids csv;
-SELECT * FROM copy_regression_oids ORDER BY oid;
-      a      
--------------
- a text data
- a text data
- a text data
- a text data
+SELECT oid, * FROM copy_regression_oids;
+  oid  |      a      
+-------+-------------
+ 50000 | a text data
+ 50001 | a text data
+ 60000 | a text data
+ 60001 | a text data
 (4 rows)
 
 DROP TABLE copy_regression_oids;

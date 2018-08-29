@@ -4984,6 +4984,9 @@ PROCESS_SEGMENT_DATA:
 
 						mtuple = ExecFetchSlotMemTuple(slot, false);
 
+						if (cstate->oids && file_has_oids)
+							MemTupleSetOid(mtuple, resultRelInfo->ri_aoInsertDesc->mt_bind, loaded_oid);
+
 						/* inserting into an append only relation */
 						appendonly_insert(resultRelInfo->ri_aoInsertDesc, mtuple, &tupleOid, (AOTupleId *) &insertedTid);
 					}
@@ -5005,6 +5008,10 @@ PROCESS_SEGMENT_DATA:
 						HeapTuple tuple;
 
 						tuple = ExecFetchSlotHeapTuple(slot);
+
+						if (cstate->oids && file_has_oids)
+							HeapTupleSetOid(tuple, loaded_oid);
+
 						heap_insert(resultRelInfo->ri_RelationDesc, tuple, mycid, use_wal, use_fsm, GetCurrentTransactionId());
 						insertedTid = tuple->t_self;
 					}

@@ -152,7 +152,7 @@ COPY copy_regression_oids from stdin with oids csv;
 60000,a text data
 60001,a text data
 \.
-SELECT * FROM copy_regression_oids ORDER BY oid;
+SELECT oid, * FROM copy_regression_oids;
 
 DROP TABLE copy_regression_oids;
 

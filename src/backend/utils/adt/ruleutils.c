@@ -5531,9 +5531,10 @@ get_windowref_expr(WindowRef *wref, deparse_context *context)
 		nargs++;
 	}
 
-	appendStringInfo(buf, "%s(",
+	appendStringInfo(buf, "%s(%s",
 					 generate_function_name(wref->winfnoid,
-											nargs, argtypes, NULL));
+											nargs, argtypes, NULL),
+					 wref->windistinct ? "DISTINCT " : "");
 
 	get_rule_expr((Node *) wref->args, context, true);
 	appendStringInfoChar(buf, ')');

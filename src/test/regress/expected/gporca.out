@@ -10130,8 +10130,7 @@ set optimizer_enable_ctas = off;
 set client_min_messages='log';
 create table foo_ctas(a) as (select generate_series(1,10)) distributed by (a);
 LOG:  statement: create table foo_ctas(a) as (select generate_series(1,10)) distributed by (a);
-LOG:  Needs sample for foo_ctas
-LOG:  Computing Scalar Stats  column 1
+LOG:  Computing Scalar Stats : column a
 reset client_min_messages;
 LOG:  statement: reset client_min_messages;
 reset optimizer_enable_ctas;

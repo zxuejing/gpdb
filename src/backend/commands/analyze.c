@@ -498,8 +498,15 @@ analyze_rel_internal(Oid relid, VacuumStmt *vacstmt,
 	 * each column are stored in a child context.  The calc routines are
 	 * responsible to make sure that whatever they store into the VacAttrStats
 	 * structure is allocated in anl_context.
+	 *
+	 * When we have a root partition, we use the leaf partition statistics to
+	 * derive root table statistics. In that case, we do not need to collect a
+	 * sample. Therefore, the statistics calculation depends on root level have
+	 * any tuples. In addition, we continue for statistics calculation if
+	 * optimizer_analyze_root_partition or ROOTPARTITION is specified in the
+	 * ANALYZE statement.
 	 */
-	if (numrows > 0 || (optimizer_analyze_root_partition && totalrows > 0.0))
+	if (numrows > 0 || ((optimizer_analyze_root_partition || vacstmt->rootonly) && totalrows > 0.0))
 	{
 		HeapTuple *validRows = (HeapTuple *) palloc(numrows * sizeof(HeapTuple));
 		MemoryContext col_context,

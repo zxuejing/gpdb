@@ -995,7 +995,7 @@ upgrade_tuple(AppendOnlyExecutorReadBlock *executorReadBlock,
 			executorReadBlock->numNumericAtts = n;
 		}
 
-		/* If there were any numeric columns, we need to convert them. */
+		/* If there were any numeric columns, we need to conver them. */
 		if (executorReadBlock->numNumericAtts > 0)
 			convert_numerics = true;
 	}

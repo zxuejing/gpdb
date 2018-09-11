@@ -528,3 +528,15 @@ select q1, unique2, thousand, hundred
 select f1, unique2, case when unique2 is null then f1 else 0 end
   from int4_tbl a left join tenk1 b on f1 = unique2
   where (case when unique2 is null then f1 else 0 end) = 0;
+
+-- github issue 5370 cases
+drop table if exists t5370;
+drop table if exists t5370_2;
+create table t5370(id int,name text) distributed by(id);
+insert into t5370 select i,i from  generate_series(1,1000) i;
+create table t5370_2 as select * from t5370 distributed by (id);
+analyze t5370_2;
+analyze t5370;
+explain select * from t5370 a , t5370_2 b where a.name=b.name;
+drop table t5370;
+drop table t5370_2;

@@ -10323,9 +10323,9 @@ insert into test1 select generate_series(1,100),generate_series(1,100);
 create table t_new as select avg(a) from test1 join (select i from unnest(array[1,2,3]) i) t on (test1.a = t.i);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entry.
 select * from t_new;
-        avg         
---------------------
- 2.0000000000000000
+ avg 
+-----
+   2
 (1 row)
 
 -- start_ignore
@@ -10335,9 +10335,9 @@ set optimizer_enable_gather_on_segment_for_DML=off;
 create table t_new as select avg(a) from test1 join (select i from unnest(array[1,2,3]) i) t on (test1.a = t.i);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entry.
 select * from t_new;
-        avg         
---------------------
- 2.0000000000000000
+ avg 
+-----
+   2
 (1 row)
 
 -- start_ignore

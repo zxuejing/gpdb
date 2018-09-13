@@ -2,7 +2,7 @@
 <!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
 <map><title>Security Configuration Guide</title>
     <topicref href="../../5110/homenav.html" scope="external" navtitle="Greenplum Database 5.11 Documentation"
-        format="html"/>
+        format="html" otherprops="op-help"/>
     <topicref href="topics/preface.xml">
         <topicref href="topics/SecuringGPDB.xml"/>
         <topicref href="topics/ports_and_protocols.xml"/>

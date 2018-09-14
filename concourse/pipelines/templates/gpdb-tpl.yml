@@ -2967,8 +2967,6 @@ jobs:
 
 - name: DPM_backup_43_restore_5
   plan:
-  - get: nightly-trigger
-    trigger: [[ test_trigger ]]
   - *ccp_jitter_delay
   - aggregate:
     - get: gpdb_src
@@ -2979,6 +2977,7 @@ jobs:
     - get: gpdb_binary
       resource: bin_gpdb_centos6
       passed: [gate_dpm_start]
+      trigger: [[ test_trigger ]]
     - get: gpdb4_binary
       resource: bin_gpdb4_centos6
     - get: ccp_src
@@ -3017,8 +3016,6 @@ jobs:
 
 - name: gptransfer-43x-to-5x
   plan:
-  - get: nightly-trigger
-    trigger: [[ test_trigger ]]
   - *ccp_jitter_delay
   - aggregate:
     - get: gpdb_src
@@ -3026,6 +3023,7 @@ jobs:
     - get: gpdb_binary
       resource: bin_gpdb_centos6
       passed: [gate_dpm_start]
+      trigger: [[ test_trigger ]]
     - get: gpdb4_binary
       resource: bin_gpdb4_centos6
     - get: ccp_src

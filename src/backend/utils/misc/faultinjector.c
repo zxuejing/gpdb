@@ -289,6 +289,8 @@ FaultInjectorIdentifierEnumToString[] = {
 		/* inject fault before an append-only delete */
 	_("appendonly_update"),
 		/* inject fault before an append-only update */
+	_("before_creating_an_ao_hash_entry"),
+		/* inject fault before creating an ao hash entry */
 	_("appendonly_skip_compression"),
 		/* inject fault in append-only compression function */
 	_("reindex_db"),

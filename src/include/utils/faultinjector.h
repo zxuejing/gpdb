@@ -187,6 +187,7 @@ typedef enum FaultInjectorIdentifier_e {
 	AppendOnlyInsert,
 	AppendOnlyDelete,
 	AppendOnlyUpdate,
+	BeforeCreatingAnAOHashEntry,
 	AppendOnlySkipCompression,
 
 	ReindexDB,

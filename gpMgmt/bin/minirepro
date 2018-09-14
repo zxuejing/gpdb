@@ -115,6 +115,8 @@ def parse_cmd_line():
                  help='file name that contains the query')
     p.add_option('-f', action='store', dest='output_file',
                  help='minirepro output file name')
+    p.add_option('-l', '--hll', action='store_true', dest='dumpHLL',
+                 default=False, help='Include HLL stats')
     return p
 
 def dump_query(connectionInfo, query_file):
@@ -207,7 +209,7 @@ def dump_tuple_count(cur, oid_str, f_out):
         updateStmt = templateStmt.format(E(',\n'.join(lines)), E(vals[0]), E(vals[1]))
         f_out.writelines(updateStmt)
 
-def dump_stats(cur, oid_str, f_out):
+def dump_stats(cur, oid_str, f_out, inclHLL):
     query = 'SELECT pgc.relname, pgn.nspname, pga.attname, pgt.typname, pgs.* ' \
         'FROM pg_class pgc, pg_statistic pgs, pg_namespace pgn, pg_attribute pga, pg_type pgt ' \
         'WHERE pgc.relnamespace = pgn.oid and pgc.oid in (%s) ' \
@@ -248,17 +250,31 @@ def dump_stats(cur, oid_str, f_out):
         starelid = "'%s.%s'::regclass" % (E(vals[1]), E(vals[0]))
         rowVals = ["\t%s" % (starelid)]
         schemaname = vals[1]
-
+        i = 0
+        hll = False
         if vals[3][0] == '_':
             rowTypes = types + [vals[3]] * 4
         else:
             rowTypes = types + [vals[3] + '[]'] * 4
         for val, typ in zip(vals[5:], rowTypes):
+            i = i + 1
+            str_val = "'%s'" % val
+            if i == 8 and (val == 99):
+                if inclHLL == False:
+                    val = 0
+                hll = True
+
             if val is None:
                 val = 'NULL'
             elif isinstance(val, (str, unicode)) and val[0] == '{':
                 val = "E'%s'" % E(val)
-            rowVals.append('\t{0}::{1}'.format(val, typ))
+            if i == 20 and hll == True:
+                if inclHLL == True:
+                    rowVals.append('\t{0}::{1}'.format(str_val, 'bytea[]'))
+                else:
+                    rowVals.append('\t{0}'.format('NULL::int4[]'))
+            else:
+                rowVals.append('\t{0}::{1}'.format(val, typ))
 
         # For non-catalog tables we don't need to delete stats first
         # stats need to be deleted only for catalog tables
@@ -283,6 +299,7 @@ def main():
     port = options.port or ('PGPORT' in envOpts and envOpts['PGPORT']) or '5432'
     query_file = options.query_file
     output_file = options.output_file
+    inclHLL = options.dumpHLL
 
     if query_file is None:
         parser.error("No query file specified.")
@@ -372,7 +389,7 @@ def main():
 
     # dump column stats
     print "Writing column statistics ..."
-    dump_stats(cursor, mr_query.relids, f_out)
+    dump_stats(cursor, mr_query.relids, f_out, inclHLL)
 
     cursor.close()
     conn.close()

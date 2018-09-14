@@ -74,7 +74,7 @@ def dumpTupleCount(cur):
                                             t, zip(columns[2:], vals[2:], types))), vals[0], vals[1])
 
 
-def dumpStats(cur):
+def dumpStats(cur, inclHLL):
     query = 'SELECT pgc.relname, pgn.nspname, pga.attname, pgt.typname, pgs.* ' \
         'FROM pg_class pgc, pg_statistic pgs, pg_namespace pgn, pg_attribute pga, pg_type pgt ' \
         'WHERE pgc.relnamespace = pgn.oid and pgn.nspname NOT IN ' + \
@@ -111,18 +111,32 @@ def dumpStats(cur):
 
     for vals in ResultIter(cur):
         rowVals = ["\t'%s.%s'::regclass" % tuple(vals[1::-1])]
-
+        i = 0
+        hll = False
         if vals[3][0] == '_':
             rowTypes = types + [vals[3]] * 4
         else:
             rowTypes = types + [vals[3] + '[]'] * 4
         for val, typ in zip(vals[5:], rowTypes):
+            i = i + 1
+            str_val = "'%s'" % val
+            if i == 8 and (val == 99):
+                if inclHLL == False:
+                    val = 0
+                hll = True
+
             if val is None:
                 val = 'NULL'
             elif isinstance(val, (str, unicode)) and val[0] == '{':
                 val = val.replace("'", "''").replace('\\', '\\\\')
                 val = "E'" + val + "'"
-            rowVals.append('\t{0}::{1}'.format(val, typ))
+            if i == 20 and hll == True:
+                if inclHLL == True:
+                    rowVals.append('\t{0}::{1}'.format(str_val, 'bytea[]'))
+                else:
+                    rowVals.append('\t{0}'.format('NULL::int4[]'))
+            else:
+                rowVals.append('\t{0}::{1}'.format(val, typ))
         print pstring.format(vals[0], vals[2], ',\n'.join(rowVals))
 
 
@@ -137,6 +151,8 @@ def parseCmdLine():
                  help='Connect as someone other than current user')
     p.add_option('-s', '--stats-only', action='store_false', dest='dumpSchema',
                  default=True, help='Just dump the stats, do not do a schema dump')
+    p.add_option('-l', '--hll', action='store_true', dest='dumpHLL',
+                 default=False, help='Include HLL stats')
     return p
 
 
@@ -164,6 +180,7 @@ def main():
     user = options.user or os.getlogin()
     port = options.port or '5432'
     inclSchema = options.dumpSchema
+    inclHLL = options.dumpHLL
 
     envOpts = os.environ
     envOpts['PGOPTIONS'] = pgoptions
@@ -215,7 +232,7 @@ def main():
         with closing(pgdb.connect(connectionString)) as connection:
             with closing(connection.cursor()) as cursor:
                 dumpTupleCount(cursor)
-                dumpStats(cursor)
+                dumpStats(cursor, inclHLL)
     except pgdb.DatabaseError, err:  # catch *all* exceptions
         sys.stderr.write('Error while dumping statistics:\n')
         sys.stderr.write(err.message)

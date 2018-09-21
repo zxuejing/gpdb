@@ -3035,26 +3035,27 @@ reset gp_enable_agg_distinct_pruning;
 set enable_groupagg=off;
 -- both queries should use hashagg
 explain select count(distinct j) from (select t1.* from qp_misc_jiras.tbl5994_test t1, qp_misc_jiras.tbl5994_test t2 where t1.j = t2.j) tmp group by j;
-                                                           QUERY PLAN                                                           
---------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice3; segments: 3)  (cost=28696.41..28708.91 rows=1000 width=12)
-   ->  HashAggregate  (cost=28696.41..28708.91 rows=334 width=12)
-         Group By: partial_aggregation.j
-         ->  HashAggregate  (cost=28668.91..28681.41 rows=334 width=8)
+                                                         QUERY PLAN                                                          
+-----------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)  (cost=154966.70..154979.20 rows=1000 width=12)
+   ->  HashAggregate  (cost=154966.70..154979.20 rows=334 width=12)
+         Group By: t1.j
+         ->  HashAggregate  (cost=154939.20..154951.70 rows=334 width=8)
                Group By: t1.j, t1.j
-               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=28631.41..28651.41 rows=334 width=8)
-                     Hash Key: t1.j
-                     ->  HashAggregate  (cost=28631.41..28631.41 rows=334 width=8)
-                           Group By: t1.j, t1.j
-                           ->  Hash Join  (cost=2824.49..21019.90 rows=338290 width=4)
-                                 Hash Cond: t1.j = t2.j
-                                 ->  Seq Scan on tbl5994_test t1  (cost=0.00..355.57 rows=10619 width=4)
-                                 ->  Hash  (cost=1629.85..1629.85 rows=31857 width=4)
-                                       ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1629.85 rows=31857 width=4)
-                                             ->  Seq Scan on tbl5994_test t2  (cost=0.00..355.57 rows=10619 width=4)
- Settings:  enable_groupagg=off; optimizer_segments=3
+               ->  HashAggregate  (cost=154921.70..154921.70 rows=334 width=8)
+                     Group By: t1.j, t1.j
+                     ->  Hash Join  (cost=3759.25..99322.62 rows=2471070 width=4)
+                           Hash Cond: t1.j = t2.j
+                           ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..2683.00 rows=28700 width=4)
+                                 Hash Key: t1.j
+                                 ->  Seq Scan on tbl5994_test t1  (cost=0.00..961.00 rows=28700 width=4)
+                           ->  Hash  (cost=2683.00..2683.00 rows=28700 width=4)
+                                 ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..2683.00 rows=28700 width=4)
+                                       Hash Key: t2.j
+                                       ->  Seq Scan on tbl5994_test t2  (cost=0.00..961.00 rows=28700 width=4)
+ Settings:  enable_groupagg=off; optimizer_force_three_stage_scalar_dqa=off; optimizer_segments=3
  Optimizer status: legacy query optimizer
-(17 rows)
+(18 rows)
 
 explain select count(distinct j) from (select t1.* from qp_misc_jiras.tbl5994_test t1, qp_misc_jiras.tbl5994_test t2 where t1.i = t2.i) tmp group by j;
                                                   QUERY PLAN                                                   
@@ -3080,26 +3081,25 @@ explain select count(distinct j) from (select t1.* from qp_misc_jiras.tbl5994_te
 set enable_groupagg=on;
 -- first query should use groupagg, and second one - hashagg
 explain select count(distinct j) from (select t1.* from qp_misc_jiras.tbl5994_test t1, qp_misc_jiras.tbl5994_test t2 where t1.j = t2.j) tmp group by j;
-                                                           QUERY PLAN                                                           
---------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice3; segments: 3)  (cost=28696.41..28708.91 rows=1000 width=12)
-   ->  HashAggregate  (cost=28696.41..28708.91 rows=334 width=12)
-         Group By: partial_aggregation.j
-         ->  HashAggregate  (cost=28668.91..28681.41 rows=334 width=8)
-               Group By: t1.j, t1.j
-               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=28631.41..28651.41 rows=334 width=8)
-                     Hash Key: t1.j
-                     ->  HashAggregate  (cost=28631.41..28631.41 rows=334 width=8)
-                           Group By: t1.j, t1.j
-                           ->  Hash Join  (cost=2824.49..21019.90 rows=338290 width=4)
-                                 Hash Cond: t1.j = t2.j
-                                 ->  Seq Scan on tbl5994_test t1  (cost=0.00..355.57 rows=10619 width=4)
-                                 ->  Hash  (cost=1629.85..1629.85 rows=31857 width=4)
-                                       ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1629.85 rows=31857 width=4)
-                                             ->  Seq Scan on tbl5994_test t2  (cost=0.00..355.57 rows=10619 width=4)
- Settings:  enable_groupagg=on; optimizer_segments=3
+                                                      QUERY PLAN                                                       
+-----------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)  (cost=1318091.67..1373703.25 rows=1000 width=12)
+   ->  GroupAggregate  (cost=1318091.67..1373703.25 rows=334 width=12)
+         Group By: t1.j
+         ->  Sort  (cost=1318091.67..1336624.70 rows=2471070 width=4)
+               Sort Key: t1.j
+               ->  Hash Join  (cost=3759.25..99322.62 rows=2471070 width=4)
+                     Hash Cond: t1.j = t2.j
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..2683.00 rows=28700 width=4)
+                           Hash Key: t1.j
+                           ->  Seq Scan on tbl5994_test t1  (cost=0.00..961.00 rows=28700 width=4)
+                     ->  Hash  (cost=2683.00..2683.00 rows=28700 width=4)
+                           ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..2683.00 rows=28700 width=4)
+                                 Hash Key: t2.j
+                                 ->  Seq Scan on tbl5994_test t2  (cost=0.00..961.00 rows=28700 width=4)
+ Settings:  enable_groupagg=on; optimizer_force_three_stage_scalar_dqa=off; optimizer_segments=3
  Optimizer status: legacy query optimizer
-(17 rows)
+(16 rows)
 
 explain select count(distinct j) from (select t1.* from qp_misc_jiras.tbl5994_test t1, qp_misc_jiras.tbl5994_test t2 where t1.i = t2.i) tmp group by j;
                                                   QUERY PLAN                                                   

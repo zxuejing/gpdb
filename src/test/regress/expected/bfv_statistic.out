@@ -476,23 +476,25 @@ ANALYZE test_join_card1;
 ANALYZE test_join_card2;
 ANALYZE test_join_card3;
 EXPLAIN SELECT * FROM test_join_card1 t1, test_join_card2 t2, test_join_card3 t3 WHERE t1.b = t2.b and t3.b = t2.b;
-                                                    QUERY PLAN                                                    
-------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice3; segments: 3)  (cost=1146.84..1495.29 rows=2910 width=22)
-   ->  Hash Join  (cost=1146.84..1495.29 rows=970 width=22)
-         Hash Cond: t1.b::text = t2.b::text
-         ->  Seq Scan on test_join_card1 t1  (cost=0.00..227.00 rows=6667 width=10)
-         ->  Hash  (cost=928.59..928.59 rows=5820 width=12)
-               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=240.00..928.59 rows=5820 width=12)
-                     ->  Hash Join  (cost=240.00..695.79 rows=1940 width=12)
-                           Hash Cond: t2.b::text = t3.b::text
-                           ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..308.95 rows=5999 width=4)
-                                 ->  Seq Scan on test_join_card2 t2  (cost=0.00..68.99 rows=2000 width=4)
-                           ->  Hash  (cost=115.00..115.00 rows=3334 width=8)
-                                 ->  Seq Scan on test_join_card3 t3  (cost=0.00..115.00 rows=3334 width=8)
- Settings:  optimizer=off
+                                                       QUERY PLAN                                                       
+------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice4; segments: 3)  (cost=1101.91..1478.29 rows=2910 width=22)
+   ->  Hash Join  (cost=1101.91..1478.29 rows=970 width=22)
+         Hash Cond: t3.b::text = t1.b::text
+         ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..315.00 rows=3334 width=8)
+               Hash Key: t3.b
+               ->  Seq Scan on test_join_card3 t3  (cost=0.00..115.00 rows=3334 width=8)
+         ->  Hash  (cost=1029.16..1029.16 rows=1940 width=14)
+               ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=533.91..1029.16 rows=1940 width=14)
+                     Hash Key: t1.b
+                     ->  Hash Join  (cost=533.91..912.76 rows=1940 width=14)
+                           Hash Cond: t1.b::text = t2.b::text
+                           ->  Seq Scan on test_join_card1 t1  (cost=0.00..227.00 rows=6667 width=10)
+                           ->  Hash  (cost=308.95..308.95 rows=5999 width=4)
+                                 ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..308.95 rows=5999 width=4)
+                                       ->  Seq Scan on test_join_card2 t2  (cost=0.00..68.99 rows=2000 width=4)
  Optimizer status: legacy query optimizer
-(14 rows)
+(16 rows)
 
 -- start_ignore
 DROP TABLE IF EXISTS test_join_card1;

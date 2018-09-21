@@ -12,6 +12,6 @@
 -- creates reader and writer gang
 5&: SELECT t1.* FROM reader_waits_for_lock_table t1 INNER JOIN reader_waits_for_lock_table t2 ON t1.b = t2.b;
 -- all processes in the session 5 should be blocked
-2U: SELECT count(case when not waiting then 1 end), count(*) > 0 FROM pg_stat_activity where sess_id = (SELECT setting FROM reader_waits_for_lock_table_sessionid);
+2U: SELECT count(case when not waiting then 1 end), count(*) > 0 FROM pg_stat_activity where sess_id = (SELECT setting FROM reader_waits_for_lock_table_sessionid) and waiting_reason='lock';;
 2U: COMMIT;
 5<:

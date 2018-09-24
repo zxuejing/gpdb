@@ -198,8 +198,7 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 		if (gp_log_optimization_time)
 			INSTR_TIME_SET_CURRENT(starttime);
 
-		curMemoryAccountId = MemoryAccounting_CreatePlanningMemoryAccount(
-			MEMORY_OWNER_TYPE_Optimizer);
+		curMemoryAccountId = MemoryAccounting_GetOrCreateOptimizerAccount();
 
 		START_MEMORY_ACCOUNT(curMemoryAccountId);
 		{
@@ -225,8 +224,7 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	if (gp_log_optimization_time)
 		INSTR_TIME_SET_CURRENT(starttime);
 
-	curMemoryAccountId =
-		MemoryAccounting_CreatePlanningMemoryAccount(MEMORY_OWNER_TYPE_Planner);
+	curMemoryAccountId = MemoryAccounting_GetOrCreatePlannerAccount();
 	/*
 	 * Incorrectly indented on purpose to avoid re-indenting an entire upstream
 	 * function

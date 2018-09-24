@@ -624,7 +624,7 @@ namespace gpdb {
 	char *DefGetString(DefElem *defelem);
 
 	// transform array Const to an ArrayExpr
-	Expr *TransformArrayConstToArrayExpr(Const *constant);
+	Expr *TransformArrayConstToArrayExpr(Const *constant, int *arrayLen);
 
 	// transform array Const to an ArrayExpr
 	Node *EvalConstExpressions(Node *node);

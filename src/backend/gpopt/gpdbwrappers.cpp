@@ -2966,12 +2966,13 @@ gpdb::DefGetString
 Expr *
 gpdb::TransformArrayConstToArrayExpr
 	(
-	Const *c
+	Const *c,
+	int *arrayLen
 	)
 {
 	GP_WRAP_START;
 	{
-		return transform_array_Const_to_ArrayExpr(c);
+		return transform_array_Const_to_ArrayExpr(c, arrayLen);
 	}
 	GP_WRAP_END;
 	return NULL;

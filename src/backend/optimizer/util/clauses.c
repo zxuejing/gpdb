@@ -2370,7 +2370,7 @@ fold_constants(PlannerInfo *root, Query *q, ParamListInfo boundParams, Size max_
  * large arrays.
  */
 Expr *
-transform_array_Const_to_ArrayExpr(Const *c)
+transform_array_Const_to_ArrayExpr(Const *c, int *arrayLen)
 {
 	Oid			elemtype;
 	int16		elemlen;
@@ -2395,6 +2395,7 @@ transform_array_Const_to_ArrayExpr(Const *c)
 
 	ac = DatumGetArrayTypeP(c->constvalue);
 	nelems = ArrayGetNItems(ARR_NDIM(ac), ARR_DIMS(ac));
+	*arrayLen = nelems;
 
 	/* All set, extract the elements, and an ArrayExpr to hold them. */
 	get_typlenbyvalalign(elemtype, &elemlen, &elembyval, &elemalign);

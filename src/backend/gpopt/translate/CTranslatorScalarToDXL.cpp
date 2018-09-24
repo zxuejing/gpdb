@@ -514,12 +514,13 @@ CTranslatorScalarToDXL::CreateScalarArrayCompFromExpr
 
 	Expr *right_expr = (Expr*) gpdb::ListNth(scalar_array_op_expr->args, 1);
 
+	int arrayLen = 0;
 	// If the argument array is an array Const, try to transform it to an
 	// ArrayExpr, to allow ORCA to optimize it better. (ORCA knows how to
 	// extract elements of an ArrayExpr, but doesn't currently know how
 	// to do it from an array-typed Const.)
 	if (IsA(right_expr, Const))
-		right_expr = gpdb::TransformArrayConstToArrayExpr((Const *) right_expr);
+		right_expr = gpdb::TransformArrayConstToArrayExpr((Const *) right_expr, &arrayLen);
 
 	CDXLNode *right_node = TranslateScalarToDXL(right_expr, var_colid_mapping);
 
@@ -541,7 +542,14 @@ CTranslatorScalarToDXL::CreateScalarArrayCompFromExpr
 		type = Edxlarraycomptypeall;
 	}
 
-	CDXLScalarArrayComp *dxlop = GPOS_NEW(m_mp) CDXLScalarArrayComp(m_mp, GPOS_NEW(m_mp) CMDIdGPDB(scalar_array_op_expr->opno), GPOS_NEW(m_mp) CWStringConst(op_name->GetBuffer()), type);
+	CDXLScalarArrayComp *dxlop = GPOS_NEW(m_mp) CDXLScalarArrayComp
+													(
+													m_mp,
+													GPOS_NEW(m_mp) CMDIdGPDB(scalar_array_op_expr->opno),
+													GPOS_NEW(m_mp) CWStringConst(op_name->GetBuffer()),
+													type,
+													arrayLen
+													);
 
 	// create the DXL node holding the scalar opexpr
 	CDXLNode *dxlnode = GPOS_NEW(m_mp) CDXLNode(m_mp, dxlop);

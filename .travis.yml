@@ -31,6 +31,7 @@ addons:
   apt:
     packages:
     - libevent-dev
+    - libapr1-dev
 
 ## ----------------------------------------------------------------------
 ## Build tools
@@ -54,30 +55,6 @@ install:
   - pip install --user setuptools
 
 ## ----------------------------------------------------------------------
-## Build APR & APR-UTIL used to build gpfdist
-## ----------------------------------------------------------------------
-
-env:
-  - APR=apr-1.6.5
-    APR_UTIL=apr-util-1.6.1
-    APR_TAR=${APR}.tar.gz
-    APR_UTIL_TAR=${APR_UTIL}.tar.gz
-
-before_script:
-  - export PATH=${TRAVIS_BUILD_DIR}/tools/bin:$PATH
-  - cd ${TRAVIS_BUILD_DIR}
-  - wget http://ftp.jaist.ac.jp/pub/apache/apr/${APR_TAR}
-  - wget http://ftp.jaist.ac.jp/pub/apache/apr/${APR_UTIL_TAR}
-  - tar xf ${APR_TAR}
-  - tar xf ${APR_UTIL_TAR}
-  - cd ${TRAVIS_BUILD_DIR}/${APR}
-  - ./configure --prefix=${TRAVIS_BUILD_DIR}/tools
-  - make install
-  - cd ${TRAVIS_BUILD_DIR}/${APR_UTIL}
-  - ./configure --prefix=${TRAVIS_BUILD_DIR}/tools --with-apr=${TRAVIS_BUILD_DIR}/${APR}
-  - make install
-
-## ----------------------------------------------------------------------
 ## Perform build:
 ##   GPDB
 ##   gpmapreduce
@@ -87,7 +64,7 @@ before_script:
 
 script:
   - cd ${TRAVIS_BUILD_DIR}
-  - ./configure --with-openssl --with-ldap --with-libcurl --prefix=${TRAVIS_BUILD_DIR}/gpsql --with-apr-config=${TRAVIS_BUILD_DIR}/tools/bin/apr-1-config --disable-orca --disable-gpcloud --enable-pxf
+  - ./configure --with-openssl --with-ldap --with-libcurl --prefix=${TRAVIS_BUILD_DIR}/gpsql --disable-orca --disable-gpcloud --enable-pxf
 
   - make
   - make install

@@ -40,3 +40,4 @@ transient_types.out
 hooktest.out
 gpcopy.out
 query_info_hook_test.out
+/oid_wraparound.out

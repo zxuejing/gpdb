@@ -5,6 +5,7 @@
 /largeobject.sql
 /misc.sql
 /tablespace.sql
+/oid_wraparound.sql
 
 restore_restoredb.sql
 sreh.sql

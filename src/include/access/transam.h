@@ -146,4 +146,8 @@ extern Oid	GetNewObjectId(void);
 extern void AdvanceObjectId(Oid newOid);
 extern Oid	GetNewSegRelfilenode(void);
 extern Oid	GetNewSequenceRelationObjectId(void);
+extern bool OidFollowsNextOid(Oid id);
+
 #endif   /* TRAMSAM_H */
+
+

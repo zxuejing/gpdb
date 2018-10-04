@@ -702,22 +702,22 @@ resources:
     versioned_file: {{deb_package_ubuntu16_versioned_file}}
 
 {% if "DPM" in test_sections %}
-- name: nightly-trigger
-  type: time
-  source:
-    location: America/Los_Angeles
-    days: [Sunday, Monday, Tuesday, Wednesday, Thursday, Friday]
-    start: 6:00 AM
-    stop: 7:00 AM
+# - name: nightly-trigger
+#   type: time
+#   source:
+#     location: America/Los_Angeles
+#     days: [Sunday, Monday, Tuesday, Wednesday, Thursday, Friday]
+#     start: 6:00 AM
+#     stop: 7:00 AM
 
 {% endif %}
-- name: nightly-trigger-aix
-  type: time
-  source:
-    location: America/Los_Angeles
-    days: [Sunday, Monday, Tuesday, Wednesday, Thursday, Friday]
-    start: 8:00 AM
-    stop: 9:00 AM
+# - name: nightly-trigger-aix
+#   type: time
+#   source:
+#     location: America/Los_Angeles
+#     days: [Sunday, Monday, Tuesday, Wednesday, Thursday, Friday]
+#     start: 8:00 AM
+#     stop: 9:00 AM
 
 {% if "AA" in test_sections %}
 - name: madlib_ci
@@ -1313,8 +1313,8 @@ jobs:
   # We need to serialize this job to avoid overwhelming workload
   # on remote machine.
   - aggregate:
-    - get: nightly-trigger-aix
-      trigger: true
+    # - get: nightly-trigger-aix
+      # trigger: true
     - get: gpdb_src
       passed: [gate_compile_start]
     - get: gpaddon_src
@@ -2559,8 +2559,8 @@ jobs:
 
 - name: DPM_backup-restore_ddboost_part1
   plan:
-  - get: nightly-trigger
-    trigger: [[ test_trigger ]]
+  # - get: nightly-trigger
+    # trigger: [[ test_trigger ]]
   - *ccp_jitter_delay
   - aggregate:
     - get: ccp_src
@@ -2637,8 +2637,8 @@ jobs:
 
 - name: DPM_backup-restore_ddboost_part2
   plan:
-  - get: nightly-trigger
-    trigger: [[ test_trigger ]]
+  # - get: nightly-trigger
+    # trigger: [[ test_trigger ]]
   - *ccp_jitter_delay
   - aggregate:
     - get: ccp_src
@@ -2715,8 +2715,8 @@ jobs:
 
 - name: DPM_backup-restore_ddboost_part3
   plan:
-  - get: nightly-trigger
-    trigger: [[ test_trigger ]]
+  # - get: nightly-trigger
+    # trigger: [[ test_trigger ]]
   - *ccp_jitter_delay
   - aggregate:
     - get: ccp_src
@@ -2793,9 +2793,9 @@ jobs:
 
 - name: DPM_backup-restore_netbackup_part1
   plan:
-  - get: nightly-trigger
-    tags: ["netbackup"]
-    trigger: [[ test_trigger ]]
+  # - get: nightly-trigger
+    # tags: ["netbackup"]
+    # trigger: [[ test_trigger ]]
   - *ccp_jitter_delay
   - aggregate:
     - get: ccp_src
@@ -2851,9 +2851,9 @@ jobs:
 
 - name: DPM_backup-restore_netbackup_part2
   plan:
-  - get: nightly-trigger
-    tags: ["netbackup"]
-    trigger: [[ test_trigger ]]
+  # - get: nightly-trigger
+    # tags: ["netbackup"]
+    # trigger: [[ test_trigger ]]
   - *ccp_jitter_delay
   - aggregate:
     - get: ccp_src
@@ -2909,9 +2909,9 @@ jobs:
 
 - name: DPM_backup-restore_netbackup_part3
   plan:
-  - get: nightly-trigger
-    tags: ["netbackup"]
-    trigger: [[ test_trigger ]]
+  # - get: nightly-trigger
+    # tags: ["netbackup"]
+    # trigger: [[ test_trigger ]]
   - *ccp_jitter_delay
   - aggregate:
     - get: ccp_src
@@ -2967,8 +2967,8 @@ jobs:
 
 - name: DPM_backup_43_restore_5
   plan:
-  - get: nightly-trigger
-    trigger: [[ test_trigger ]]
+  # - get: nightly-trigger
+    # trigger: [[ test_trigger ]]
   - *ccp_jitter_delay
   - aggregate:
     - get: gpdb_src
@@ -3017,8 +3017,8 @@ jobs:
 
 - name: gptransfer-43x-to-5x
   plan:
-  - get: nightly-trigger
-    trigger: [[ test_trigger ]]
+  # - get: nightly-trigger
+    # trigger: [[ test_trigger ]]
   - *ccp_jitter_delay
   - aggregate:
     - get: gpdb_src

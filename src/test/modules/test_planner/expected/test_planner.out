@@ -15,6 +15,8 @@ INFO:  Success test_window_function_with_subquery_has_correct_extparams - integr
 INFO:  Success test_window_function_with_subquery_has_correct_extparams - integration_tests/planner_integration_tests.c:26
 INFO:  Success test_window_function_with_subquery_has_correct_extparams - integration_tests/planner_integration_tests.c:29
 INFO:  Success test_window_function_with_subquery_has_correct_extparams - integration_tests/planner_integration_tests.c:32
+INFO:  Success test_stable_function_in_subquery_is_evaluated_to_const - integration_tests/planner_integration_tests.c:70
+INFO:  Success test_stable_function_in_simple_query_is_not_evaluated_in_planner - integration_tests/planner_integration_tests.c:83
  test_planner 
 --------------
  

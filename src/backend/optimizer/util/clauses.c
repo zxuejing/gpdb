@@ -58,6 +58,7 @@ typedef struct
 	List	   *active_fns;
 	Node	   *case_val;
 	bool		estimate;
+	bool		eval_stable_functions;
 	bool		recurse_queries; /* recurse into query structures */
 	bool		recurse_sublink_testexpr; /* recurse into sublink test expressions */
 	Size        max_size; /* max constant binary size in bytes, 0: no restrictions */
@@ -111,6 +112,11 @@ static Node *substitute_actual_parameters_mutator(Node *node,
 							  substitute_actual_parameters_context *context);
 static void sql_inline_error_callback(void *arg);
 static bool contain_grouping_clause_walker(Node *node, void *context);
+
+/*
+ * Greenplum specific functions
+ */
+static bool should_eval_stable_functions(PlannerInfo *root);
 
 /*****************************************************************************
  *		OPERATOR clause functions
@@ -1791,6 +1797,11 @@ Query *
 fold_constants(PlannerGlobal *glob, Query *q, ParamListInfo boundParams, Size max_size)
 {
 	eval_const_expressions_context context;
+	PlannerInfo root;
+
+	root.glob = glob;
+	root.query_level = 1;
+	root.parse = q;
 
 	context.glob = glob;
 	context.boundParams = boundParams;
@@ -1799,9 +1810,9 @@ fold_constants(PlannerGlobal *glob, Query *q, ParamListInfo boundParams, Size ma
 	context.estimate = false;	/* safe transformations only */
 	context.recurse_queries = true; /* recurse into query structures */
 	context.recurse_sublink_testexpr = false; /* do not recurse into sublink test expressions */
-
 	context.max_size = max_size;
-	
+	context.eval_stable_functions = should_eval_stable_functions(&root);
+
 	return (Query *) query_or_expression_tree_mutator
 						(
 						(Node *) q,
@@ -1935,6 +1946,7 @@ eval_const_expressions(PlannerInfo *root, Node *node)
 	context.recurse_queries = false; /* do not recurse into query structures */
 	context.recurse_sublink_testexpr = true;
 	context.max_size = 0;
+	context.eval_stable_functions = should_eval_stable_functions(root);
 
 	return eval_const_expressions_mutator(node, &context);
 }
@@ -1995,7 +2007,7 @@ eval_const_expressions_mutator(Node *node,
 			{
 				/* OK to substitute parameter value? */
 				if (context->estimate || (prm->pflags & PARAM_FLAG_CONST) ||
-					context->glob)
+					context->eval_stable_functions)
 				{
 					/*
 					 * Return a Const representing the param value.  Must copy
@@ -3447,9 +3459,9 @@ evaluate_function(Oid funcid, Oid result_type, int32 result_typmod, List *args,
 		 /* okay */ ;
 	else if (context->estimate && funcform->provolatile == PROVOLATILE_STABLE)
 		 /* okay */ ;
-	else if (context->glob && funcform->provolatile == PROVOLATILE_STABLE)
+	else if (context->eval_stable_functions && funcform->provolatile == PROVOLATILE_STABLE)
 	{
-		 /* okay, but we cannot reuse this plan */
+		/* okay, but we cannot reuse this plan */
 		context->glob->oneoffPlan = true;
 	}
 	else
@@ -5083,4 +5095,31 @@ bool subexpression_match(Expr *expr1, Expr *expr2)
 	subexpression_matching_context ctx;
 	ctx.needle = expr1;
 	return subexpression_matching_walker((Node *) expr2, (void *) &ctx);
+}
+
+/*
+ * If this expression is part of a query, and the query isn't a simple
+ * "SELECT foo()" style query with no actual tables involved, then we
+ * also aggressively evaluate stable functions, in addition to immutable
+ * ones. Such plans cannot be reused, and therefore need to be re-planned
+ * on every execution, but it can be a big win if it allows partition
+ * elimination to happen. That's considered a good tradeoff in GPDB, as
+ * typical queries are long-running.
+ */
+static bool
+should_eval_stable_functions(PlannerInfo *root)
+{
+	/*
+	 * Without PlannerGlobal, we cannot mark the plan as a `oneoffPlan`
+	 */
+	if (root == NULL) return false;
+	if (root->glob == NULL) return false;
+
+	/*
+	 * If the query has no range table, then there is no reason to need to
+	 * pre-evaluate stable functions, as the output cannot be used as part
+	 * of static partition elimination, unless the query is part of a
+	 * subquery.
+	 */
+	return root->parse->rtable || root->query_level > 1;
 }

@@ -126,7 +126,11 @@
       <p>After a restore operation completes, the utility checks the <codeph>gpdbrestore</codeph>
         status file for SQL execution errors and displays a warning if an error is found. The
         default location of the restore status files are in the
-            <codeph>db_dumps/<varname>date</varname>/</codeph> directory.</p></section>
+            <codeph>db_dumps/<varname>date</varname>/</codeph> directory.</p><p>Be sure to examine
+        the utility output messages and the restore status files when the operation completes. If
+          <codeph>gpdbrestore</codeph> output displays any warnings, or you notice errors in the
+        restore status files, you must execute the restore process again.</p>
+    </section>
     <section id="section6">
       <title>Options</title>
       <parml>

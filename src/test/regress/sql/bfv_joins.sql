@@ -173,3 +173,32 @@ SELECT count(*)
 FROM mpp25537_facttable1 ft, mpp25537_dimdate dt, mpp25537_dimtabl1 dt1
 WHERE ft.wk_id = dt.wk_id
 AND ft.id = dt1.id;
+
+--
+-- Test NLJ with join conds on distr keys using equality, IS DISTINCT FROM & IS NOT DISTINCT FROM exprs
+--
+create table nlj1 (a int, b int);
+create table nlj2 (a int, b int);
+
+insert into nlj1 values (1, 1), (NULL, NULL);
+insert into nlj2 values (1, 5), (NULL, 6);
+
+set optimizer_enable_hashjoin=off;
+set enable_hashjoin=off; set enable_mergejoin=off; set enable_nestloop=on;
+
+explain select * from nlj1, nlj2 where nlj1.a = nlj2.a;
+select * from nlj1, nlj2 where nlj1.a = nlj2.a;
+
+explain select * from nlj1, nlj2 where nlj1.a is not distinct from nlj2.a;
+select * from nlj1, nlj2 where nlj1.a is not distinct from nlj2.a;
+
+explain select * from nlj1, (select NULL a, b from nlj2) other where nlj1.a is not distinct from other.a;
+select * from nlj1, (select NULL a, b from nlj2) other where nlj1.a is not distinct from other.a;
+
+explain select * from nlj1, nlj2 where nlj1.a is distinct from nlj2.a;
+select * from nlj1, nlj2 where nlj1.a is distinct from nlj2.a;
+
+reset optimizer_enable_hashjoin;
+reset enable_hashjoin; reset enable_mergejoin; reset enable_nestloop;
+drop table nlj1, nlj2;
+

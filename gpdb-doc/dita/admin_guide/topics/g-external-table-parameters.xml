@@ -7,28 +7,39 @@
       <p>The following parameters configure the external tables feature of Greenplum Database. </p>
       <p>See <xref href="../external/g-external-tables.xml#topic3"/> for more information about
          external tables.</p>
-      <simpletable id="kh164454">
+      <simpletable>
          <strow>
             <stentry>
                <p>
-                  <codeph>gp_external_enable_exec</codeph>
+                  <codeph href="guc-list.xml#gp_external_enable_exec" type="section"
+                     >gp_external_enable_exec</codeph>
                </p>
                <p>
-                  <codeph>gp_external_max_segs</codeph>
+                  <codeph href="guc-list.xml#gp_external_enable_filter_pushdown" type="section"
+                     >gp_external_enable_filter_pushdown</codeph>
+               </p>
+               <p>
+                  <codeph href="guc-list.xml#gp_external_max_segs" type="section"
+                     >gp_external_max_segs</codeph>
+               </p>
+               <p>
+                  <codeph href="guc-list.xml#topic_lvm_ttc_3p" type="section"
+                     >gp_initial_bad_row_limit</codeph>
+               </p>
+               <p>
+                  <codeph href="guc-list.xml#gp_reject_percent_threshold" type="section"
+                     >gp_reject_percent_threshold</codeph>
                </p>
             </stentry>
             <stentry>
                <p>
-                  <codeph>gp_initial_bad_row_limit</codeph>
+                  <codeph href="guc-list.xml#readable_external_table_timeout" type="section"
+                     >readable_external_table_timeout</codeph>
                </p>
                <p>
-                  <codeph>gp_reject_percent_threshold</codeph>
-               </p>
-               <p>
-                  <codeph>readable_external_table_timeout</codeph>
-               </p>
-               <p>
-                  <codeph>writable_external_table_bufsize</codeph></p>
+                  <codeph href="guc-list.xml#writable_external_table_bufsize" type="section"
+                     >writable_external_table_bufsize</codeph></p>
+               <p><codeph href="guc-list.xml#verify_gpfdists_cert">verify_gpfdists_cert</codeph></p>
             </stentry>
          </strow>
       </simpletable>

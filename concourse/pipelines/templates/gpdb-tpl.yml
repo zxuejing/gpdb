@@ -44,6 +44,7 @@ groups:
   - compile_gpdb_centos6
   - compile_gpdb_centos7
   - compile_gpdb_sles11
+  - compile_gpdb_ubuntu16
   - compile_gpdb_open_source_ubuntu16
   - compile_gpdb_open_source_centos6
   - compile_gpdb_binary_swap_centos6
@@ -165,6 +166,7 @@ groups:
   - compile_gpdb_centos6
   - compile_gpdb_centos7
   - compile_gpdb_sles11
+  - compile_gpdb_ubuntu16
   - compile_gpdb_open_source_ubuntu16
   - compile_gpdb_open_source_centos6
   - compile_gpdb_binary_swap_centos6
@@ -421,6 +423,12 @@ resources:
     private_key: {{gpaddon-git-key}}
     uri: {{gpaddon-git-remote}}
 
+- name: docker-in-concourse
+  type: git
+  source:
+    uri: git@github.com:pivotal/docker-in-concourse
+    private_key: {{docker-in-concourse-git-key}}
+
 - name: debian_release
   type: git
   source:
@@ -456,6 +464,14 @@ resources:
   source:
     repository: pivotaldata/ubuntu-gpdb-debian-dev
     tag: '16.04'
+
+- name: ubuntu-gpcloud-dev-16
+  type: docker-image
+  source:
+    repository: pivotaldata/ubuntu-gpcloud-dev
+    tag: '16.04'
+    username: {{docker_username}}
+    password: {{docker_password}}
 
 - name: centos-mingw
   type: docker-image
@@ -562,6 +578,15 @@ resources:
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
     versioned_file: {{bin_gpdb_sles11_versioned_file}}
+
+- name: bin_gpdb_ubuntu16
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: {{bin_gpdb_ubuntu16_versioned_file}}
 
 - name: bin_gpdb_windows_clients
   type: s3
@@ -1019,6 +1044,7 @@ jobs:
     - get: centos-mingw
     - get: ubuntu-gpdb-dev-16
     - get: ubuntu-gpdb-debian-dev-16
+    - get: ubuntu-gpcloud-dev-16
 
 - name: compile_gpdb_centos6
   plan:
@@ -1146,6 +1172,31 @@ jobs:
   - put: installer_sles11_gpdb_loaders
     params:
       file: gpdb_artifacts/greenplum-loaders-*-sles11-x86_64.zip
+
+- name: compile_gpdb_ubuntu16
+  plan:
+  - aggregate:
+    - get: reduced-frequency-trigger
+      trigger: ((reduced-frequency-trigger-flag))
+    - get: gpdb_src
+      passed: [gate_compile_start]
+      trigger: ((gpdb_src-trigger-flag))
+    - get: gpaddon_src
+      passed: [gate_compile_start]
+    - get: docker-in-concourse
+    - get: ubuntu-gpcloud-dev-16
+      passed: [gate_compile_start]
+  - task: compile_gpdb
+    file: gpdb_src/concourse/tasks/compile_gpdb_ubuntu16.yml
+    image: ubuntu-gpcloud-dev-16
+    privileged: true
+  - aggregate:
+    - put: bin_gpdb_ubuntu16
+      params:
+        file: gpdb_artifacts/bin_gpdb.tar.gz
+    - put: deb_package_ubuntu16
+      params:
+        file: gpdb_artifacts/greenplum-db*.deb
 
 - name: compile_gpdb_open_source_ubuntu16
   plan:
@@ -1370,6 +1421,7 @@ jobs:
       - compile_gpdb_open_source_centos6
       - compile_gpdb_centos7
       - compile_gpdb_sles11
+      - compile_gpdb_ubuntu16
       - compile_gpdb_open_source_ubuntu16
       trigger: true
     - get: bin_gpdb_sles11
@@ -3555,6 +3607,7 @@ jobs:
       - compile_gpdb_open_source_centos6
       - compile_gpdb_centos7
       - compile_gpdb_sles11
+      - compile_gpdb_ubuntu16
       - compile_gpdb_open_source_ubuntu16
       - compile_gpdb_windows_cl
       - compile_gpdb_aix7_remote

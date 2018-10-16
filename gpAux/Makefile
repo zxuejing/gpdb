@@ -174,7 +174,7 @@ suse11_x86_64_CONFIGFLAGS=--enable-ddboost --enable-gpperfmon --with-gssapi ${OR
 sles11_x86_64_CONFIGFLAGS=--enable-ddboost --enable-gpperfmon --with-gssapi ${ORCA_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
 linux_x86_64_CONFIGFLAGS=--enable-snmp ${ORCA_CONFIG} --with-libxml $(APR_CONFIG)
 osx106_x86_CONFIGFLAGS=--enable-snmp ${ORCA_CONFIG} --with-libxml $(APR_CONFIG)
-ubuntu1604_amd64_CONFIGFLAGS=--enable-snmp --enable-tap-tests --enable-gpperfmon --with-gssapi --enable-mapreduce ${ORCA_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
+ubuntu1604_amd64_CONFIGFLAGS=--enable-snmp ${ORCA_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
 
 BLD_CONFIGFLAGS=$($(BLD_ARCH)_CONFIGFLAGS)
 
@@ -881,17 +881,23 @@ set_scripts_version :
 #---------------------------------------------------------------------
 
 mkgphdfs:
+ifneq ($(BLD_ARCH),$(filter $(BLD_ARCH),ubuntu1604_amd64))
 	@cd extensions && $(MAKE) mkgphdfs OPT="$(INSTCFLAGS)" INSTLOC=$(INSTLOC)
+endif
 
 mkorafce:
+ifneq ($(BLD_ARCH),$(filter $(BLD_ARCH),ubuntu1604_amd64))
 	@cd extensions && $(MAKE) mkorafce OPT="$(INSTCFLAGS)" INSTLOC=$(INSTLOC)
+endif
 
 mkpgbench:
+ifneq ($(BLD_ARCH),$(filter $(BLD_ARCH),ubuntu1604_amd64))
 	@cd $(BUILDDIR)/contrib/pgbench && $(MAKE) install
+endif
 
 mkpgbouncer:
-ifeq "$(shell uname -s)" "Darwin"
-	echo "pgbouncer can't build on Mac"
+ifeq ($(BLD_ARCH),$(filter $(BLD_ARCH),osx106_x86_64 ubuntu1604_amd64))
+	echo "pgbouncer can't build on $(BLD_ARCH)"
 else
 	@if [ ! -f extensions/pgbouncer/source/configure ]; then cd extensions/pgbouncer/source && ./autogen.sh ;fi
 	@cd extensions/pgbouncer/source && ./configure --with-libevent=$(BLD_TOP)/ext/$(BLD_ARCH) --prefix=$(INSTLOC) --enable-evdns --with-pam

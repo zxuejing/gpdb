@@ -69,8 +69,7 @@
               <entry colname="col1">VOLATILE</entry>
               <entry colname="col2">Restricted</entry>
               <entry colname="col3">Function values can change within a single table scan. For
-                example: <codeph>random()</codeph>,
-                  <codeph>timeofday()</codeph>.</entry>
+                example: <codeph>random()</codeph>, <codeph>timeofday()</codeph>.</entry>
               <entry colname="col4">Any function with side effects is volatile, even if its result
                 is predictable. For example: <codeph>setval()</codeph>.</entry>
             </row>
@@ -203,7 +202,7 @@ SELECT foo();
             <row>
               <entry colname="col1">
                 <xref format="html"
-                  href="http://www.postgresql.org/docs/8.3/static/functions-matching.html"
+                  href="https://www.postgresql.org/docs/8.3/static/functions-matching.html"
                   scope="external">
                   <ph>Pattern Matching</ph>
                 </xref>
@@ -399,7 +398,7 @@ SELECT foo();
             <row>
               <entry colname="col1">
                 <xref format="html"
-                  href="http://www.postgresql.org/docs/9.1/interactive/functions-xml.html"
+                  href="https://www.postgresql.org/docs/9.1/static/functions-xml.html"
                   scope="external">XML Functions</xref> and function-like expressions </entry>
               <entry colname="col2"/>
               <entry colname="col3">
@@ -604,7 +603,7 @@ SELECT foo();
               </row>
             </thead>
             <tbody>
-<!--
+              <!--
               <row>
                 <entry><codeph>to_json(anyelement)</codeph></entry>
                 <entry>Returns the value as a valid JSON object. Arrays and composites are processed
@@ -648,7 +647,7 @@ SELECT foo();
             </tbody>
           </tgroup>
         </table>
-<!--
+        <!--
         <note><codeph>array_to_json</codeph> and <codeph>row_to_json</codeph> have the same behavior
           as <codeph>to_json</codeph> except for offering a pretty-printing option. The behavior
           described for <codeph>to_json</codeph> also applies to individual values converted by the

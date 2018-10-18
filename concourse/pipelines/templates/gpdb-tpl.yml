@@ -689,6 +689,15 @@ resources:
     secret_access_key: {{bucket-secret-access-key}}
     regexp: deliverables/greenplum-loaders-5.(.*)-sles11-x86_64.zip
 
+- name: deb_package_ubuntu16
+  type: s3
+  source:
+    access_key_id: ((bucket-access-key-id))
+    bucket: ((bucket-name))
+    region_name: ((aws-region))
+    secret_access_key: ((bucket-secret-access-key))
+    regexp: deb_package_ubuntu16/greenplum-db_(.*)_amd64.deb
+
 - name: deb_package_open_source_ubuntu16
   type: s3
   source:

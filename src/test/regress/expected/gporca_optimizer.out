@@ -10065,7 +10065,7 @@ set log_statement='none';
 set log_min_duration_statement=-1;
 set client_min_messages='log';
 select count(*) from foo group by cube(a,b);
-LOG:  2016-08-19 10:46:53:360703 PDT,THD000,NOTICE,"Feature not supported by the Pivotal Query Optimizer: Cube",
+LOG:  2016-08-19 10:46:53:360703 PDT,THD000,NOTICE,"Feature not supported: Cube",
 INFO:  GPORCA failed to produce a plan, falling back to planner
 LOG:  Planner produced plan :0
  count
@@ -10188,7 +10188,7 @@ set optimizer_enable_ctas = off;
 set client_min_messages='log';
 create table foo_ctas(a) as (select generate_series(1,10)) distributed by (a);
 LOG:  statement: create table foo_ctas(a) as (select generate_series(1,10)) distributed by (a);
-LOG:  2017-05-31 14:43:22:338568 PDT,THD000,NOTICE,"Feature not supported by the Pivotal Query Optimizer: CTAS. Set optimizer_enable_ctas to on to enable CTAS with GPORCA",
+LOG:  2017-05-31 14:43:22:338568 PDT,THD000,NOTICE,"Feature not supported: CTAS. Set optimizer_enable_ctas to on to enable CTAS with GPORCA",
 INFO:  GPORCA failed to produce a plan, falling back to planner
 LOG:  Planner produced plan :0
 LOG:  Computing Scalar Stats : column a

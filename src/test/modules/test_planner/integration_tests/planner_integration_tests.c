@@ -6,7 +6,8 @@
 #include "src/assertions.h"
 #include "src/planner_test_helpers.h"
 
-static void test_window_function_with_subquery_has_correct_extparams()
+static void
+test_window_function_with_subquery_has_correct_extparams()
 {
 	const char *query_string = "select ( \
 							       SELECT min(1) OVER() \
@@ -31,7 +32,8 @@ static void test_window_function_with_subquery_has_correct_extparams()
 		is_equal_to(0));
 }
 
-static void test_vanilla_subquery_has_correct_extparams()
+static void
+test_vanilla_subquery_has_correct_extparams()
 {
 	const char *subquery_string = "select ( \
 								    select 1 from pg_class \
@@ -55,7 +57,9 @@ static void test_vanilla_subquery_has_correct_extparams()
 		is_equal_to(0));
 }
 
-void run_planner_integration_test_suite(void) {
+void
+run_planner_integration_test_suite(void)
+{
 	test_vanilla_subquery_has_correct_extparams();
 	test_window_function_with_subquery_has_correct_extparams();
 }

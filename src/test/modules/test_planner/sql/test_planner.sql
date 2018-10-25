@@ -1,17 +1,12 @@
 -- start_matchsubs
---
--- # Ignore drop failures
--- m/.*extension \"test_planner\" does not exist/
--- s/(.*)//
---
 -- # Remove all successful
--- m/INFO:  Success.*/
--- s/(.*)//
---
+-- m/INFO:  Success.*\.c:\d+/
+-- s/\d+/###/
 -- end_matchsubs
 
-DROP EXTENSION test_planner;
+--start_ignore
 CREATE EXTENSION test_planner;
+--end_ignore
 
 SELECT test_planner();
 DROP EXTENSION test_planner;

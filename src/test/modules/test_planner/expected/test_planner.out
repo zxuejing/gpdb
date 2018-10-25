@@ -1,25 +1,23 @@
 -- start_matchsubs
---
--- # Ignore drop failures
--- m/.*extension \"test_planner\" does not exist/
--- s/(.*)//
--- 
 -- # Remove all successful
--- m/INFO:  Success.*/
--- s/(.*)//
---
+-- m/INFO:  Success.*\.c:\d+/
+-- s/\d+/###/
 -- end_matchsubs
-DROP EXTENSION test_planner;
-
+--start_ignore
 CREATE EXTENSION test_planner;
+--end_ignore
 SELECT test_planner();
-
-
-
-
- test_planner
+INFO:  Success test_vanilla_subquery_has_correct_extparams - integration_tests/planner_integration_tests.c:48
+INFO:  Success test_vanilla_subquery_has_correct_extparams - integration_tests/planner_integration_tests.c:51
+INFO:  Success test_vanilla_subquery_has_correct_extparams - integration_tests/planner_integration_tests.c:54
+INFO:  Success test_vanilla_subquery_has_correct_extparams - integration_tests/planner_integration_tests.c:57
+INFO:  Success test_window_function_with_subquery_has_correct_extparams - integration_tests/planner_integration_tests.c:23
+INFO:  Success test_window_function_with_subquery_has_correct_extparams - integration_tests/planner_integration_tests.c:26
+INFO:  Success test_window_function_with_subquery_has_correct_extparams - integration_tests/planner_integration_tests.c:29
+INFO:  Success test_window_function_with_subquery_has_correct_extparams - integration_tests/planner_integration_tests.c:32
+ test_planner 
 --------------
-
+ 
 (1 row)
 
 DROP EXTENSION test_planner;

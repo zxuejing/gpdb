@@ -2994,8 +2994,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_streaming_material,
-		true,
-		NULL, NULL, NULL
+		true, NULL, NULL
 	},
 	{
 		{"optimizer_enable_gather_on_segment_for_dml", PGC_USERSET, DEVELOPER_OPTIONS,
@@ -3004,8 +3003,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_gather_on_segment_for_dml,
-		true,
-		NULL, NULL, NULL
+		true, NULL, NULL
 	},
 	{
 		{"optimizer_enforce_subplans", PGC_USERSET, DEVELOPER_OPTIONS,

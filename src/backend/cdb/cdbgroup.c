@@ -3554,7 +3554,6 @@ Node *split_aggref(Aggref *aggref, MppGroupContext *ctx)
 	ListCell *cell;
 	Node *final_node;
 	Oid transtype = InvalidOid;
-	AttrNumber attrno = OUTER;
 	TargetEntry *prelim_tle = NULL;
 
 	Assert(aggref != NULL  && aggref->agglevelsup == 0);
@@ -3640,7 +3639,8 @@ Node *split_aggref(Aggref *aggref, MppGroupContext *ctx)
 		Aggref *pref;
 		Aggref *iref;
 		Aggref *fref;
-		
+		AttrNumber attrno;
+
 		/*
 		 * We may have seen an Aggref just like this one already.  Look for
 		 * the preliminary form of such in the preliminary Aggref target

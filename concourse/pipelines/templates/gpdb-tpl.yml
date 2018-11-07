@@ -664,14 +664,14 @@ resources:
     secret_access_key: {{bucket-secret-access-key}}
     regexp: deliverables/greenplum-loaders-5.(.*)-sles11-x86_64.zip
 
-- name: deb_package_ubuntu16
+- name: deb_package_open_source_ubuntu16
   type: s3
   source:
     access_key_id: {{bucket-access-key-id}}
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
-    versioned_file: {{deb_package_ubuntu16_versioned_file}}
+    versioned_file: {{deb_package_open_source_ubuntu16_versioned_file}}
 
 {% if "DPM" in test_sections %}
 - name: nightly-trigger
@@ -1177,9 +1177,9 @@ jobs:
     - put: compiled_bits_ubuntu16
       params:
         file: compiled_bits_ubuntu16/compiled_bits_ubuntu16.tar.gz
-    - put: deb_package_ubuntu16
+    - put: deb_package_open_source_ubuntu16
       params:
-        file: {{deb_package_ubuntu16_versioned_file}}
+        file: {{deb_package_open_source_ubuntu16_versioned_file}}
 
 - name: compile_gpdb_open_source_centos6
   public: true
@@ -1387,7 +1387,7 @@ jobs:
     - get: compiled_bits_ubuntu16
       passed:
       - compile_gpdb_ubuntu16
-    - get: deb_package_ubuntu16
+    - get: deb_package_open_source_ubuntu16
       passed:
       - compile_gpdb_ubuntu16
 
@@ -1422,7 +1422,7 @@ jobs:
       - get: compiled_bits_ubuntu16
         passed:
         - gate_compile_end
-      - get: deb_package_ubuntu16
+      - get: deb_package_open_source_ubuntu16
         passed:
         - gate_compile_end
 
@@ -1620,7 +1620,7 @@ jobs:
       passed:
       - gate_icw_start
     - get: ubuntu-gpdb-debian-dev-16
-    - get: deb_package_ubuntu16
+    - get: deb_package_open_source_ubuntu16
       passed:
       - gate_icw_start
       trigger: [[ test_trigger ]]
@@ -1628,7 +1628,7 @@ jobs:
     file: gpdb_src/concourse/tasks/deb_test_package.yml
     image: ubuntu-gpdb-debian-dev-16
     params:
-      DEBIAN_PACKAGE: {{deb_package_ubuntu16_versioned_file}}
+      DEBIAN_PACKAGE: {{deb_package_open_source_ubuntu16_versioned_file}}
 
 - name: icw_extensions_gpcloud
   plan:

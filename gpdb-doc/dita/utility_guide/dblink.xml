@@ -68,14 +68,17 @@ postgres=# <b>\q
 </b>$</codeblock></li>
         <li>Log into a different database as a superuser. In this example, the superuser
             <codeph>gpadmin</codeph> logs into the database <codeph>testdb</codeph>. If the
-            <codeph>dblink</codeph> functions are not already available, register the
-            <codeph>dblink</codeph> extension in the
-          database:<codeblock>$ <b>psql -d testdb</b>
+            <codeph>dblink</codeph> functions are not already available, install them using the
+            <codeph>$GPHOME/share/postgresql/contrib/dblink.sql</codeph>
+          script:<codeblock>$ <b>psql -d testdb</b>
 psql (9.4beta1)
 Type "help" for help.
 
-testdb=# <b>CREATE EXTENSION dblink</b>;
-CREATE EXENSION</codeblock></li>
+testdb=# <b>\i /usr/local/greenplum-db/share/postgresql/contrib/dblink.sql</b>
+SET
+CREATE FUNCTION
+CREATE FUNCTION
+...</codeblock></li>
         <li>Use the <codeph>dblink_connect()</codeph> function to create either an implicit or a
           named connection to another database. The connection string that you provide should be a
           libpq-style keyword/value string. This example creates a connection named

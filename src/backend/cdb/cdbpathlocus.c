@@ -217,10 +217,7 @@ cdbpathlocus_compare(CdbPathLocus_Comparison    op,
  * cdb_build_distribution_pathkeys
  *	  Build canonicalized pathkeys list for given columns of rel.
  *
- *    Returns a List, of length 'nattrs': each of its members is
- *    a List of one or more PathKey nodes.  The returned List
- *    might contain duplicate entries: this occurs when the
- *    corresponding columns are constrained to be equal.
+ *    Returns a List of PathKeys, of length 'nattrs'.
  *
  *    The caller receives ownership of the returned List, freshly
  *    palloc'ed in the caller's context.  The members of the returned
@@ -228,25 +225,25 @@ cdbpathlocus_compare(CdbPathLocus_Comparison    op,
  *    other contexts.
  */
 static List *
-cdb_build_distribution_pathkeys(PlannerInfo      *root,
-					            RelOptInfo *rel,
-                                int         nattrs,
-                                AttrNumber *attrs)
+cdb_build_distribution_pathkeys(PlannerInfo *root,
+								RelOptInfo *rel,
+								int nattrs,
+								AttrNumber *attrs)
 {
-	List   *retval = NIL;
-    List   *eq = list_make1(makeString("="));
-    int     i;
-    bool	isAppendChildRelation = false;
-    
+	List	   *retval = NIL;
+	List	   *eq = list_make1(makeString("="));
+	int			i;
+	bool		isAppendChildRelation = false;
+
     isAppendChildRelation = (rel->reloptkind == RELOPT_OTHER_MEMBER_REL);
     
-    for (i = 0; i < nattrs; ++i)
-    {
-		PathKey   *cpathkey;
-    	
-        /* Find or create a Var node that references the specified column. */
-        Var    *expr = find_indexkey_var(root, rel, attrs[i]);
-        Assert(expr);
+	for (i = 0; i < nattrs; ++i)
+	{
+		PathKey    *cpathkey;
+
+		/* Find or create a Var node that references the specified column. */
+		Var		   *expr = find_indexkey_var(root, rel, attrs[i]);
+		Assert(expr);
 
         /* 
          * Find or create a pathkey. We distinguish two cases for performance reasons:
@@ -287,7 +284,7 @@ cdb_build_distribution_pathkeys(PlannerInfo      *root,
 
         /* Append to list of pathkeys. */
         retval = lappend(retval, cpathkey);
-    }
+	}
 
 	list_free_deep(eq);
 	return retval;

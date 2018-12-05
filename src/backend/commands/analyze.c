@@ -3262,7 +3262,12 @@ merge_leaf_stats(VacAttrStatsP stats,
 			nMultiples[i] = (float) hllcounters[i]->nmultiples;
 			samplerows += hllcounters[i]->samplerows;
 			hllcounters_copy[i] = hll_copy(hllcounters[i]);
-			finalHLL = hyperloglog_merge_counters(finalHLL, hllcounters[i]);
+			HLLCounter finalHLL_intermediate = finalHLL;
+			finalHLL = hyperloglog_merge_counters(finalHLL_intermediate, hllcounters[i]);
+			if (NULL != finalHLL_intermediate)
+			{
+				pfree(finalHLL_intermediate);
+			}
 			free_attstatsslot(&hllSlot);
 			samplehll_count++;
 			totalhll_count++;
@@ -3330,26 +3335,31 @@ merge_leaf_stats(VacAttrStatsP stats,
 					if (nDistincts[i] == 0)
 						continue;
 
-					HLLCounter finalHLL_temp = NULL;
+					HLLCounter finalHLL_NDV = NULL;
 					for (j = 0; j < numPartitions; j++)
 					{
 						// merge the HLL counters for each partition
 						// except the current partition (i)
 						if (i != j && hllcounters_copy[j] != NULL)
 						{
-							HLLCounter temp_hll_counter =
-								hll_copy(hllcounters_copy[j]);
-							finalHLL_temp =
-								hyperloglog_merge_counters(finalHLL_temp, temp_hll_counter);
+							HLLCounter hllcounter_temp = hll_copy(hllcounters_copy[j]);
+							HLLCounter finalHLL_NDV_temp = finalHLL_NDV;
+							finalHLL_NDV = hyperloglog_merge_counters(finalHLL_NDV_temp, hllcounter_temp);
+							if (NULL != finalHLL_NDV_temp)
+							{
+								pfree(finalHLL_NDV_temp);
+							}
+							pfree(hllcounter_temp);
 						}
 					}
-					if (finalHLL_temp != NULL)
+					if (finalHLL_NDV != NULL)
 					{
 						// Calculating uniques in each partition
 						nUniques[i] =
-							ndistinct - hyperloglog_estimate(finalHLL_temp);
+							ndistinct - hyperloglog_estimate(finalHLL_NDV);
 						nUnique += nUniques[i];
 						nmultiple += nMultiples[i] * (nUniques[i] / nDistincts[i]);
+						pfree(finalHLL_NDV);
 					}
 					else
 					{

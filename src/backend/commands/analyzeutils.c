@@ -103,8 +103,6 @@ float4 getBucketSizes(const HeapTuple *heaptupleStats, const float4 *relTuples, 
 					  MCVFreqPair **mcvPairRemaining, int rem_mcv,
 					  float4 *eachBucket);
 
-#define DEFAULT_COLLATION_OID	100
-
 float4
 get_rel_reltuples(Oid relid)
 {

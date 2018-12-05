@@ -1638,6 +1638,28 @@ set allow_system_table_mods='dml';
 delete from gp_distribution_policy where localoid='rewrite_rules_1_prt_2'::regclass;
 reset allow_system_table_mods;
 
+-- Test predicate inference for certain cast exprs
+create table foid (a oid);
+create table infer_vc (a varchar);
+create table infer_txt (a text);
+CREATE TABLE infer_part_vc (id int, gender varchar(1)) 
+  DISTRIBUTED BY (id)
+  PARTITION BY LIST (gender)
+  ( PARTITION girls VALUES ('F'), 
+    PARTITION boys VALUES ('M'), 
+    DEFAULT PARTITION other );
+
+analyze foid;
+analyze infer_txt;
+analyze infer_vc;
+analyze infer_part_vc;
+
+explain select * from foid f1 inner join foid f2 on (f1.a = f2.a) where f2.a = 5;
+explain select * from infer_txt f1 inner join infer_txt f2 on (f1.a = f2.a) where f1.a = 'K';
+explain select * from infer_vc f1 inner join infer_txt f2 on (f1.a = f2.a) where f1.a = 'K';
+explain select * from infer_vc f1 inner join infer_vc f2 on (f1.a = f2.a) where f1.a = 'K';
+explain select * from infer_part_vc inner join infer_txt on (infer_part_vc.gender = infer_txt.a) and infer_txt.a = 'M';
+
 -- start_ignore
 DROP SCHEMA orca CASCADE;
 -- end_ignore

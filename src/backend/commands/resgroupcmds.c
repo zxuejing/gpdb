@@ -469,16 +469,16 @@ AlterResourceGroup(AlterResourceGroupStmt *stmt)
 
 	validateCapabilities(pg_resgroupcapability_rel, groupid, &caps, false);
 
-	/* cpuset & cpu_rate_limit can not coexist 
+	/* cpuset & cpu_rate_limit can not coexist
 	 * if cpuset is active, then cpu_rate_limit must set to CPU_RATE_LIMIT_DISABLED
 	 * if cpu_rate_limit is active, then cpuset must set to "" */
 	if (limitType == RESGROUP_LIMIT_TYPE_CPUSET)
 	{
 		updateResgroupCapabilityEntry(pg_resgroupcapability_rel,
-									  groupid, RESGROUP_LIMIT_TYPE_CPU, 
+									  groupid, RESGROUP_LIMIT_TYPE_CPU,
 									  CPU_RATE_LIMIT_DISABLED, "");
 		updateResgroupCapabilityEntry(pg_resgroupcapability_rel,
-									  groupid, RESGROUP_LIMIT_TYPE_CPUSET, 
+									  groupid, RESGROUP_LIMIT_TYPE_CPUSET,
 									  0, caps.cpuset);
 	}
 	else if (limitType == RESGROUP_LIMIT_TYPE_CPU)
@@ -584,19 +584,19 @@ GetResGroupCapabilities(Relation rel, Oid groupId, ResGroupCaps *resgroupCaps)
 		switch (type)
 		{
 			case RESGROUP_LIMIT_TYPE_CONCURRENCY:
-				resgroupCaps->concurrency = str2Int(proposed, 
+				resgroupCaps->concurrency = str2Int(proposed,
 													getResgroupOptionName(type));
 				break;
 			case RESGROUP_LIMIT_TYPE_CPU:
-				resgroupCaps->cpuRateLimit = str2Int(proposed, 
+				resgroupCaps->cpuRateLimit = str2Int(proposed,
 													 getResgroupOptionName(type));
 				break;
 			case RESGROUP_LIMIT_TYPE_MEMORY:
-				resgroupCaps->memLimit = str2Int(proposed, 
+				resgroupCaps->memLimit = str2Int(proposed,
 												 getResgroupOptionName(type));
 				break;
 			case RESGROUP_LIMIT_TYPE_MEMORY_SHARED_QUOTA:
-				resgroupCaps->memSharedQuota = str2Int(proposed, 
+				resgroupCaps->memSharedQuota = str2Int(proposed,
 													   getResgroupOptionName(type));
 				break;
 			case RESGROUP_LIMIT_TYPE_MEMORY_SPILL_RATIO:
@@ -1014,14 +1014,14 @@ parseStmtOptions(CreateResourceGroupStmt *stmt, ResGroupCaps *caps)
 		else
 			mask |= 1 << type;
 
-		if (type == RESGROUP_LIMIT_TYPE_CPUSET) 
+		if (type == RESGROUP_LIMIT_TYPE_CPUSET)
 		{
 			const char *cpuset = defGetString(defel);
 			checkCpusetSyntax(cpuset);
 			StrNCpy(caps->cpuset, cpuset, sizeof(caps->cpuset));
 			caps->cpuRateLimit = CPU_RATE_LIMIT_DISABLED;
 		}
-		else 
+		else
 		{
 			value = getResgroupOptionValue(defel, type);
 			checkResgroupCapLimit(type, value);

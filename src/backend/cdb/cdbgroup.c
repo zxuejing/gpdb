@@ -6878,9 +6878,11 @@ within_agg_planner(PlannerInfo *root,
 			 */
 			memcpy(&root_copy, root, sizeof(PlannerInfo));
 			sz = root->simple_rel_array_size * sizeof(RelOptInfo *);
-			root_copy.simple_rel_array =
-				(RelOptInfo **) palloc(sz);
+			root_copy.simple_rel_array = (RelOptInfo **) palloc(sz);
 			memcpy(root_copy.simple_rel_array, root->simple_rel_array, sz);
+			sz = root->simple_rel_array_size * sizeof(RangeTblEntry *);
+			root_copy.simple_rte_array = (RangeTblEntry **) palloc(sz);
+			memcpy(root_copy.simple_rte_array, root->simple_rte_array, sz);
 
 			/*
 			 * Query should be copied deeply for the planner changes it.

@@ -49,6 +49,86 @@ function install_and_configure_gpdb() {
   configure
 }
 
+# usage: gen_gpexpand_input <old_size> <new_size>
+function gen_gpexpand_input() {
+  local old="$1"
+  local new="$2"
+  local inputfile="/tmp/inputfile.${old}-${new}"
+  local i
+
+  for ((i=old; i<new; i++)); do
+    cat <<EOF
+$HOSTNAME:$HOSTNAME:$((25432+i*2)):$PWD/datadirs/expand/primary${i}:$((3+i*2)):${i}:p
+$HOSTNAME:$HOSTNAME:$((25433+i*2)):$PWD/datadirs/expand/mirror${i}:$((4+i*2)):${i}:m
+EOF
+  done | tee $inputfile
+
+  chmod a+r $inputfile
+}
+
+# extract PGOPTIONS from MAKE_TEST_COMMAND
+function get_pgoptions() {
+  local pgoptions
+
+  cat >/tmp/get_pgoptions.mk <<"EOF"
+$(info $(PGOPTIONS))
+EOF
+
+  pgoptions="$(eval make $MAKE_TEST_COMMAND -f /tmp/get_pgoptions.mk -nq 2>/dev/null)"
+  echo "$pgoptions"
+}
+
+# usage: expand_cluster <old_size> <new_size>
+function expand_cluster() {
+  local old="$1"
+  local new="$2"
+  local inputfile="/tmp/inputfile.${old}-${new}"
+  local pidfile="/tmp/postmaster.pid.${old}-${new}"
+  local dbname="postgres"
+  local pgoptions="$(get_pgoptions)"
+  local uncompleted
+  local partial
+
+  pushd gpdb_src/gpAux/gpdemo
+
+  gen_gpexpand_input "$old" "$new"
+
+  # Backup master pid, by checking it later we can know whether the cluster is
+  # restarted during the tests.
+  su gpadmin -c "head -n 1 $MASTER_DATA_DIRECTORY/postmaster.pid >$pidfile"
+  # begin expansion
+  su gpadmin -c "yes | PGOPTIONS='$pgoptions' gpexpand -s -i $inputfile"
+  # redistribute tables
+  su gpadmin -c "yes | PGOPTIONS='$pgoptions' gpexpand -s"
+  # check the result
+  uncompleted=$(su gpadmin -c "psql -Aqtd $dbname -c \"select count(*) from gpexpand.status_detail where status <> 'COMPLETED'\"")
+  # cleanup
+  su gpadmin -c "yes | PGOPTIONS='$pgoptions' gpexpand -s -c"
+
+  popd
+
+  if [ "$uncompleted" -ne 0 ]; then
+	  echo "error: some tables are not successfully expanded"
+	  return 1
+  fi
+
+  # double check gp_distribution_policy.numsegments
+  partial=$(su gpadmin -c "psql -Aqtd $dbname -c \"select count(*) from gp_distribution_policy where numsegments <> $new\"")
+  if [ "$partial" -ne 0 ]; then
+	  echo "error: not all the tables are expanded by gpexpand"
+	  return 1
+  fi
+
+  echo "all the tables are successfully expanded"
+  return 0
+}
+
+# usage: make_cluster [<demo_cluster_options>]
+#
+# demo_cluster_options are passed to `make create-demo-cluster` literally,
+# any options accepted by that command are acceptable here.
+#
+# e.g. make_cluster WITH_MIRRORS=false
 function make_cluster() {
   source /usr/local/greenplum-db-devel/greenplum_path.sh
   export BLDWRAP_POSTGRES_CONF_ADDONS=${BLDWRAP_POSTGRES_CONF_ADDONS}
@@ -57,7 +137,8 @@ function make_cluster() {
   export DEFAULT_QD_MAX_CONNECT=150
   export STATEMENT_MEM=250MB
   pushd gpdb_src/gpAux/gpdemo
-  su gpadmin -c "make create-demo-cluster"
+  export MASTER_DATA_DIRECTORY=`pwd`"/datadirs/qddir/demoDataDir-1"
+  su gpadmin -c "make create-demo-cluster $@"
   popd
 }
 

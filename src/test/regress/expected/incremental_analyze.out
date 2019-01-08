@@ -1549,12 +1549,12 @@ NOTICE:  CREATE TABLE will create partition "foo_1_prt_1" for table "foo"
 NOTICE:  CREATE TABLE will create partition "foo_1_prt_2" for table "foo"
 INSERT INTO foo select i, i%6, repeat('aaaa', 100000) FROM generate_series(1, 100)i;
 ANALYZE foo;
-SELECT * FROM pg_stats WHERE tablename like 'foo%' and attname = 'c' ORDER BY attname,tablename;
- schemaname |  tablename  | attname | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation 
-------------+-------------+---------+-----------+-----------+------------+------------------+-------------------+------------------+-------------
- public     | foo         | c       |         0 |      1024 |          0 |                  |                   |                  |            
- public     | foo_1_prt_1 | c       |         0 |      1024 |          0 |                  |                   |                  |            
- public     | foo_1_prt_2 | c       |         0 |      1024 |          0 |                  |                   |                  |            
+SELECT schemaname, tablename, attname, null_frac, avg_width, n_distinct FROM pg_stats WHERE tablename like 'foo%' and attname = 'c' ORDER BY attname,tablename;
+ schemaname |  tablename  | attname | null_frac | avg_width | n_distinct 
+------------+-------------+---------+-----------+-----------+------------
+ public     | foo         | c       |         0 |      1028 |          1 
+ public     | foo_1_prt_1 | c       |         0 |      1028 |          1 
+ public     | foo_1_prt_2 | c       |         0 |      1028 |          1 
 (3 rows)
 
 -- Test ANALYZE auto merge behavior
@@ -1970,3 +1970,5 @@ SELECT relname, relpages, reltuples FROM pg_class WHERE relname LIKE 'incr_analy
  incr_analyze_test_1_prt_6 |        1 |         0
 (7 rows)
 
+INSERT INTO t900c SELECT i%130, i%8, 'something'||i::text FROM generate_series(1,100)i;
+ANALYZE t900c;

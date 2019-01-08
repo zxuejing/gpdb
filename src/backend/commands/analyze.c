@@ -56,7 +56,8 @@
 
 /*
  * To avoid consuming too much memory during analysis and/or too much space
- * in the resulting pg_statistic rows, we ignore varlena datums that are wider
+ * in the resulting pg_statistic rows, we truncate text and varchar datums
+ * to WIDTH_THRESHOLD and we ignore other varlena datums that are wider
  * than WIDTH_THRESHOLD (after detoasting!).  This is legitimate for MCV
  * and distinct-value calculations since a wide value is unlikely to be
  * duplicated at all, much less be a most-common value.  For the same reason,
@@ -1548,12 +1549,31 @@ acquire_sample_rows_by_query(Relation onerel, int nattrs, VacAttrStats **attrsta
 		{
 			isVarlenaCol[i] = false;
 			const char *attname = quote_identifier(NameStr(attrstats[i]->attr->attname));
+			bool is_text = (attrstats[i]->attr->atttypid == TEXTOID ||
+							attrstats[i]->attr->atttypid == VARCHAROID ||
+							attrstats[i]->attr->atttypid == BPCHAROID ||
+							attrstats[i]->attr->atttypid == BYTEAOID);
 			bool is_varlena = (!attrstats[i]->attr->attbyval &&
 									  attrstats[i]->attr->attlen == -1);
 			bool is_varwidth = (!attrstats[i]->attr->attbyval &&
 									   attrstats[i]->attr->attlen < 0);
 
-			if (is_varlena || is_varwidth)
+			if (is_text)
+			{
+				// For text types and similar types where we can apply the substring function,
+				// truncate the value at WIDTH_THRESHOLD, to limit the amount of memory
+				// consumed by this value. Note that this should be more than enough to
+				// build bucket boundaries and that usually it will also be enough to compute
+				// reasonable NDV estimates. It will, however, result in an artificially low
+				// average width estimate for the column (similar to the varlena case below).
+				appendStringInfo(&columnStr,
+								 "substring(Ta.%s, 1, %d) as %s",
+								 attname,
+								 WIDTH_THRESHOLD,
+								 attname);
+
+			}
+			else if (is_varlena || is_varwidth)
 			{
 				appendStringInfo(&columnStr,
 								 "(case when pg_column_size(Ta.%s) > %d then NULL else Ta.%s  end) as %s, ",
@@ -1568,7 +1588,6 @@ acquire_sample_rows_by_query(Relation onerel, int nattrs, VacAttrStats **attrsta
 								 "true"); // Greater than WIDTH_THRESHOLD
 				isVarlenaCol[i] = true;
 			}
-
 			else
 			{
 				appendStringInfo(&columnStr, "Ta.%s ", attname);
@@ -2727,8 +2746,12 @@ compute_scalar_stats(VacAttrStatsP stats,
 	int			nonnull_cnt = 0;
 	int			toowide_cnt = 0;
 	double		total_width = 0;
-	bool		is_varlena = (!stats->attr->attbyval &&
-							  stats->attr->attlen == -1);
+	bool		is_text     = (stats->attr->atttypid == TEXTOID ||
+							   stats->attr->atttypid == VARCHAROID ||
+							   stats->attr->atttypid == BPCHAROID ||
+							   stats->attr->atttypid == BYTEAOID);
+	bool		is_varlena  = (!stats->attr->attbyval &&
+							   stats->attr->attlen == -1);
 	bool		is_varwidth = (!stats->attr->attbyval &&
 							   stats->attr->attlen < 0);
 	double		corr_xysum;
@@ -2793,7 +2816,7 @@ compute_scalar_stats(VacAttrStatsP stats,
 			 * excessively wide, and if so don't detoast at all --- just
 			 * ignore the value.
 			 */
-			if (toast_raw_datum_size(value) > WIDTH_THRESHOLD)
+			if (!is_text && toast_raw_datum_size(value) > WIDTH_THRESHOLD)
 			{
 				toowide_cnt++;
 				continue;

@@ -3680,7 +3680,6 @@ jobs:
       - icw_gporca_ubuntu16
       - icw_gporca_ubuntu16_oss
       - icw_extensions_gpcloud
-      - client_loader_remote_test_aix
       - mpp_resource_group_centos6
       - mpp_resource_group_centos7
       - MU_check_centos

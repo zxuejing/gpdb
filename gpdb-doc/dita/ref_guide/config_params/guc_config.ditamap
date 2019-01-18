@@ -279,8 +279,6 @@
             <topicref href="guc-list.xml#temp_buffers"/>
             <topicref href="guc-list.xml#TimeZone"/>
             <topicref href="guc-list.xml#timezone_abbreviations"/>
-            <topicref href="guc-list.xml#track_activities"/>
-            <topicref href="guc-list.xml#track_counts"/>
             <topicref href="guc-list.xml#transaction_isolation"/>
             <topicref href="guc-list.xml#transaction_read_only"/>
             <topicref href="guc-list.xml#transform_null_equals"/>

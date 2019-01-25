@@ -482,5 +482,176 @@ select t1.id, t1.data, t2.id, t2.data from test_int1 t1, test_int2 t2 where t1.d
 (2 rows)
 
 -- Cleanup
+reset enable_hashjoin;
 set client_min_messages='warning'; -- silence drop-cascade NOTICEs
 drop schema pred cascade;
+reset search_path;
+-- tests to ensure that join reordering of LOJs and inner joins produces the
+-- correct join predicates & residual filters
+reset all;
+drop table if exists t1, t2, t3;
+NOTICE:  table "t1" does not exist, skipping
+NOTICE:  table "t2" does not exist, skipping
+NOTICE:  table "t3" does not exist, skipping
+CREATE TABLE t1 (a int, b int, c int);
+CREATE TABLE t2 (a int, b int, c int);
+CREATE TABLE t3 (a int, b int, c int);
+INSERT INTO t1 SELECT i, i, i FROM generate_series(1, 1000) i;
+INSERT INTO t2 SELECT i, i, i FROM generate_series(2, 1000) i; -- start from 2 so that one row from t1 doesn't match
+INSERT INTO t3 VALUES (1, 2, 3), (NULL, 2, 2);
+ANALYZE t1;
+ANALYZE t2;
+ANALYZE t3;
+-- ensure plan has a filter over left outer join
+explain select * from t1 left join t2 on (t1.a = t2.a) join t3 on (t1.b = t3.b) where (t2.a IS NULL OR (t1.c = t3.c));
+                                               QUERY PLAN                                               
+--------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=27.65..43.44 rows=10 width=36)
+   ->  Hash Left Join  (cost=27.65..43.44 rows=4 width=36)
+         Hash Cond: t1.a = t2.a
+         Filter: t2.a IS NULL OR t1.c = t3.c
+         ->  Hash Join  (cost=2.18..17.79 rows=4 width=24)
+               Hash Cond: t1.b = t3.b
+               ->  Seq Scan on t1  (cost=0.00..13.00 rows=334 width=12)
+               ->  Hash  (cost=2.10..2.10 rows=2 width=12)
+                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.10 rows=2 width=12)
+                           ->  Seq Scan on t3  (cost=0.00..2.02 rows=1 width=12)
+         ->  Hash  (cost=12.99..12.99 rows=333 width=12)
+               ->  Seq Scan on t2  (cost=0.00..12.99 rows=333 width=12)
+ Settings:  optimizer=off
+ Optimizer status: legacy query optimizer
+(14 rows)
+
+select * from t1 left join t2 on (t1.a = t2.a) join t3 on (t1.b = t3.b) where (t2.a IS NULL OR (t1.c = t3.c));
+ a | b | c | a | b | c | a | b | c 
+---+---+---+---+---+---+---+---+---
+ 2 | 2 | 2 | 2 | 2 | 2 |   | 2 | 2
+(1 row)
+
+-- ensure plan has two inner joins with the where clause & join predicates ANDed
+explain select * from t1 left join t2 on (t1.a = t2.a) join t3 on (t1.b = t3.b) where (t2.a = t3.a);
+                                   QUERY PLAN                                    
+---------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=17.78..35.89 rows=10 width=36)
+   ->  Hash Join  (cost=17.78..35.89 rows=4 width=36)
+         Hash Cond: t1.a = t2.a AND t1.b = t3.b
+         ->  Seq Scan on t1  (cost=0.00..13.00 rows=334 width=12)
+         ->  Hash  (cost=17.63..17.63 rows=4 width=24)
+               ->  Hash Join  (cost=2.04..17.63 rows=4 width=24)
+                     Hash Cond: t2.a = t3.a
+                     ->  Seq Scan on t2  (cost=0.00..12.99 rows=333 width=12)
+                     ->  Hash  (cost=2.02..2.02 rows=1 width=12)
+                           ->  Seq Scan on t3  (cost=0.00..2.02 rows=1 width=12)
+ Settings:  optimizer=off
+ Optimizer status: legacy query optimizer
+(12 rows)
+
+select * from t1 left join t2 on (t1.a = t2.a) join t3 on (t1.b = t3.b) where (t2.a = t3.a);
+ a | b | c | a | b | c | a | b | c 
+---+---+---+---+---+---+---+---+---
+(0 rows)
+
+-- ensure plan has a filter over left outer join
+explain select * from t1 left join t2 on (t1.a = t2.a) join t3 on (t1.b = t3.b) where (t2.a is distinct from t3.a);
+                                               QUERY PLAN                                               
+--------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=27.65..43.44 rows=10 width=36)
+   ->  Hash Left Join  (cost=27.65..43.44 rows=4 width=36)
+         Hash Cond: t1.a = t2.a
+         Filter: t2.a IS DISTINCT FROM t3.a
+         ->  Hash Join  (cost=2.18..17.79 rows=4 width=24)
+               Hash Cond: t1.b = t3.b
+               ->  Seq Scan on t1  (cost=0.00..13.00 rows=334 width=12)
+               ->  Hash  (cost=2.10..2.10 rows=2 width=12)
+                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.10 rows=2 width=12)
+                           ->  Seq Scan on t3  (cost=0.00..2.02 rows=1 width=12)
+         ->  Hash  (cost=12.99..12.99 rows=333 width=12)
+               ->  Seq Scan on t2  (cost=0.00..12.99 rows=333 width=12)
+ Settings:  optimizer=off
+ Optimizer status: legacy query optimizer
+(14 rows)
+
+select * from t1 left join t2 on (t1.a = t2.a) join t3 on (t1.b = t3.b) where (t2.a is distinct from t3.a);
+ a | b | c | a | b | c | a | b | c 
+---+---+---+---+---+---+---+---+---
+ 2 | 2 | 2 | 2 | 2 | 2 |   | 2 | 2
+ 2 | 2 | 2 | 2 | 2 | 2 | 1 | 2 | 3
+(2 rows)
+
+-- ensure plan has a filter over left outer join
+explain select * from t3 join (select t1.a t1a, t1.b t1b, t1.c t1c, t2.a t2a, t2.b t2b, t2.c t2c from t1 left join t2 on (t1.a = t2.a)) t on (t1a = t3.a) WHERE (t2a IS NULL OR (t1c = t3.a));
+                                   QUERY PLAN                                   
+--------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=27.52..43.30 rows=10 width=36)
+   ->  Hash Left Join  (cost=27.52..43.30 rows=4 width=36)
+         Hash Cond: t1.a = t2.a
+         Filter: t2.a IS NULL OR t1.c = t3.a
+         ->  Hash Join  (cost=2.04..17.65 rows=4 width=24)
+               Hash Cond: t1.a = t3.a
+               ->  Seq Scan on t1  (cost=0.00..13.00 rows=334 width=12)
+               ->  Hash  (cost=2.02..2.02 rows=1 width=12)
+                     ->  Seq Scan on t3  (cost=0.00..2.02 rows=1 width=12)
+         ->  Hash  (cost=12.99..12.99 rows=333 width=12)
+               ->  Seq Scan on t2  (cost=0.00..12.99 rows=333 width=12)
+ Settings:  optimizer=off
+ Optimizer status: legacy query optimizer
+(13 rows)
+
+select * from t3 join (select t1.a t1a, t1.b t1b, t1.c t1c, t2.a t2a, t2.b t2b, t2.c t2c from t1 left join t2 on (t1.a = t2.a)) t on (t1a = t3.a) WHERE (t2a IS NULL OR (t1c = t3.a));
+ a | b | c | t1a | t1b | t1c | t2a | t2b | t2c 
+---+---+---+-----+-----+-----+-----+-----+-----
+ 1 | 2 | 3 |   1 |   1 |   1 |     |     |    
+(1 row)
+
+-- ensure plan has a filter over left outer join
+explain select * from (select t1.a t1a, t1.b t1b, t2.a t2a, t2.b t2b from t1 left join t2 on t1.a = t2.a) tt 
+  join t3 on tt.t1b = t3.b 
+  join (select t1.a t1a, t1.b t1b, t2.a t2a, t2.b t2b from t1 left join t2 on t1.a = t2.a) tt1 on tt1.t1b = t3.b 
+  join t3 t3_1 on tt1.t1b = t3_1.b and (tt1.t2a is NULL OR tt1.t1b = t3.b);
+                                                                 QUERY PLAN                                                                 
+--------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice5; segments: 3)  (cost=71.24..87.04 rows=10 width=56)
+   ->  Hash Left Join  (cost=71.24..87.04 rows=4 width=56)
+         Hash Cond: public.t1.a = public.t2.a
+         ->  Redistribute Motion 3:3  (slice4; segments: 3)  (cost=45.76..61.44 rows=2 width=48)
+               Hash Key: public.t1.a
+               ->  Hash Left Join  (cost=45.76..61.38 rows=2 width=48)
+                     Hash Cond: public.t1.a = public.t2.a
+                     Filter: public.t2.a IS NULL OR public.t1.b = t3.b
+                     ->  Hash Join  (cost=20.28..35.84 rows=2 width=40)
+                           Hash Cond: public.t1.b = public.t1.b
+                           ->  Seq Scan on t1  (cost=0.00..13.00 rows=334 width=8)
+                           ->  Hash  (cost=20.16..20.16 rows=4 width=32)
+                                 ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=4.35..20.16 rows=4 width=32)
+                                       ->  Hash Join  (cost=4.35..20.03 rows=2 width=32)
+                                             Hash Cond: public.t1.b = t3.b
+                                             ->  Hash Join  (cost=2.18..17.79 rows=4 width=20)
+                                                   Hash Cond: public.t1.b = t3_1.b
+                                                   ->  Seq Scan on t1  (cost=0.00..13.00 rows=334 width=8)
+                                                   ->  Hash  (cost=2.10..2.10 rows=2 width=12)
+                                                         ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.10 rows=2 width=12)
+                                                               ->  Seq Scan on t3 t3_1  (cost=0.00..2.02 rows=1 width=12)
+                                             ->  Hash  (cost=2.10..2.10 rows=2 width=12)
+                                                   ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..2.10 rows=2 width=12)
+                                                         ->  Seq Scan on t3  (cost=0.00..2.02 rows=1 width=12)
+                     ->  Hash  (cost=12.99..12.99 rows=333 width=8)
+                           ->  Seq Scan on t2  (cost=0.00..12.99 rows=333 width=8)
+         ->  Hash  (cost=12.99..12.99 rows=333 width=8)
+               ->  Seq Scan on t2  (cost=0.00..12.99 rows=333 width=8)
+ Settings:  optimizer=off
+ Optimizer status: legacy query optimizer
+(30 rows)
+
+select * from (select t1.a t1a, t1.b t1b, t2.a t2a, t2.b t2b from t1 left join t2 on t1.a = t2.a) tt 
+  join t3 on tt.t1b = t3.b 
+  join (select t1.a t1a, t1.b t1b, t2.a t2a, t2.b t2b from t1 left join t2 on t1.a = t2.a) tt1 on tt1.t1b = t3.b 
+  join t3 t3_1 on tt1.t1b = t3_1.b and (tt1.t2a is NULL OR tt1.t1b = t3.b);
+ t1a | t1b | t2a | t2b | a | b | c | t1a | t1b | t2a | t2b | a | b | c 
+-----+-----+-----+-----+---+---+---+-----+-----+-----+-----+---+---+---
+   2 |   2 |   2 |   2 |   | 2 | 2 |   2 |   2 |   2 |   2 |   | 2 | 2
+   2 |   2 |   2 |   2 |   | 2 | 2 |   2 |   2 |   2 |   2 | 1 | 2 | 3
+   2 |   2 |   2 |   2 | 1 | 2 | 3 |   2 |   2 |   2 |   2 |   | 2 | 2
+   2 |   2 |   2 |   2 | 1 | 2 | 3 |   2 |   2 |   2 |   2 | 1 | 2 | 3
+(4 rows)
+
+drop table t1, t2, t3;

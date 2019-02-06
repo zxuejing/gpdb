@@ -48,7 +48,7 @@
 
 /* This file contains internal functions and several functions exposed to the
  * outside via hyperloglog.h. The functions are for the manipulation/creation/
- * evaluation of HLLCounters that are necessary for implementing incremental
+ * evaluation of GpHLLCounters that are necessary for implementing incremental
  * analyze in GPDB. This file is modified from its original content and we removed
  * the code that was unnecessary for our purpose.
  */
@@ -67,39 +67,39 @@
 #include "lib/stringinfo.h"
 #include "libpq/pqformat.h"
 
-#include "utils/hyperloglog/hyperloglog.h"
+#include "utils/hyperloglog/gp_hyperloglog.h"
 
 
 /* ------------- function declarations for local functions --------------- */
-static double hll_estimate_dense(HLLCounter hloglog);
-static double error_estimate(double E,int b);
+static double gp_hll_estimate_dense(GpHLLCounter hloglog);
+static double gp_error_estimate(double E,int b);
 
-static HLLCounter hll_add_hash_dense(HLLCounter hloglog, uint64_t hash);
+static GpHLLCounter gp_hll_add_hash_dense(GpHLLCounter hloglog, uint64_t hash);
 
-static HLLCounter hll_compress_dense(HLLCounter hloglog);
-static HLLCounter hll_compress_dense_unpacked(HLLCounter hloglog);
-static HLLCounter hll_decompress_unpacked(HLLCounter hloglog);
-static HLLCounter hll_decompress_dense(HLLCounter hloglog);
-static HLLCounter hll_decompress_dense_unpacked(HLLCounter hloglog);
+static GpHLLCounter gp_hll_compress_dense(GpHLLCounter hloglog);
+static GpHLLCounter gp_hll_compress_dense_unpacked(GpHLLCounter hloglog);
+static GpHLLCounter gp_hll_decompress_unpacked(GpHLLCounter hloglog);
+static GpHLLCounter gp_hll_decompress_dense(GpHLLCounter hloglog);
+static GpHLLCounter gp_hll_decompress_dense_unpacked(GpHLLCounter hloglog);
 
 /* ---------------------- function definitions --------------------------- */
 
-HLLCounter
-hll_unpack(HLLCounter hloglog){
+GpHLLCounter
+gp_hll_unpack(GpHLLCounter hloglog){
 
 	char entry;
 	int i, m;
-	HLLCounter htemp;
+	GpHLLCounter htemp;
 
 	if (hloglog->format == UNPACKED || hloglog->format == UNPACKED_UNPACKED)
 	{
-		return hll_copy(hloglog);
+		return gp_hll_copy(hloglog);
 	}
 
 	/* use decompress to handle compressed unpacking */
 	if (hloglog->b < 0)
 	{
-		return hll_decompress_unpacked(hloglog);
+		return gp_hll_decompress_unpacked(hloglog);
 	}
 
 	/* set format to unpacked*/
@@ -117,44 +117,44 @@ hll_unpack(HLLCounter hloglog){
 	 bins
 	*/
 	m = POW2(hloglog->b);
-	htemp = palloc(sizeof(HLLData) + m);
-	memcpy(htemp, hloglog, sizeof(HLLData));
+	htemp = palloc(sizeof(GpHLLData) + m);
+	memcpy(htemp, hloglog, sizeof(GpHLLData));
 
 	for(i=0; i < m; i++){
-		HLL_DENSE_GET_REGISTER(entry,hloglog->data,i,hloglog->binbits);
+		GP_HLL_DENSE_GET_REGISTER(entry,hloglog->data,i,hloglog->binbits);
 		htemp->data[i] = entry;
 	}
 
 	hloglog = htemp;
 
 	/* set the varsize to the appropriate length  */
-	SET_VARSIZE(hloglog, sizeof(HLLData) + m);
+	SET_VARSIZE(hloglog, sizeof(GpHLLData) + m);
 
 	return hloglog;
 }
 
 
-HLLCounter
-hll_decompress_unpacked(HLLCounter hloglog)
+GpHLLCounter
+gp_hll_decompress_unpacked(GpHLLCounter hloglog)
 {
 	/* make sure the data is compressed */
 	if (hloglog->b > 0) {
 		return hloglog;
 	}
 
-	hloglog = hll_decompress_dense_unpacked(hloglog);
+	hloglog = gp_hll_decompress_dense_unpacked(hloglog);
 
 	return hloglog;
 }
 
 
 /* Decompresses dense counters */
-static HLLCounter
-hll_decompress_dense_unpacked(HLLCounter hloglog)
+static GpHLLCounter
+gp_hll_decompress_dense_unpacked(GpHLLCounter hloglog)
 {
 	//char * dest;
 	int m;
-	HLLCounter htemp;
+	GpHLLCounter htemp;
 
 	/* reset b to positive value for calcs and to indicate data is
 	* decompressed */
@@ -164,9 +164,9 @@ hll_decompress_dense_unpacked(HLLCounter hloglog)
 	/* allocate and zero an array large enough to hold all the decompressed
 	* bins */
 	m = POW2(hloglog->b);
-	htemp = palloc(sizeof(HLLData) + m);
-	memset(htemp, 0, m + sizeof(HLLData));
-	memcpy(htemp, hloglog, sizeof(HLLData));
+	htemp = palloc(sizeof(GpHLLData) + m);
+	memset(htemp, 0, m + sizeof(GpHLLData));
+	memcpy(htemp, hloglog, sizeof(GpHLLData));
 
 	/* decompress the data */
 	pglz_decompress((PGLZ_Header *)hloglog->data,(char *) &htemp->data);
@@ -174,7 +174,7 @@ hll_decompress_dense_unpacked(HLLCounter hloglog)
 	hloglog = htemp;
 
 	/* set the varsize to the appropriate length  */
-	SET_VARSIZE(hloglog, sizeof(HLLData) + m);
+	SET_VARSIZE(hloglog, sizeof(GpHLLData) + m);
 
 	return hloglog;
 }
@@ -191,13 +191,13 @@ hll_decompress_dense_unpacked(HLLCounter hloglog)
  * returns:
  *      instance of HLL estimator (throws ERROR in case of failure)
  */
-HLLCounter
-hll_create(double ndistinct, float error, uint8_t format)
+GpHLLCounter
+gp_hll_create(double ndistinct, float error, uint8_t format)
 {
 
     float m;
     size_t length;
-    HLLCounter p;
+    GpHLLCounter p;
     
     /* target error rate needs to be between 0 and 1 */
     if (error <= 0 || error >= 1){
@@ -208,8 +208,8 @@ hll_create(double ndistinct, float error, uint8_t format)
     } 
 
     /* the counter is allocated as part of this memory block  */
-    length = hll_get_size(ndistinct, error);
-    p = (HLLCounter)palloc0(length);
+    length = gp_hll_get_size(ndistinct, error);
+    p = (GpHLLCounter)palloc0(length);
 
     /* set the counter struct version */
     p->version = STRUCT_VERSION;
@@ -243,12 +243,12 @@ hll_create(double ndistinct, float error, uint8_t format)
 
 /* Performs a simple 'copy' of the counter, i.e. allocates a new counter and
  * copies the state from the supplied one. */
-HLLCounter
-hll_copy(HLLCounter counter)
+GpHLLCounter
+gp_hll_copy(GpHLLCounter counter)
 {
     
     size_t length = VARSIZE_ANY(counter);
-    HLLCounter copy = (HLLCounter)palloc(length);
+    GpHLLCounter copy = (GpHLLCounter)palloc(length);
     
     memcpy(copy, counter, length);
     
@@ -264,12 +264,12 @@ hll_copy(HLLCounter counter)
  * Merging is only possible if the counters share the same parameters (number
  * of bins, bin size, ...). If the counters don't match, this throws an ERROR.
  *  */
-HLLCounter
-hll_merge(HLLCounter counter1, HLLCounter counter2)
+GpHLLCounter
+gp_hll_merge(GpHLLCounter counter1, GpHLLCounter counter2)
 {
 
 	int i;
-	HLLCounter result = counter1;
+	GpHLLCounter result = counter1;
 	int upper_bound = POW2(result->b);
 
 	/* check compatibility first */
@@ -291,7 +291,7 @@ hll_merge(HLLCounter counter1, HLLCounter counter2)
 /* Computes size of the structure, depending on the requested error rate and
  * ndistinct. */
 int 
-hll_get_size(double ndistinct, float error)
+gp_hll_get_size(double ndistinct, float error)
 {
 
     int b;
@@ -315,17 +315,17 @@ hll_get_size(double ndistinct, float error)
      *  size_in_bytes = struct_overhead + num_buckets*(bits_per_bucket/8)
      *
      * */  
-    return sizeof(HLLData) + (int)(ceil(POW2(b)) * ceil(log2(log2(ndistinct))) / 8.0);
+    return sizeof(GpHLLData) + (int)(ceil(POW2(b)) * ceil(log2(log2(ndistinct))) / 8.0);
 
 }
 
 /* Hyperloglog estimate header function */
 double 
-hll_estimate(HLLCounter hloglog)
+gp_hll_estimate(GpHLLCounter hloglog)
 {
     double E = 0;
     
-	E = hll_estimate_dense(hloglog);
+	E = gp_hll_estimate_dense(hloglog);
 
 	return E;
 }
@@ -340,7 +340,7 @@ hll_estimate(HLLCounter hloglog)
  * 
  */
 static double
-hll_estimate_dense(HLLCounter hloglog)
+gp_hll_estimate_dense(GpHLLCounter hloglog)
 {
 	double H = 0, E = 0;
 	int j, V = 0;
@@ -371,7 +371,7 @@ hll_estimate_dense(HLLCounter hloglog)
 	if (E <= (5.0 * m)) {
 
 		/* account for hloglog low cardinality bias */
-		E = E - error_estimate(E, hloglog->b);
+		E = E - gp_error_estimate(E, hloglog->b);
 
 		/* search for empty registers for linear counting */
 		for (j = 0; j < m; j++){
@@ -406,7 +406,7 @@ hll_estimate_dense(HLLCounter hloglog)
 /* Estimates the error from hyperloglog's low cardinality bias and by taking
  * a simple linear regression of the nearest 6 points */
 static double 
-error_estimate(double E,int b)
+gp_error_estimate(double E,int b)
 {
     double avg=0;
     double beta,alpha;
@@ -458,24 +458,24 @@ error_estimate(double E,int b)
 }
 
 /* Add element header function */
-HLLCounter
-hll_add_element(HLLCounter hloglog, const char * element, int elen)
+GpHLLCounter
+gp_hll_add_element(GpHLLCounter hloglog, const char * element, int elen)
 {
 
     uint64_t hash;
 
     /* compute the hash */
-    hash = MurmurHash64A(element, elen, HASH_SEED);    
+    hash = GpMurmurHash64A(element, elen, HASH_SEED);    
 
     /* add the hash to the estimator */
-    hloglog = hll_add_hash_dense(hloglog, hash);
+    hloglog = gp_hll_add_hash_dense(hloglog, hash);
 
     return hloglog;
 }
 
 /* Add the appropriate values to a dense encoded counter for a given hash */
-static HLLCounter
-hll_add_hash_dense(HLLCounter hloglog, uint64_t hash)
+static GpHLLCounter
+gp_hll_add_hash_dense(GpHLLCounter hloglog, uint64_t hash)
 {
 
     uint64_t idx;
@@ -500,7 +500,7 @@ hll_add_hash_dense(HLLCounter hloglog, uint64_t hash)
 	    addn = HASH_LENGTH;
 	    rho = (HASH_LENGTH - hloglog->b);
 	    while (addn == HASH_LENGTH && rho < POW2(hloglog->binbits)){
-		    hash = MurmurHash64A((const char * )&hash, HASH_LENGTH/8, HASH_SEED);
+		    hash = GpMurmurHash64A((const char * )&hash, HASH_LENGTH/8, HASH_SEED);
             /* zero length runs should be 1 so counter gets set */
 		    addn = __builtin_clzll(hash) + 1;
 		    rho += addn;
@@ -508,9 +508,9 @@ hll_add_hash_dense(HLLCounter hloglog, uint64_t hash)
     }
 
     /* keep the highest value */
-    HLL_DENSE_GET_REGISTER(entry,hloglog->data,idx,hloglog->binbits);
+    GP_HLL_DENSE_GET_REGISTER(entry,hloglog->data,idx,hloglog->binbits);
     if (rho > entry) {
-        HLL_DENSE_SET_REGISTER(hloglog->data,idx,rho,hloglog->binbits);
+        GP_HLL_DENSE_SET_REGISTER(hloglog->data,idx,rho,hloglog->binbits);
     }
     
     return hloglog;
@@ -520,16 +520,16 @@ hll_add_hash_dense(HLLCounter hloglog, uint64_t hash)
 /* Just reset the counter (set all the counters to 0). We do this by
  * zeroing the data array */
 void 
-hll_reset_internal(HLLCounter hloglog)
+gp_hll_reset_internal(GpHLLCounter hloglog)
 {
 
-    memset(hloglog->data, 0, VARSIZE_ANY(hloglog) - sizeof(HLLData) );
+    memset(hloglog->data, 0, VARSIZE_ANY(hloglog) - sizeof(GpHLLData) );
 
 }
 
 /* Compress header function */
-HLLCounter
-hll_compress(HLLCounter hloglog)
+GpHLLCounter
+gp_hll_compress(GpHLLCounter hloglog)
 {
 
     /* make sure the data isn't compressed already */
@@ -538,21 +538,21 @@ hll_compress(HLLCounter hloglog)
     }
 
     if (hloglog->idx == -1 && hloglog->format == PACKED){
-        hloglog = hll_compress_dense(hloglog);
+        hloglog = gp_hll_compress_dense(hloglog);
     } else if (hloglog->idx == -1 && hloglog->format == UNPACKED){
-	hloglog = hll_compress_dense_unpacked(hloglog);
+	hloglog = gp_hll_compress_dense_unpacked(hloglog);
     } else if (hloglog->format == UNPACKED_UNPACKED){
 	hloglog->format = UNPACKED;
     } else if (hloglog->format == PACKED_UNPACKED){
-	hloglog = hll_unpack(hloglog);
+	hloglog = gp_hll_unpack(hloglog);
     }
     
     return hloglog;
 }
 
 /* Compresses dense encoded counters using lz compression */
-static HLLCounter
-hll_compress_dense(HLLCounter hloglog)
+static GpHLLCounter
+gp_hll_compress_dense(GpHLLCounter hloglog)
 {
     PGLZ_Header * dest;
     char entry,*data;    
@@ -581,7 +581,7 @@ hll_compress_dense(HLLCounter hloglog)
     /* put all registers in a normal array  i.e. remove dense packing so
      * lz compression can work optimally */
     for(i=0; i < m ; i++){
-        HLL_DENSE_GET_REGISTER(entry,hloglog->data,i,hloglog->binbits);
+        GP_HLL_DENSE_GET_REGISTER(entry,hloglog->data,i,hloglog->binbits);
         data[i] = entry;
     }
 
@@ -602,7 +602,7 @@ hll_compress_dense(HLLCounter hloglog)
 
     /* resize the counter to only encompass the compressed data and the struct
      *  overhead*/
-    SET_VARSIZE(hloglog,sizeof(HLLData) + VARSIZE_ANY(dest) );
+    SET_VARSIZE(hloglog,sizeof(GpHLLData) + VARSIZE_ANY(dest) );
 
     /* invert the b value so it being < 0 can be used as a compression flag */
     hloglog->b = -1 * (hloglog->b);
@@ -620,8 +620,8 @@ hll_compress_dense(HLLCounter hloglog)
 }
 
 /* Compresses dense encoded counters using lz compression */
-static HLLCounter
-hll_compress_dense_unpacked(HLLCounter hloglog)
+static GpHLLCounter
+gp_hll_compress_dense_unpacked(GpHLLCounter hloglog)
 {
 	PGLZ_Header * dest;
 	int m;
@@ -658,7 +658,7 @@ hll_compress_dense_unpacked(HLLCounter hloglog)
 
 	/* resize the counter to only encompass the compressed data and the struct
 	*  overhead*/
-	SET_VARSIZE(hloglog, sizeof(HLLData) + VARSIZE_ANY(dest));
+	SET_VARSIZE(hloglog, sizeof(GpHLLData) + VARSIZE_ANY(dest));
 
 	/* invert the b value so it being < 0 can be used as a compression flag */
 	hloglog->b = -1 * (hloglog->b);
@@ -675,26 +675,26 @@ hll_compress_dense_unpacked(HLLCounter hloglog)
 
 
 /* Decompress header function */
-HLLCounter
-hll_decompress(HLLCounter hloglog)
+GpHLLCounter
+gp_hll_decompress(GpHLLCounter hloglog)
 {
      /* make sure the data is compressed */
     if (hloglog->b > 0) {
         return hloglog;
     }
     
-    hloglog = hll_decompress_dense(hloglog);
+    hloglog = gp_hll_decompress_dense(hloglog);
 
     return hloglog;
 }
 
 /* Decompresses dense counters */
-static HLLCounter
-hll_decompress_dense(HLLCounter hloglog)
+static GpHLLCounter
+gp_hll_decompress_dense(GpHLLCounter hloglog)
 {
     char * dest;
     int m,i;
-    HLLCounter htemp;
+    GpHLLCounter htemp;
 
     /* reset b to positive value for calcs and to indicate data is
      * decompressed */
@@ -717,18 +717,18 @@ hll_decompress_dense(HLLCounter hloglog)
 
     /* copy the struct internals but not the data into a counter with enough 
      * space for the uncompressed data  */
-    htemp = palloc(sizeof(HLLData) + (int)ceil((m * hloglog->binbits / 8.0)));
-    memcpy(htemp,hloglog,sizeof(HLLData));
+    htemp = palloc(sizeof(GpHLLData) + (int)ceil((m * hloglog->binbits / 8.0)));
+    memcpy(htemp,hloglog,sizeof(GpHLLData));
     hloglog = htemp;
 
     /* set the registers to the appropriate value based on the decompressed
      * data */
     for (i=0; i<m; i++){
-        HLL_DENSE_SET_REGISTER(hloglog->data,i,dest[i],hloglog->binbits);
+        GP_HLL_DENSE_SET_REGISTER(hloglog->data,i,dest[i],hloglog->binbits);
     }
 
     /* set the varsize to the appropriate length  */
-    SET_VARSIZE(hloglog,sizeof(HLLData) + (int)ceil((m * hloglog->binbits / 8.0)) );
+    SET_VARSIZE(hloglog,sizeof(GpHLLData) + (int)ceil((m * hloglog->binbits / 8.0)) );
     
 
     /* free allocated memory */
@@ -741,17 +741,17 @@ hll_decompress_dense(HLLCounter hloglog)
 
 /* ---------------------- function definitions --------------------------- */
 
-HLLCounter
-hyperloglog_add_item(HLLCounter hllcounter, Datum element, int16 typlen, bool typbyval, char typalign)
+GpHLLCounter
+gp_hyperloglog_add_item(GpHLLCounter hllcounter, Datum element, int16 typlen, bool typbyval, char typalign)
 {
-	HLLCounter hyperloglog;
+	GpHLLCounter hyperloglog;
 	
 	/* requires the estimator to be already created */
 	if (hllcounter == NULL)
 		elog(ERROR, "hyperloglog counter must not be NULL");
 	
 	/* estimator (we know it's not a NULL value) */
-	hyperloglog = (HLLCounter) hllcounter;
+	hyperloglog = (GpHLLCounter) hllcounter;
 	
 	/* TODO The requests for type info shouldn't be a problem (thanks to
 	 * lsyscache), but if it turns out to have a noticeable impact it's
@@ -762,24 +762,24 @@ hyperloglog_add_item(HLLCounter hllcounter, Datum element, int16 typlen, bool ty
 	/* decompress if needed */
 	if(hyperloglog->b < 0)
 	{
-		hyperloglog = hll_decompress(hyperloglog);
+		hyperloglog = gp_hll_decompress(hyperloglog);
 	}
 	
 	/* it this a varlena type, passed by reference or by value ? */
 	if (typlen == -1)
 	{
 		/* varlena */
-		hyperloglog = hll_add_element(hyperloglog, VARDATA_ANY(element), VARSIZE_ANY_EXHDR(element));
+		hyperloglog = gp_hll_add_element(hyperloglog, VARDATA_ANY(element), VARSIZE_ANY_EXHDR(element));
 	}
 	else if (typbyval)
 	{
 		/* fixed-length, passed by value */
-		hyperloglog = hll_add_element(hyperloglog, (char*)&element, typlen);
+		hyperloglog = gp_hll_add_element(hyperloglog, (char*)&element, typlen);
 	}
 	else
 	{
 		/* fixed-length, passed by reference */
-		hyperloglog = hll_add_element(hyperloglog, (char*)element, typlen);
+		hyperloglog = gp_hll_add_element(hyperloglog, (char*)element, typlen);
 	}
 	
 	return hyperloglog;
@@ -787,21 +787,21 @@ hyperloglog_add_item(HLLCounter hllcounter, Datum element, int16 typlen, bool ty
 
 
 double
-hyperloglog_estimate(HLLCounter hyperloglog)
+gp_hyperloglog_estimate(GpHLLCounter hyperloglog)
 {
 	double estimate;
 	
 	/* unpack if needed */
-	hyperloglog = hll_unpack(hyperloglog);
+	hyperloglog = gp_hll_unpack(hyperloglog);
 	
-	estimate = hll_estimate(hyperloglog);
+	estimate = gp_hll_estimate(hyperloglog);
 	
 	/* return the updated bytea */
 	return estimate;
 }
 
-HLLCounter
-hyperloglog_merge_counters(HLLCounter counter1, HLLCounter counter2)
+GpHLLCounter
+gp_hyperloglog_merge_counters(GpHLLCounter counter1, GpHLLCounter counter2)
 {
 	if (counter1 == NULL && counter2 == NULL)
 	{
@@ -812,53 +812,53 @@ hyperloglog_merge_counters(HLLCounter counter1, HLLCounter counter2)
 	{
 		/* if first counter is null just copy the second estimator into the
 		 * first one */
-		return hll_copy(counter2);
+		return gp_hll_copy(counter2);
 	}
 	else if (counter2 == NULL) {
 		/* if second counter is null just return the the first estimator */
-		return hll_copy(counter1);
+		return gp_hll_copy(counter1);
 	}
 	else
 	{
 		/* ok, we already have the estimator - merge the second one into it */
 		/* unpack if needed */
-		HLLCounter counter1_new = hll_unpack(counter1);
-		HLLCounter counter2_new = hll_unpack(counter2);
+		GpHLLCounter counter1_new = gp_hll_unpack(counter1);
+		GpHLLCounter counter2_new = gp_hll_unpack(counter2);
 
 		/* perform the merge */
-		counter1_new = hll_merge(counter1_new, counter2_new);
+		counter1_new = gp_hll_merge(counter1_new, counter2_new);
 
 		/*  counter2_new is not required any more */
 		pfree(counter2_new);
 
-		/* return the updated HLLCounter */
+		/* return the updated GpHLLCounter */
 		return counter1_new;
 	}
 }
 
 
-HLLCounter
-hyperloglog_init_def()
+GpHLLCounter
+gp_hyperloglog_init_def()
 {
-	HLLCounter hyperloglog;
+	GpHLLCounter hyperloglog;
 	
-	hyperloglog = hll_create(DEFAULT_NDISTINCT, DEFAULT_ERROR, PACKED);
+	hyperloglog = gp_hll_create(DEFAULT_NDISTINCT, DEFAULT_ERROR, PACKED);
 	
 	return hyperloglog;
 }
 
 int
-hyperloglog_len(HLLCounter hyperloglog)
+gp_hyperloglog_len(GpHLLCounter hyperloglog)
 {
 	return VARSIZE_ANY(hyperloglog);
 }
 
-/* MurmurHash64A produces the fastest 64 bit hash of the MurmurHash 
+/* GpMurmurHash64A produces the fastest 64 bit hash of the MurmurHash 
  * implementations and is ~ 20x faster than md5. This version produces the
  * same hash for the same key and seed in both big and little endian systems
  * */
 uint64_t 
-MurmurHash64A (const void * key, int len, unsigned int seed) 
+GpMurmurHash64A (const void * key, int len, unsigned int seed) 
 {
     const uint64_t m = 0xc6a4a7935bd1e995;
     const int r = 47;
@@ -924,7 +924,7 @@ static const int8 b64lookup[128] = {
 
 
 int
-hll_b64_encode(const char *src, unsigned len, char *dst)
+gp_hll_b64_encode(const char *src, unsigned len, char *dst)
 {
 	char	   *p,
 		*lend = dst + 76;
@@ -972,7 +972,7 @@ hll_b64_encode(const char *src, unsigned len, char *dst)
 }
 
 int
-hll_b64_decode(const char *src, unsigned len, char *dst)
+gp_hll_b64_decode(const char *src, unsigned len, char *dst)
 {
 	const char *srcend = src + len,
 		*s = src;
@@ -1042,14 +1042,14 @@ hll_b64_decode(const char *src, unsigned len, char *dst)
 
 
 int
-b64_enc_len(const char *src, unsigned srclen)
+gp_b64_enc_len(const char *src, unsigned srclen)
 {
 	/* 3 bytes will be converted to 4, linefeed after 76 chars */
 	return (srclen + 2) * 4 / 3 + srclen / (76 * 3 / 4);
 }
 
 int
-b64_dec_len(const char *src, unsigned srclen)
+gp_b64_dec_len(const char *src, unsigned srclen)
 {
 	return (srclen * 3) >> 2;
 }

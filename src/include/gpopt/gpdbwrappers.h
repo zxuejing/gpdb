@@ -638,6 +638,10 @@ namespace gpdb {
 	// returns true if a query cancel is requested in GPDB
 	bool IsAbortRequested(void);
 
+	uint32 HashBpChar(Datum d);
+
+	uint32 HashText(Datum d);
+
 } //namespace gpdb
 
 #define ForEach(cell, l)	\

@@ -1248,7 +1248,6 @@ ResourceGroupGetQueryMemoryLimit(void)
 		 * RESGROUP_BYPASS_MODE_MEMORY_LIMIT_ON_QE chunk,
 		 * we should make sure query_mem + misc mem <= chunk.
 		 */
-		return bytesInChunk * RESGROUP_BYPASS_MODE_MEMORY_LIMIT_ON_QE / 2;
 		return Min(bytesInMB,
 				   bytesInChunk * RESGROUP_BYPASS_MODE_MEMORY_LIMIT_ON_QE / 2);
 	}

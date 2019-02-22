@@ -91,6 +91,11 @@ test_pxfprotocol_import_first_call(void **state)
 	((ExtProtocolData *) fcinfo->context)->prot_last_call = false;
 	((ExtProtocolData *) fcinfo->context)->prot_url = uri_param;
 
+	ExternalSelectDesc desc = (ExternalSelectDesc) palloc0(sizeof(ExternalSelectDesc));
+	desc->projInfo = NULL;
+
+	((ExtProtocolData*) fcinfo->context)->desc = desc;
+
 	Relation	relation = (Relation) palloc0(sizeof(Relation));
 
 	((ExtProtocolData *) fcinfo->context)->prot_relation = relation;
@@ -140,6 +145,7 @@ test_pxfprotocol_import_first_call(void **state)
 	assert_int_equal(context->relation, relation);
 
 	/* cleanup */
+	pfree(desc);
 	pfree(relation);
 	pfree(gphd_uri);
 	pfree(EXTPROTOCOL_GET_USER_CTX(fcinfo));
@@ -229,6 +235,11 @@ test_pxfprotocol_export_first_call(void **state)
 	((ExtProtocolData *) fcinfo->context)->prot_last_call = false;
 	((ExtProtocolData *) fcinfo->context)->prot_url = uri_param;
 
+	ExternalSelectDesc desc = (ExternalSelectDesc) palloc0(sizeof(ExternalSelectDesc));
+	desc->projInfo = NULL;
+
+	((ExtProtocolData*) fcinfo->context)->desc = desc;
+
 	Relation	relation = (Relation) palloc0(sizeof(Relation));
 
 	((ExtProtocolData *) fcinfo->context)->prot_relation = relation;
@@ -271,6 +282,7 @@ test_pxfprotocol_export_first_call(void **state)
 	assert_int_equal(context->relation, relation);
 
 	/* cleanup */
+	pfree(desc);
 	pfree(relation);
 	pfree(gphd_uri);
 	pfree(EXTPROTOCOL_GET_USER_CTX(fcinfo));
@@ -370,13 +382,13 @@ main(int argc, char *argv[])
 	cmockery_parse_arguments(argc, argv);
 
 	const		UnitTest tests[] = {
-		unit_test(test_pxfprotocol_validate_urls),
-		unit_test_setup_teardown(test_pxfprotocol_import_first_call, before_test, after_test),
-		unit_test_setup_teardown(test_pxfprotocol_import_second_call, before_test, after_test),
-		unit_test_setup_teardown(test_pxfprotocol_import_last_call, before_test, after_test),
-		unit_test_setup_teardown(test_pxfprotocol_export_first_call, before_test, after_test),
-		unit_test_setup_teardown(test_pxfprotocol_export_second_call, before_test, after_test),
-		unit_test_setup_teardown(test_pxfprotocol_export_last_call, before_test, after_test)
+			unit_test(test_pxfprotocol_validate_urls),
+			unit_test_setup_teardown(test_pxfprotocol_import_first_call, before_test, after_test),
+			unit_test_setup_teardown(test_pxfprotocol_import_second_call, before_test, after_test),
+			unit_test_setup_teardown(test_pxfprotocol_import_last_call, before_test, after_test),
+			unit_test_setup_teardown(test_pxfprotocol_export_first_call, before_test, after_test),
+			unit_test_setup_teardown(test_pxfprotocol_export_second_call, before_test, after_test),
+			unit_test_setup_teardown(test_pxfprotocol_export_last_call, before_test, after_test)
 
 	};
 

@@ -17,6 +17,7 @@
  * under the License.
  */
 
+#include "pxffilters.h"
 #include "pxfheaders.h"
 #include "access/fileam.h"
 #include "catalog/pg_exttable.h"
@@ -26,20 +27,23 @@ static void add_alignment_size_httpheader(CHURL_HEADERS headers);
 static void add_tuple_desc_httpheader(CHURL_HEADERS headers, Relation rel);
 static void add_location_options_httpheader(CHURL_HEADERS headers, GPHDUri *gphduri);
 static char *get_format_name(char fmtcode);
-
+static void add_projection_desc_httpheader(CHURL_HEADERS headers, ProjectionInfo *projInfo, List *qualsAttributes);
+static bool add_attnums_from_targetList(Node *node, List *attnums);
+static void add_projection_index_header(CHURL_HEADERS pVoid, StringInfoData data, int attno, char number[32]);
 /*
- * Add key/value pairs to connection header.
- * These values are the context of the query and used
- * by the remote component.
- */
+* Add key/value pairs to connection header.
+* These values are the context of the query and used
+* by the remote component.
+*/
 void
 build_http_headers(PxfInputData *input)
 {
-	extvar_t	ev;
-	CHURL_HEADERS headers = input->headers;
-	GPHDUri    *gphduri = input->gphduri;
-	Relation	rel = input->rel;
-	char *filterstr = input->filterstr;
+	extvar_t       ev;
+	CHURL_HEADERS  headers    = input->headers;
+	GPHDUri        *gphduri   = input->gphduri;
+	Relation       rel        = input->rel;
+	char           *filterstr = input->filterstr;
+	ProjectionInfo *proj_info = input->proj_info;
 
 	if (rel != NULL)
 	{
@@ -47,12 +51,31 @@ build_http_headers(PxfInputData *input)
 		ExtTableEntry *exttbl = GetExtTableEntry(rel->rd_id);
 
 		/* pxf treats CSV as TEXT */
-		char	   *format = get_format_name(exttbl->fmtcode);
+		char *format = get_format_name(exttbl->fmtcode);
 
 		churl_headers_append(headers, "X-GP-FORMAT", format);
 
 		/* Record fields - name and type of each field */
 		add_tuple_desc_httpheader(headers, rel);
+	}
+
+	if (proj_info != NULL)
+	{
+		bool qualsAreSupported = true;
+		List *qualsAttributes =
+				extractPxfAttributes(input->quals, &qualsAreSupported);
+		/* projection information is incomplete if columns from WHERE clause wasn't extracted */
+		/* if any of expressions in WHERE clause is not supported - do not send any projection information at all*/
+		if (qualsAreSupported &&
+			(qualsAttributes != NIL || list_length(input->quals) == 0))
+		{
+			add_projection_desc_httpheader(headers, proj_info, qualsAttributes);
+		}
+		else
+		{
+			elog(DEBUG2,
+				 "Query will not be optimized to use projection information");
+		}
 	}
 
 	/* GP cluster configuration */
@@ -62,7 +85,7 @@ build_http_headers(PxfInputData *input)
 	if (!ev.GP_USER || !ev.GP_USER[0])
 		ereport(ERROR,
 				(errcode(ERRCODE_INTERNAL_ERROR),
-						errmsg("User identity is unknown")));
+						errmsg("user identity is unknown")));
 	churl_headers_append(headers, "X-GP-USER", ev.GP_USER);
 
 	churl_headers_append(headers, "X-GP-SEGMENT-ID", ev.GP_SEGMENT_ID);
@@ -83,13 +106,13 @@ build_http_headers(PxfInputData *input)
 	churl_headers_append(headers, "X-GP-URI", gphduri->uri);
 
 	/* filters */
-	if (filterstr == NULL) {
-		churl_headers_append(headers, "X-GP-HAS-FILTER", "0");
-	}
-	else {
-		churl_headers_append(headers, "X-GP-HAS-FILTER", "1");
+	if (filterstr != NULL)
 		churl_headers_append(headers, "X-GP-FILTER", filterstr);
-	}
+
+	if (list_length(input->quals) > 0)
+		churl_headers_append(headers, "X-GP-HAS-FILTER", "1");
+	else
+		churl_headers_append(headers, "X-GP-HAS-FILTER", "0");
 }
 
 /* Report alignment size to remote component
@@ -121,9 +144,9 @@ add_alignment_size_httpheader(CHURL_HEADERS headers)
 static void
 add_tuple_desc_httpheader(CHURL_HEADERS headers, Relation rel)
 {
-	char		long_number[sizeof(int32) * 8];
+	char           long_number[sizeof(int32) * 8];
 	StringInfoData formatter;
-	TupleDesc	tuple;
+	TupleDesc      tuple;
 
 	initStringInfo(&formatter);
 
@@ -159,72 +182,72 @@ add_tuple_desc_httpheader(CHURL_HEADERS headers, Relation rel)
 			switch (tuple->attrs[i]->atttypid)
 			{
 				case NUMERICOID:
-					{
-						resetStringInfo(&formatter);
-						appendStringInfo(&formatter, "X-GP-ATTR-TYPEMOD%u-COUNT", i);
-						pg_ltoa(2, long_number);
-						churl_headers_append(headers, formatter.data, long_number);
+				{
+					resetStringInfo(&formatter);
+					appendStringInfo(&formatter, "X-GP-ATTR-TYPEMOD%u-COUNT", i);
+					pg_ltoa(2, long_number);
+					churl_headers_append(headers, formatter.data, long_number);
 
 
-						/* precision */
-						resetStringInfo(&formatter);
-						appendStringInfo(&formatter, "X-GP-ATTR-TYPEMOD%u-%u", i, 0);
-						pg_ltoa((tuple->attrs[i]->atttypmod >> 16) & 0xffff, long_number);
-						churl_headers_append(headers, formatter.data, long_number);
+					/* precision */
+					resetStringInfo(&formatter);
+					appendStringInfo(&formatter, "X-GP-ATTR-TYPEMOD%u-%u", i, 0);
+					pg_ltoa((tuple->attrs[i]->atttypmod >> 16) & 0xffff, long_number);
+					churl_headers_append(headers, formatter.data, long_number);
 
-						/* scale */
-						resetStringInfo(&formatter);
-						appendStringInfo(&formatter, "X-GP-ATTR-TYPEMOD%u-%u", i, 1);
-						pg_ltoa((tuple->attrs[i]->atttypmod - VARHDRSZ) & 0xffff, long_number);
-						churl_headers_append(headers, formatter.data, long_number);
-						break;
-					}
+					/* scale */
+					resetStringInfo(&formatter);
+					appendStringInfo(&formatter, "X-GP-ATTR-TYPEMOD%u-%u", i, 1);
+					pg_ltoa((tuple->attrs[i]->atttypmod - VARHDRSZ) & 0xffff, long_number);
+					churl_headers_append(headers, formatter.data, long_number);
+					break;
+				}
 				case CHAROID:
 				case BPCHAROID:
 				case VARCHAROID:
-					{
-						resetStringInfo(&formatter);
-						appendStringInfo(&formatter, "X-GP-ATTR-TYPEMOD%u-COUNT", i);
-						pg_ltoa(1, long_number);
-						churl_headers_append(headers, formatter.data, long_number);
+				{
+					resetStringInfo(&formatter);
+					appendStringInfo(&formatter, "X-GP-ATTR-TYPEMOD%u-COUNT", i);
+					pg_ltoa(1, long_number);
+					churl_headers_append(headers, formatter.data, long_number);
 
-						resetStringInfo(&formatter);
-						appendStringInfo(&formatter, "X-GP-ATTR-TYPEMOD%u-%u", i, 0);
-						pg_ltoa((tuple->attrs[i]->atttypmod - VARHDRSZ), long_number);
-						churl_headers_append(headers, formatter.data, long_number);
-						break;
-					}
+					resetStringInfo(&formatter);
+					appendStringInfo(&formatter, "X-GP-ATTR-TYPEMOD%u-%u", i, 0);
+					pg_ltoa((tuple->attrs[i]->atttypmod - VARHDRSZ), long_number);
+					churl_headers_append(headers, formatter.data, long_number);
+					break;
+				}
 				case VARBITOID:
 				case BITOID:
 				case TIMESTAMPOID:
 				case TIMESTAMPTZOID:
 				case TIMEOID:
 				case TIMETZOID:
-					{
-						resetStringInfo(&formatter);
-						appendStringInfo(&formatter, "X-GP-ATTR-TYPEMOD%u-COUNT", i);
-						pg_ltoa(1, long_number);
-						churl_headers_append(headers, formatter.data, long_number);
+				{
+					resetStringInfo(&formatter);
+					appendStringInfo(&formatter, "X-GP-ATTR-TYPEMOD%u-COUNT", i);
+					pg_ltoa(1, long_number);
+					churl_headers_append(headers, formatter.data, long_number);
 
-						resetStringInfo(&formatter);
-						appendStringInfo(&formatter, "X-GP-ATTR-TYPEMOD%u-%u", i, 0);
-						pg_ltoa((tuple->attrs[i]->atttypmod), long_number);
-						churl_headers_append(headers, formatter.data, long_number);
-						break;
-					}
+					resetStringInfo(&formatter);
+					appendStringInfo(&formatter, "X-GP-ATTR-TYPEMOD%u-%u", i, 0);
+					pg_ltoa((tuple->attrs[i]->atttypmod), long_number);
+					churl_headers_append(headers, formatter.data, long_number);
+					break;
+				}
 				case INTERVALOID:
-					{
-						resetStringInfo(&formatter);
-						appendStringInfo(&formatter, "X-GP-ATTR-TYPEMOD%u-COUNT", i);
-						pg_ltoa(1, long_number);
-						churl_headers_append(headers, formatter.data, long_number);
+				{
+					resetStringInfo(&formatter);
+					appendStringInfo(&formatter, "X-GP-ATTR-TYPEMOD%u-COUNT", i);
+					pg_ltoa(1, long_number);
+					churl_headers_append(headers, formatter.data, long_number);
 
-						resetStringInfo(&formatter);
-						appendStringInfo(&formatter, "X-GP-ATTR-TYPEMOD%u-%u", i, 0);
-						pg_ltoa(INTERVAL_PRECISION(tuple->attrs[i]->atttypmod), long_number);
-						churl_headers_append(headers, formatter.data, long_number);
-						break;
-					}
+					resetStringInfo(&formatter);
+					appendStringInfo(&formatter, "X-GP-ATTR-TYPEMOD%u-%u", i, 0);
+					pg_ltoa(INTERVAL_PRECISION(tuple->attrs[i]->atttypmod), long_number);
+					churl_headers_append(headers, formatter.data, long_number);
+					break;
+				}
 				default:
 					elog(DEBUG5, "add_tuple_desc_httpheader: unsupported type %d ", tuple->attrs[i]->atttypid);
 					break;
@@ -236,7 +259,105 @@ add_tuple_desc_httpheader(CHURL_HEADERS headers, Relation rel)
 }
 
 /*
- * The options in the LOCATION statement of "create extenal table"
+ * Report projection description to the remote component
+ */
+static void
+add_projection_desc_httpheader(CHURL_HEADERS headers,
+							   ProjectionInfo *projInfo,
+							   List *qualsAttributes)
+{
+	int            i;
+	int            number;
+    int            numSimpleVars;
+    int            numTargetList;
+	char           long_number[sizeof(int32) * 8];
+	int            *varNumbers = projInfo->pi_varNumbers;
+	StringInfoData formatter;
+
+	initStringInfo(&formatter);
+	numSimpleVars = 0;
+	numTargetList = 0;
+
+	if (!varNumbers)
+	{
+		/*
+		 * When there are not just simple Vars we need to
+		 * walk the tree to get attnums
+		 */
+		List     *l = lappend_int(NIL, 0);
+		ListCell *lc1;
+
+		foreach(lc1, projInfo->pi_targetlist)
+		{
+			GenericExprState *gstate = (GenericExprState *) lfirst(lc1);
+			add_attnums_from_targetList((Node *) gstate->arg->expr, l);
+		}
+
+		foreach(lc1, l)
+		{
+			int attno = lfirst_int(lc1);
+			if (attno > InvalidAttrNumber)
+			{
+				add_projection_index_header(headers,
+				                            formatter, attno - 1, long_number);
+				numTargetList++;
+			}
+		}
+
+		list_free(l);
+	}
+	else
+	{
+		numSimpleVars = list_length(projInfo->pi_targetlist);
+	}
+
+	number = numTargetList + numSimpleVars + list_length(qualsAttributes);
+	if (number == 0)
+		return;
+
+	/* Convert the number of projection columns to a string */
+	pg_ltoa(number, long_number);
+	churl_headers_append(headers, "X-GP-ATTRS-PROJ", long_number);
+
+	for (i = 0; varNumbers && i < numSimpleVars; i++)
+	{
+		add_projection_index_header(headers,
+		                            formatter, varNumbers[i] - 1, long_number);
+	}
+
+	ListCell *attribute = NULL;
+
+	/*
+	 * Attributes coming from quals
+	 */
+	foreach(attribute, qualsAttributes)
+	{
+		AttrNumber attrNumber = (AttrNumber) lfirst_int(attribute);
+		add_projection_index_header(headers,
+		                            formatter, attrNumber, long_number);
+	}
+
+	list_free(qualsAttributes);
+	pfree(formatter.data);
+}
+
+/*
+ * Adds the projection index header for the given attno
+ */
+static void
+add_projection_index_header(CHURL_HEADERS headers,
+                            StringInfoData str,
+                            int attno,
+                            char long_number[32])
+{
+	pg_ltoa(attno, long_number);
+	resetStringInfo(&str);
+	appendStringInfo(&str, "X-GP-ATTRS-PROJ-IDX");
+	churl_headers_append(headers, str.data, long_number);
+}
+
+/*
+ * The options in the LOCATION statement of "create external table"
  * FRAGMENTER=HdfsDataFragmenter&ACCESSOR=SequenceFileAccessor...
  */
 static void
@@ -274,8 +395,42 @@ get_format_name(char fmtcode)
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_INTERNAL_ERROR),
-				 errmsg("Unable to get format name for format code: %c", fmtcode)));
+						errmsg("unable to get format name for format code: %c",
+							   fmtcode)));
 	}
 
 	return formatName;
+}
+
+/*
+ * Gets a list of attnums from the given Node
+ * it uses expression_tree_walker to recursively
+ * get the list
+ */
+static bool
+add_attnums_from_targetList(Node *node, List *attnums)
+{
+	if (node == NULL)
+		return false;
+	if (IsA(node, Var))
+	{
+		Var        *variable = (Var *) node;
+		AttrNumber attnum    = variable->varattno;
+
+		lappend_int(attnums, attnum);
+		return false;
+	}
+
+	/*
+	 * Don't examine the arguments or filters of Aggrefs or WindowRef,
+	 * because those do not represent expressions to be evaluated within the
+	 * overall targetlist's econtext.
+	 */
+	if (IsA(node, Aggref))
+		return false;
+	if (IsA(node, WindowRef))
+		return false;
+	return expression_tree_walker(node,
+								  add_attnums_from_targetList,
+								  (void *) attnums);
 }

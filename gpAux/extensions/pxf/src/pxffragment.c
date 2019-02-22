@@ -5,6 +5,7 @@
 #include "cdb/cdbtm.h"
 #include "cdb/cdbvars.h"
 #include "commands/copy.h"
+#include "utils/guc.h"
 #include "utils/jsonapi.h"
 
 static List *get_data_fragment_list(GPHDUri *hadoop_uri, ClientContext *client_context);
@@ -26,10 +27,14 @@ static void pxf_array_element_end(void *state, bool isnull);
  * Returns selected fragments that have been allocated to the current segment
  */
 void
-get_fragments(GPHDUri *uri, Relation relation, char* filter_string)
+get_fragments(GPHDUri *uri,
+			  Relation relation,
+			  char *filter_string,
+			  ProjectionInfo *proj_info,
+			  List *quals)
 {
 
-	List	   *data_fragments = NIL;
+	List	   *data_fragments;
 
 	/* Context for the Fragmenter API */
 	ClientContext client_context;
@@ -45,10 +50,12 @@ get_fragments(GPHDUri *uri, Relation relation, char* filter_string)
 	/*
 	 * Enrich the curl HTTP header
 	 */
-	inputData.headers = client_context.http_headers;
-	inputData.gphduri = uri;
-	inputData.rel = relation;
+	inputData.headers   = client_context.http_headers;
+	inputData.gphduri   = uri;
+	inputData.rel       = relation;
 	inputData.filterstr = filter_string;
+	inputData.proj_info = proj_info;
+	inputData.quals     = quals;
 	build_http_headers(&inputData);
 
 	/*
@@ -197,8 +204,8 @@ pxf_fragment_object_start(void *state, char *name, bool isnull)
 		else
 			ereport(ERROR,
 					(errcode(ERRCODE_SYNTAX_ERROR),
-					 errmsg("unrecognized object in PXF fragment: \"%s\"",
-					 		name)));
+							errmsg("unrecognized object in PXF fragment: \"%s\"",
+								   name)));
 	}
 	else if (s->lex->token_type == JSON_TOKEN_ARRAY_START)
 	{
@@ -207,7 +214,7 @@ pxf_fragment_object_start(void *state, char *name, bool isnull)
 			if (s->object != PXF_PARSE_START)
 				ereport(ERROR,
 						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("malformed PXF fragment")));
+								errmsg("malformed PXF fragment")));
 		}
 		else if (pg_strcasecmp(name, "replicas") == 0)
 		{
@@ -217,8 +224,8 @@ pxf_fragment_object_start(void *state, char *name, bool isnull)
 		else
 			ereport(ERROR,
 					(errcode(ERRCODE_SYNTAX_ERROR),
-					 errmsg("unrecognized array in PXF fragment: \"%s\"",
-					 		name)));
+							errmsg("unrecognized array in PXF fragment: \"%s\"",
+								   name)));
 	}
 }
 
@@ -234,7 +241,7 @@ check_and_assign(char **field, JsonTokenType type, char *token,
 	else
 		ereport(ERROR,
 				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("unexpected value \"%s\" for attribute", token)));
+						errmsg("unexpected value \"%s\" for attribute", token)));
 }
 
 static void
@@ -335,7 +342,7 @@ parse_get_fragments_response(List *fragments, StringInfo rest_buf)
 
 	pfree(state->lex);
 
-    return state->fragments;
+	return state->fragments;
 }
 
 /*

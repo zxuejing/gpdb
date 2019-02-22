@@ -79,7 +79,7 @@ static void FunctionCallPrepareFormatter(FunctionCallInfoData *fcinfo,
 							 FmgrInfo *convFuncs,
 							 Oid *typioparams);
 
-static void open_external_readable_source(FileScanDesc scan, List* filter_quals);
+static void open_external_readable_source(FileScanDesc scan, ExternalSelectDesc desc);
 static void open_external_writable_source(ExternalInsertDesc extInsertDesc);
 static int	external_getdata(URL_FILE *extfile, CopyState pstate, int maxread);
 static void external_senddata(URL_FILE *extfile, CopyState pstate);
@@ -433,6 +433,19 @@ external_stopscan(FileScanDesc scan)
 	}
 }
 
+/*	----------------
+ *		external_getnext_init - prepare ExternalSelectDesc struct before external_getnext
+ *	----------------
+ */
+ExternalSelectDesc
+external_getnext_init(PlanState *state)
+{
+	ExternalSelectDesc
+		desc = (ExternalSelectDesc) palloc0(sizeof(ExternalSelectDescData));
+	if (state != NULL)
+		desc->projInfo = state->ps_ProjInfo;
+	return desc;
+}
 
 /* ----------------------------------------------------------------
 *		external_getnext
@@ -441,7 +454,7 @@ external_stopscan(FileScanDesc scan)
 * ----------------------------------------------------------------
 */
 HeapTuple
-external_getnext(FileScanDesc scan, ScanDirection direction, List* filter_quals)
+external_getnext(FileScanDesc scan, ScanDirection direction, ExternalSelectDesc desc)
 {
 	HeapTuple	tuple;
 
@@ -461,7 +474,7 @@ external_getnext(FileScanDesc scan, ScanDirection direction, List* filter_quals)
 	 * only.
 	 */
 	if (!scan->fs_file)
-		open_external_readable_source(scan, filter_quals);
+		open_external_readable_source(scan, desc);
 
 	/* Note: no locking manipulations needed */
 	FILEDEBUG_1;
@@ -1172,7 +1185,7 @@ externalgettup_custom(FileScanDesc scan)
 */
 static HeapTuple
 externalgettup(FileScanDesc scan,
-			   ScanDirection dir __attribute__((unused)))
+               ScanDirection dir __attribute__((unused)))
 {
 	CopyState	pstate = scan->fs_pstate;
 	bool		custom = pstate->custom;
@@ -1546,7 +1559,7 @@ FunctionCallPrepareFormatter(FunctionCallInfoData *fcinfo,
  * 4) a command to execute
  */
 static void
-open_external_readable_source(FileScanDesc scan, List* filter_quals)
+open_external_readable_source(FileScanDesc scan, ExternalSelectDesc desc)
 {
 	extvar_t	extvar;
 
@@ -1567,7 +1580,7 @@ open_external_readable_source(FileScanDesc scan, List* filter_quals)
 							  false /* for read */ ,
 							  &extvar,
 							  scan->fs_pstate,
-							  filter_quals);
+							  desc);
 }
 
 /*

@@ -1321,44 +1321,6 @@ GetSnapshotData(Snapshot snapshot, bool serializable)
 					xmin)));
 
 	/*
-	 * Get the distributed snapshot if needed and copy it into the field 
-	 * called distribSnapshotWithLocalMapping in the snapshot structure.
-	 *
-	 * For a distributed transaction:
-	 *   => The corrresponding distributed snapshot is made up of distributed
-	 *      xids from the DTM that are considered in-progress will be kept in
-	 *      the snapshot structure separately from any local in-progress xact.
-	 *
-	 *      The MVCC function XidInSnapshot is used to evaluate whether
-	 *      a tuple is visible through a snapshot. Only committed xids are
-	 *      given to XidInSnapshot for evaluation. XidInSnapshot will first
-	 *      determine if the committed tuple is for a distributed transaction.  
-	 *      If the xact is distributed it will be evaluated only against the
-	 *      distributed snapshot and not the local snapshot.
-	 *
-	 *      Otherwise, when the committed transaction being evaluated is local,
-	 *      then it will be evaluated only against the local portion of the
-	 *      snapshot.
-	 *
-	 * For a local transaction:
-	 *   => Only the local portion of the snapshot: xmin, xmax, xcnt,
-	 *      in-progress (xip), etc, will be filled in.
-	 *
-	 *      Note that in-progress distributed transactions that have reached
-	 *      this database instance and are active will be represented in the
-	 *      local in-progress (xip) array with the distributed transaction's
-	 *      local xid.
-	 *
-	 * In summary: This 2 snapshot scheme (optional distributed, required local)
-	 * handles late arriving distributed transactions properly since that work
-	 * is only evaluated against the distributed snapshot. And, the scheme
-	 * handles local transaction work seeing distributed work properly by
-	 * including distributed transactions in the local snapshot via their
-	 * local xids.
-	 */
-	FillInDistributedSnapshot(snapshot);
-
-	/*
 	 * Spin over procArray checking xid, xmin, and subxids.  The goal is to
 	 * gather all active xids, find the lowest xmin, and try to record
 	 * subxids.
@@ -1459,6 +1421,46 @@ GetSnapshotData(Snapshot snapshot, bool serializable)
 	 */
 	if (TransactionIdPrecedes(xmin, globalxmin))
 		globalxmin = xmin;
+
+	/*
+	 * Get the distributed snapshot if needed and copy it into the field
+	 * called distribSnapshotWithLocalMapping in the snapshot structure.
+	 *
+	 * For a distributed transaction:
+	 *   => The corrresponding distributed snapshot is made up of distributed
+	 *      xids from the DTM that are considered in-progress will be kept in
+	 *      the snapshot structure separately from any local in-progress xact.
+	 *
+	 *      The MVCC function XidInSnapshot is used to evaluate whether
+	 *      a tuple is visible through a snapshot. Only committed xids are
+	 *      given to XidInSnapshot for evaluation. XidInSnapshot will first
+	 *      determine if the committed tuple is for a distributed transaction.
+	 *      If the xact is distributed it will be evaluated only against the
+	 *      distributed snapshot and not the local snapshot.
+	 *
+	 *      Otherwise, when the committed transaction being evaluated is local,
+	 *      then it will be evaluated only against the local portion of the
+	 *      snapshot.
+	 *
+	 * For a local transaction:
+	 *   => Only the local portion of the snapshot: xmin, xmax, xcnt,
+	 *      in-progress (xip), etc, will be filled in.
+	 *
+	 *      Note that in-progress distributed transactions that have reached
+	 *      this database instance and are active will be represented in the
+	 *      local in-progress (xip) array with the distributed transaction's
+	 *      local xid.
+	 *
+	 * In summary: This 2 snapshot scheme (optional distributed, required local)
+	 * handles late arriving distributed transactions properly since that work
+	 * is only evaluated against the distributed snapshot. And, the scheme
+	 * handles local transaction work seeing distributed work properly by
+	 * including distributed transactions in the local snapshot via their
+	 * local xids.
+	 *
+	 * (We do this after releasing ProcArrayLock, to reduce contention.)
+	 */
+	FillInDistributedSnapshot(snapshot);
 
 	/* Update global variables too */
 	RecentGlobalXmin = globalxmin;

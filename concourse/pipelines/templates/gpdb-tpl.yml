@@ -26,7 +26,10 @@
 {% set aa_Test_suites = ['Planner_centos6',
                          'Orca_centos6',
                          'Planner_centos7',
-                         'Orca_centos7',
+                         'Orca_centos7'
+                        ] %}
+{% set postgis_build_platforms = ['centos6',
+                         'centos7'
                         ] %}
 ## ======================================================================
 ##   __ _ _ __ ___  _   _ _ __  ___
@@ -132,6 +135,9 @@ groups:
 {% if "AA" in test_sections %}
   ## --------------------------------------------------------------------
   - gate_advanced_analytics_start
+{% for platform in postgis_build_platforms %}
+  - postgis_build_[[ platform ]]
+{% endfor %}
 {% for test_name in aa_Test_suites %}
 {% set platform_version = '7' if "centos7" in test_name else '6' %}
 {% set orca_state = 'off' if "Planner" in test_name else 'on' %}
@@ -271,6 +277,9 @@ groups:
 - name: G:AdvancedAnalytics
   jobs:
   - gate_advanced_analytics_start
+{% for platform in postgis_build_platforms %}
+  - postgis_build_[[ platform ]]
+{% endfor %}
 {% for test_name in aa_Test_suites %}
 {% set platform_version = '7' if "centos7" in test_name else '6' %}
 {% set orca_state = 'off' if "Planner" in test_name else 'on' %}
@@ -763,6 +772,7 @@ resources:
   type: git
   source:
     branch: master
+    tag_filter: rel/v2.1.5+pivotal.2
     uri: https://github.com/greenplum-db/geospatial.git
 
 - name: postgis_gppkg_centos6
@@ -3468,6 +3478,39 @@ jobs:
       passed:
       - gate_compile_end
 
+{% for platform in postgis_build_platforms %}
+{% set platform_version = '7' if "centos7" in platform else '6' %}
+- name: postgis_build_[[ platform ]]
+  plan:
+  - aggregate:
+    - get: postgis_src
+    - get: madlib_ci
+    - get: gpdb_src
+      passed:
+      - gate_advanced_analytics_start
+    - get: bin_gpdb
+      resource: bin_gpdb_[[ platform ]]
+      trigger: [[ test_trigger ]]
+      passed:
+      - gate_advanced_analytics_start
+    - get: centos-gpdb-dev-[[ platform_version ]]
+    - get: gcc_4.4.2_snowflake
+  - aggregate:
+    - task: postgis_gpdb_build
+      file: madlib_ci/concourse/tasks/build_postgis.yml
+      image: centos-gpdb-dev-[[ platform_version ]]
+      params:
+        TEST_OS: [[ platform ]]
+        IVYREPO_HOST: {{ivyrepo_host}}
+        IVYREPO_REALM: {{ivyrepo_realm}}
+        IVYREPO_USER: {{ivyrepo_user}}
+        IVYREPO_PASSWD: {{ivyrepo_passwd}}
+  - aggregate:
+    - put: postgis_gppkg_[[ platform ]]
+      params:
+        file: postgis_gppkg/postgis-*.gppkg
+{% endfor %}
+
 {% for test_name in aa_Test_suites %}
 {% set platform_version = '7' if "centos7" in test_name else '6' %}
 {% set orca_state = 'off' if "Planner" in test_name else 'on' %}
@@ -3497,18 +3540,22 @@ jobs:
   - aggregate:
     - get: madlib_ci
     - get: postgis_src
+      passed:
+      - postgis_build_centos[[ platform_version ]]
     - get: postgis_gppkg
       resource: postgis_gppkg_centos[[ platform_version ]]
       trigger: [[ test_trigger ]]
+      passed:
+      - postgis_build_centos[[ platform_version ]]
     - get: bin_gpdb
       resource: bin_gpdb_centos[[ platform_version ]]
       trigger: [[ test_trigger ]]
       passed:
-      - gate_advanced_analytics_start
+      - postgis_build_centos[[ platform_version ]]
     - get: centos-gpdb-dev-[[ platform_version ]]
     - get: gpdb_src
       passed:
-      - gate_advanced_analytics_start
+      - postgis_build_centos[[ platform_version ]]
     - get: gcc_4.4.2_snowflake
   - task: test_postgis
     file: madlib_ci/concourse/tasks/test_postgis.yml
@@ -3715,6 +3762,9 @@ jobs:
       - gptransfer-5x-to-5x
       - mpp_interconnect
       - QP_optimizer-functional
+{% for platform in postgis_build_platforms %}
+      - postgis_build_[[ platform ]]
+{% endfor %}
 {% for test_name in aa_Test_suites %}
 {% set platform_version = '7' if "centos7" in test_name else '6' %}
 {% set orca_state = 'off' if "Planner" in test_name else 'on' %}

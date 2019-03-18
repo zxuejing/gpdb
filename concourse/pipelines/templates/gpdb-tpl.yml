@@ -49,6 +49,7 @@ groups:
   - compile_gpdb_sles11
   - compile_gpdb_ubuntu16
   - compile_gpdb_ubuntu16_oss
+  - compile_gpdb_ubuntu16_oss_abi
   - compile_gpdb_open_source_centos6
   - compile_gpdb_binary_swap_centos6
   - compile_gpdb_windows_cl
@@ -162,6 +163,7 @@ groups:
 - name: Release
   jobs:
   - gate_release_candidate_start
+  - compile_gpdb_ubuntu16_oss_abi
   - Release_Candidate
 
 {% endif %}
@@ -417,6 +419,13 @@ resources:
     ignore_paths:
     - gpdb-doc/*
     - README*
+
+- name: gpdb_src_latest_5X_tag
+  type: git
+  source:
+    branch: 5X_STABLE
+    uri: {{gpdb-git-remote}}
+    tag_filter: 5.*
 
 - name: gpdb_src_binary_swap
   type: git
@@ -1258,6 +1267,86 @@ jobs:
     - put: deb_package_open_source_ubuntu16
       params:
         file: {{deb_package_open_source_ubuntu16_versioned_file}}
+
+- name: compile_gpdb_ubuntu16_oss_abi
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [gate_compile_start]
+      trigger: ((gpdb_src-trigger-flag))
+    - get: gpdb_src_latest_5X_tag
+    - get: ubuntu-gpdb-dev-16
+      passed: [gate_compile_start]
+  - aggregate:
+    - task: compile_gpdb_head
+      image: ubuntu-gpdb-dev-16
+      config:
+        platform: linux
+        inputs:
+          - name: gpdb_src
+        outputs:
+          - name: compiled_bits_ubuntu16_head
+        run:
+          path: gpdb_src/concourse/scripts/compile_gpdb_open_source_ubuntu.bash
+        params:
+          CFLAGS: -g -Og
+          CXXFLAGS: -g -Og
+          CONFIGURE_FLAGS: {{configure_flags}}
+          TRANSFER_DIR: compiled_bits_ubuntu16_head
+          COMPILED_BITS_FILENAME: compiled_bits_ubuntu16.tar.gz
+    - task: compile_gpdb_tag
+      image: ubuntu-gpdb-dev-16
+      input_mapping:
+        gpdb_src: gpdb_src_latest_5X_tag
+      config:
+        platform: linux
+        inputs:
+          - name: gpdb_src
+        outputs:
+          - name: compiled_bits_ubuntu16_tag
+        run:
+          path: gpdb_src/concourse/scripts/compile_gpdb_open_source_ubuntu.bash
+        params:
+          CFLAGS: -g -Og
+          CXXFLAGS: -g -Og
+          CONFIGURE_FLAGS: {{configure_flags}}
+          TRANSFER_DIR: compiled_bits_ubuntu16_tag
+          COMPILED_BITS_FILENAME: compiled_bits_ubuntu16.tar.gz
+  - task: compare_abi
+    image: ubuntu-gpdb-dev-16
+    config:
+      platform: linux
+      inputs:
+        - name: gpdb_src
+        - name: compiled_bits_ubuntu16_head
+        - name: compiled_bits_ubuntu16_tag
+      outputs:
+        - name: abi
+      run:
+        path: gpdb_src/concourse/scripts/compare_abi_ubuntu.bash
+        args: [
+          'bin/postgres',
+          'lib/libecpg.so',
+          'lib/libecpg_compat.so',
+          'lib/libgppc.so',
+          'lib/libpgtypes.so',
+          'lib/libpq.so',
+        ]
+      params:
+  - task: publish_report
+    image: ubuntu-gpdb-dev-16
+    config:
+      platform: linux
+      inputs:
+        - name: gpdb_src
+        - name: abi
+      run:
+        path: gpdb_src/concourse/scripts/s3_sync
+        args: [ "./abi/", "s3://((public-bucket-name))/" ]
+      params:
+        AWS_ACCESS_KEY_ID: {{bucket-access-key-id}}
+        AWS_SECRET_ACCESS_KEY: {{bucket-secret-access-key}}
+        AWS_DEFAULT_REGION: {{aws-region}}
 
 - name: compile_gpdb_open_source_centos6
   public: true

@@ -42,12 +42,22 @@ function prep_env_for_sles() {
   source /opt/gcc_env.sh
 }
 
+function rebase_master_branch() {
+  pushd ${GPDB_SRC_PATH}
+    git config user.email "gpdb@localhost"
+    git config user.name "Gpdb Hackers"
+    git remote add upstream https://github.com/greenplum-db/gpdb.git
+    git fetch upstream
+    git rebase upstream/master
+  popd
+}
+
 function generate_build_number() {
   pushd ${GPDB_SRC_PATH}
     #Only if its git repro, add commit SHA as build number
     # BUILD_NUMBER file is used by getversion file in GPDB to append to version
     if [ -d .git ] ; then
-      echo "commit:`git rev-parse HEAD`" > BUILD_NUMBER
+      echo "commit:`git rev-parse upstream/master`" > BUILD_NUMBER
     fi
   popd
 }
@@ -81,7 +91,7 @@ function git_info() {
 
   "${CWDIR}/git_info.bash" | tee ${GREENPLUM_INSTALL_DIR}/etc/git-info.json
 
-  PREV_TAG=$(git describe --tags --abbrev=0 HEAD^)
+  PREV_TAG=$(git describe --tags --abbrev=0 upstream/master^)
 
   cat > ${GREENPLUM_INSTALL_DIR}/etc/git-current-changelog.txt <<-EOF
 	======================================================================
@@ -90,7 +100,7 @@ function git_info() {
 
 	EOF
 
-  git log --abbrev-commit --date=relative "${PREV_TAG}..HEAD" >> ${GREENPLUM_INSTALL_DIR}/etc/git-current-changelog.txt
+  git log --abbrev-commit --date=relative "${PREV_TAG}..upstream/master" >> ${GREENPLUM_INSTALL_DIR}/etc/git-current-changelog.txt
 
   popd
 }
@@ -200,6 +210,7 @@ function _main() {
         ;;
   esac
 
+  rebase_master_branch
   generate_build_number
 
   # By default, only GPDB Server binary is build.

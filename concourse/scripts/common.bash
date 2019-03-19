@@ -132,7 +132,6 @@ function expand_cluster() {
   uncompleted=$(su gpadmin -c "psql -Aqtd $dbname -c \"select count(*) from gpexpand.status_detail where status <> 'COMPLETED'\"")
   # cleanup
   su gpadmin -c "yes | PGOPTIONS='$pgoptions' gpexpand -s -c"
-  su gpadmin -c "dropdb $dbname" 2>/dev/null || : # ignore failure
 
   # dump after expansion
   su gpadmin -c "pg_dumpall --inserts -Oxaf '$dump_after'"
@@ -183,6 +182,7 @@ function make_cluster() {
   export STATEMENT_MEM=250MB
   pushd gpdb_src/gpAux/gpdemo
   export MASTER_DATA_DIRECTORY=`pwd`"/datadirs/qddir/demoDataDir-1"
+  export PGPORT=15432
   su gpadmin -c "make create-demo-cluster $@"
   popd
 }

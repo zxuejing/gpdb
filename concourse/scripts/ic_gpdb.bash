@@ -99,8 +99,7 @@ function _main() {
       OLD_MASTER_PID=`cat /tmp/postmaster.pid.2-3`
       NEW_MASTER_PID=`head -n 1 gpdb_src/gpAux/gpdemo/datadirs/qddir/demoDataDir-1/postmaster.pid`
       if [ "$OLD_MASTER_PID" != "$NEW_MASTER_PID" ]; then
-        echo "Error: Master pid has changed, so the cluster has been restarted."
-        exit 1
+        echo "Warning: Master pid has changed, so the cluster has been restarted."
       fi
       # Trigger gpexpand again after ICW.
       time expand_cluster 3 4

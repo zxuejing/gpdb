@@ -648,7 +648,7 @@ resources:
     versioned_file: ((pipeline-name))/deb_package_ubuntu16/greenplum-db.deb
 
 {% endif %}
-{% if "aix7" in os_types %}
+{% if "aix7" in os_types or "centos7" in os_types %}
 - name: nightly-trigger
   type: time
   source:
@@ -897,6 +897,8 @@ jobs:
 - name: compile_gpdb_centos7
   plan:
   - aggregate:
+    - get: nightly-trigger
+      trigger: true
     - get: reduced-frequency-trigger
       trigger: ((reduced-frequency-trigger-flag))
     - get: gpdb_src

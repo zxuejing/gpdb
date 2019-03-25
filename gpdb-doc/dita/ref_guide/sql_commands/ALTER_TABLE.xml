@@ -597,10 +597,8 @@ ALTER TABLE <varname>name</varname>
                                                 is not supported if the partitioned table contains a
                                                 column with a check constraint or a <codeph>NOT
                                                   NULL</codeph> constraint.</pd>
-                                        <pd>You cannot exchange a partition with a replicated table.
-                                                You cannot exchange a partition with a partitioned
-                                                table or a child partition of a partitioned
-                                                table.</pd>
+                                        <pd>Exchanging a partition with a partitioned table or a child partition of a partitioned
+                                                table is not supported.</pd>
                                         <pd><b>WITH</b> | <b>WITHOUT VALIDATION</b> - Validates that
                                                 the data in the table matches the
                                                   <codeph>CHECK</codeph> constraint of the partition

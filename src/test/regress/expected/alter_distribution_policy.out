@@ -1354,7 +1354,6 @@ CREATE UNIQUE INDEX idx3_t_dist2 ON t_dist2(col1, col2, col4);
 ALTER TABLE t_dist2 SET DISTRIBUTED BY(col1); 
 WARNING:  distribution policy of relation "t_dist2" already set to (col1)
 HINT:  Use ALTER TABLE "t_dist2" SET WITH (REORGANIZE=TRUE) DISTRIBUTED BY (col1) to force redistribution
-ALTER TABLE t_dist2 SET DISTRIBUTED BY(col2); 
 ALTER TABLE t_dist2 SET DISTRIBUTED BY(col1, col2); 
 ALTER TABLE t_dist2 SET DISTRIBUTED BY(col1, col2, col3); 
 ERROR:  UNIQUE INDEX and DISTRIBUTED BY definitions incompatible
@@ -1363,5 +1362,11 @@ ALTER TABLE t_dist2 SET DISTRIBUTED BY(col3);
 ERROR:  UNIQUE INDEX and DISTRIBUTED BY definitions incompatible
 HINT:  the DISTRIBUTED BY columns must be equal to or a left-subset of the UNIQUE INDEX columns.
 ALTER TABLE t_dist2 SET DISTRIBUTED BY(col4); 
+ERROR:  UNIQUE INDEX and DISTRIBUTED BY definitions incompatible
+HINT:  the DISTRIBUTED BY columns must be equal to or a left-subset of the UNIQUE INDEX columns.
+ALTER TABLE t_dist2 SET DISTRIBUTED BY(col2);
+ERROR:  UNIQUE INDEX and DISTRIBUTED BY definitions incompatible
+HINT:  the DISTRIBUTED BY columns must be equal to or a left-subset of the UNIQUE INDEX columns.
+ALTER TABLE t_dist2 SET DISTRIBUTED BY(col2, col1);
 ERROR:  UNIQUE INDEX and DISTRIBUTED BY definitions incompatible
 HINT:  the DISTRIBUTED BY columns must be equal to or a left-subset of the UNIQUE INDEX columns.

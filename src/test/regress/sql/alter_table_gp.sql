@@ -88,3 +88,19 @@ SELECT * FROM altable ORDER BY 1;
 -- (There used to be a quoting bug in the internal query this issues.)
 create table "foo'bar" (id int4, t text);
 alter table "foo'bar" alter column t type integer using length(t);
+
+-- Test add unique index constraint. If the unique index is not compatible with
+-- the existing distribution policy, update the policy if table is empty and
+-- does not have a primary key or unique index, otherwise error out.
+
+CREATE TABLE policy_match_unique_index(a int, b int)
+DISTRIBUTED BY (a, b)
+PARTITION BY RANGE(a) (START (1) END (2) EVERY (1));
+-- The distribution policy should by updated
+ALTER TABLE policy_match_unique_index ADD CONSTRAINT ba_pkey PRIMARY KEY (b, a);
+-- Add partition should still work
+ALTER TABLE policy_match_unique_index ADD PARTITION part2 START (2) END (3);
+-- Should not update the distribution policy because the table already has primary key
+CREATE UNIQUE INDEX a_idx ON policy_match_unique_index (a);
+-- cleanup
+drop table policy_match_unique_index;

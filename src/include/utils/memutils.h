@@ -39,10 +39,7 @@
  */
 #define MaxAllocSize	((Size) 0x3fffffff)		/* 1 gigabyte - 1 */
 
-static inline bool AllocSizeIsValid(Size sz)
-{
-        return (sz < MaxAllocSize);
-}
+#define AllocSizeIsValid(size)	((Size) (size) <= MaxAllocSize)
 
 /*
  * Multiple chunks can share a SharedChunkHeader if their shared information

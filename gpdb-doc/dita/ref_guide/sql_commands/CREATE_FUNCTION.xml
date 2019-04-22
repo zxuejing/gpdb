@@ -10,7 +10,7 @@
     { LANGUAGE <varname>langname</varname>
     | IMMUTABLE | STABLE | VOLATILE
     | CALLED ON NULL INPUT | RETURNS NULL ON NULL INPUT | STRICT
-    | [EXTERNAL] SECURITY INVOKER | [EXTERNAL] SECURITY DEFINE
+    | [EXTERNAL] SECURITY INVOKER | [EXTERNAL] SECURITY DEFINER
     | COST <varname>execution_cost</varname>
     | SET <varname>configuration_parameter</varname> { TO <varname>value</varname> | = <varname>value</varname> | FROM CURRENT }
     | AS '<varname>definition</varname>'

@@ -211,6 +211,21 @@ ExecHashJoin(HashJoinState *node)
 		elog(gp_workfile_caching_loglevel, "HashJoin built table with %.1f tuples by executing subplan for batch 0", hashtable->totalTuples);
 #endif
 
+		/*
+		 * Prefetch JoinQual to prevent motion hazard.
+		 *
+		 * See ExecPrefetchJoinQual() for details.
+		 */
+		if (node->prefetch_joinqual && ExecPrefetchJoinQual(&node->js))
+			node->prefetch_joinqual = false;
+
+		/*
+		 * We just scanned the entire inner side and built the hashtable
+		 * (and its overflow batches). Check here and remember if the inner
+		 * side is empty.
+		 */
+		node->hj_InnerEmpty = (hashtable->totalTuples == 0);
+
 		/**
 		 * If LASJ_NOTIN and a null was found on the inner side, then clean out.
 		 */
@@ -516,6 +531,7 @@ ExecInitHashJoin(HashJoin *node, EState *estate, int eflags)
 	 * the fix to MPP-989)
 	 */
 	hjstate->prefetch_inner = node->join.prefetch_inner;
+	hjstate->prefetch_joinqual = ShouldPrefetchJoinQual(estate, &node->join);
 
 	/*
 	 * initialize child nodes

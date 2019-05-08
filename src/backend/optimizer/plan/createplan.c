@@ -669,6 +669,18 @@ create_join_plan(PlannerInfo *root, JoinPath *best_path)
 	if (partition_selector_created)
 		((Join *) plan)->prefetch_inner = true;
 
+	/*
+	 * A motion deadlock can also happen when outer and joinqual both contain
+	 * motions.  It is not easy to check for joinqual here, so we set the
+	 * prefetch_joinqual mark only according to outer motion, and check for
+	 * joinqual later in the executor.
+	 *
+	 * See ExecPrefetchJoinQual() for details.
+	 */
+	if (best_path->outerjoinpath &&
+		best_path->outerjoinpath->motionHazard)
+		((Join *) plan)->prefetch_joinqual = true;
+
 	plan->flow = cdbpathtoplan_create_flow(root,
 			best_path->path.locus,
 			best_path->path.parent ? best_path->path.parent->relids
@@ -2965,6 +2977,18 @@ create_nestloop_plan(PlannerInfo *root,
 	if (prefetch)
 		join_plan->join.prefetch_inner = true;
 
+	/*
+	 * A motion deadlock can also happen when outer and joinqual both contain
+	 * motions.  It is not easy to check for joinqual here, so we set the
+	 * prefetch_joinqual mark only according to outer motion, and check for
+	 * joinqual later in the executor.
+	 *
+	 * See ExecPrefetchJoinQual() for details.
+	 */
+	if (best_path->outerjoinpath &&
+		best_path->outerjoinpath->motionHazard)
+		join_plan->join.prefetch_joinqual = true;
+
 	return join_plan;
 }
 
@@ -3287,6 +3311,25 @@ create_mergejoin_plan(PlannerInfo *root,
 
 	join_plan->join.prefetch_inner = prefetch;
 
+	/*
+	 * A motion deadlock can also happen when outer and joinqual both contain
+	 * motions.  It is not easy to check for joinqual here, so we set the
+	 * prefetch_joinqual mark only according to outer motion, and check for
+	 * joinqual later in the executor.
+	 *
+	 * See ExecPrefetchJoinQual() for details.
+	 */
+	if (best_path->jpath.outerjoinpath &&
+		best_path->jpath.outerjoinpath->motionHazard)
+		join_plan->join.prefetch_joinqual = true;
+	/*
+	 * If inner motion is not under a Material or Sort node then there could
+	 * also be motion deadlock between inner and joinqual in mergejoin.
+	 */
+	if (best_path->jpath.innerjoinpath &&
+		best_path->jpath.innerjoinpath->motionHazard)
+		join_plan->join.prefetch_joinqual = true;
+
 	copy_path_costsize(root, &join_plan->join.plan, &best_path->jpath.path);
 
 	return join_plan;
@@ -3378,6 +3421,18 @@ create_hashjoin_plan(PlannerInfo *root,
 	{
 		join_plan->join.prefetch_inner = true;
 	}
+
+	/*
+	 * A motion deadlock can also happen when outer and joinqual both contain
+	 * motions.  It is not easy to check for joinqual here, so we set the
+	 * prefetch_joinqual mark only according to outer motion, and check for
+	 * joinqual later in the executor.
+	 *
+	 * See ExecPrefetchJoinQual() for details.
+	 */
+	if (best_path->jpath.outerjoinpath &&
+		best_path->jpath.outerjoinpath->motionHazard)
+		join_plan->join.prefetch_joinqual = true;
 
 	copy_path_costsize(root, &join_plan->join.plan, &best_path->jpath.path);
 

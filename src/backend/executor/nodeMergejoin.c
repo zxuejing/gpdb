@@ -672,6 +672,14 @@ ExecMergeJoin(MergeJoinState *node)
 	}
 
 	/*
+	 * Prefetch JoinQual to prevent motion hazard.
+	 *
+	 * See ExecPrefetchJoinQual() for details.
+	 */
+	if (node->prefetch_joinqual && ExecPrefetchJoinQual(&node->js))
+		node->prefetch_joinqual = false;
+
+	/*
 	 * ok, everything is setup.. let's go to work
 	 */
 	for (;;)
@@ -1585,6 +1593,7 @@ ExecInitMergeJoin(MergeJoin *node, EState *estate, int eflags)
 					 (PlanState *) mergestate);
 
 	mergestate->prefetch_inner = node->join.prefetch_inner;
+	mergestate->prefetch_joinqual = ShouldPrefetchJoinQual(estate, &node->join);
 	mergestate->mj_squelchInner = true;
 	/* Prepare inner operators for rewind after the prefetch */
 	rewindflag = mergestate->prefetch_inner ? EXEC_FLAG_REWIND : 0;

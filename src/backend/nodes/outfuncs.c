@@ -404,6 +404,7 @@ _outJoinPlanInfo(StringInfo str, Join *node)
 	_outPlanInfo(str, (Plan *) node);
 
 	WRITE_BOOL_FIELD(prefetch_inner);
+	WRITE_BOOL_FIELD(prefetch_joinqual);
 
 	WRITE_ENUM_FIELD(jointype, JoinType);
 	WRITE_NODE_FIELD(joinqual);

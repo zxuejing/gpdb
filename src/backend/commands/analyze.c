@@ -1524,6 +1524,17 @@ acquire_sample_rows_by_query(Relation onerel, int nattrs, VacAttrStats **attrsta
 	*totalrows = relTuples;
 	*totaldeadrows = 0;
 	*totalblocks = relPages;
+
+	if (RelationIsHeap(onerel) && relTuples == 0 && relPages > 0)
+	{
+		/*
+		 * NOTICE user when all sampled pages are empty
+		 */
+		ereport(NOTICE,
+			(errmsg("ANALYZE detected all empty sample pages for relation \"%s\".",
+				RelationGetRelationName(onerel)),
+			 errhint("Run VACUUM FULL on the relation to generate more accurate statistics.")));
+	}
 	if (relTuples == 0.0)
 		return 0;
 

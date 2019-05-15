@@ -2172,7 +2172,6 @@ CTranslatorScalarToDXL::TranslateGenericDatumToDXL
 	CMDIdGPDB *mdid_old = CMDIdGPDB::CastMdid(md_type->MDId());
 	CMDIdGPDB *mdid = GPOS_NEW(mp) CMDIdGPDB(*mdid_old);
 
-	BOOL is_const_by_val = md_type->IsPassedByValue();
 	BYTE *bytes = ExtractByteArrayFromDatum(mp, md_type, is_null, len, datum);
 	ULONG length = 0;
 	if (!is_null)
@@ -2192,7 +2191,7 @@ CTranslatorScalarToDXL::TranslateGenericDatumToDXL
 		lint_value = ExtractLintValueFromDatum(mdid, is_null, bytes, length);
 	}
 
-	return CMDTypeGenericGPDB::CreateDXLDatumVal(mp, mdid, type_modifier, is_const_by_val, is_null, bytes, length, lint_value, double_value);
+	return CMDTypeGenericGPDB::CreateDXLDatumVal(mp, mdid, type_modifier, is_null, bytes, length, lint_value, double_value);
 }
 
 

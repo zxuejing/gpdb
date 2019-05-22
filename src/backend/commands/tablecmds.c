@@ -11622,11 +11622,22 @@ static void checkUniqueIndexCompatible(Relation rel, GpPolicy *pol)
 			}
 			if (!compatible)
 			{
+				HeapTuple		classTuple;
+				Form_pg_class	classStruct;
+
+				classTuple = SearchSysCache1(RELOID,
+											 ObjectIdGetDatum(indexoid));
+				if (!HeapTupleIsValid(classTuple))
+					elog(FATAL, "cache lookup failed for incompatible index %u", indexoid);
+				classStruct = (Form_pg_class) GETSTRUCT(classTuple);
+
 				ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 					 errmsg("UNIQUE INDEX and DISTRIBUTED BY definitions incompatible"),
-					 errhint("the DISTRIBUTED BY columns must be equal to "
-							 "or a left-subset of the UNIQUE INDEX columns.")));
+					 errhint("The DISTRIBUTED BY columns must be equal to "
+							 "or a left-subset of the UNIQUE INDEX \"%s\" columns.",
+							 NameStr(classStruct->relname))));
+				ReleaseSysCache(classTuple);
 			}
 		}
 

@@ -775,6 +775,22 @@ EagerFreeWalker(PlanState *node, void *context)
 		}
 	}
 
+	/*
+	 * If we have a Material node on top of Motion, there is a good chance the
+	 * Material was added to prevent Rescans of the underlying Motion node.
+	 * It is safer to not eagerly free the memory for the Material node in case
+	 * the subtree is rescanned.
+	 */
+	if (IsA(node, MaterialState))
+	{
+		PlanState *lefttree = node->lefttree;
+		if ((lefttree != NULL && IsA(lefttree, MotionState)) || node->delayEagerFree)
+		{
+			/* Skip the subtree */
+			return CdbVisit_Skip;
+		}
+	}
+
 	ExecEagerFree(node);
 	
 	return CdbVisit_Walk;

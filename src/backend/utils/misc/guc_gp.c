@@ -124,6 +124,10 @@ static const char *assign_gp_default_storage_options(
 static bool assign_pljava_classpath_insecure(bool newval, bool doit, GucSource source);
 static bool assign_gp_resource_group_bypass(bool newval, bool doit, GucSource source);
 
+static const char *assign_memory_spill_ratio(const char *newval, bool doit,
+											 GucSource source pg_attribute_unused());
+static const char *show_memory_spill_ratio(void);
+
 extern struct config_generic *find_option(const char *name, bool create_placeholders, int elevel);
 
 extern bool enable_partition_rules;
@@ -356,6 +360,7 @@ static char *gp_workfile_caching_loglevel_str;
 static char *gp_sessionstate_loglevel_str;
 static char *explain_memory_verbosity_str;
 static char *optimizer_join_order_str;
+static char *memory_spill_ratio_str;
 
 /* Backoff-related GUCs */
 bool		gp_enable_resqueue_priority;
@@ -3517,15 +3522,6 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
-		{"memory_spill_ratio", PGC_USERSET, RESOURCES_MEM,
-			gettext_noop("Sets the memory_spill_ratio for resource group."),
-			NULL
-		},
-		&memory_spill_ratio,
-		20, 0, 100, NULL, NULL
-	},
-
-	{
 		{"gp_resource_group_cpu_priority", PGC_POSTMASTER, RESOURCES,
 			gettext_noop("Sets the cpu priority for postgres processes when resource group is enabled."),
 			NULL
@@ -5450,6 +5446,20 @@ struct config_string ConfigureNamesString_gp[] =
 		"eager_free", gpvars_assign_gp_resgroup_memory_policy, gpvars_show_gp_resgroup_memory_policy
 	},
 
+	/*
+	 * Default value of the memory_spill_ratio GUC will be ignored.
+	 * Refer to ResGroupMemorySpillFromStr() for details of the string format.
+	 */
+	{
+		{"memory_spill_ratio", PGC_USERSET, RESOURCES_MEM,
+			gettext_noop("Sets the memory_spill_ratio for resource group.")
+		},
+		&memory_spill_ratio_str,
+		"0",
+		assign_memory_spill_ratio,
+		show_memory_spill_ratio
+	},
+
 	{
 		{"gp_test_time_slice_report_level", PGC_USERSET, LOGGING_WHEN,
 			gettext_noop("Sets the message level for time slice violation reports."),
@@ -5938,6 +5948,30 @@ assign_gp_resource_group_bypass(bool newval, bool doit, GucSource source)
 
 	elog(ERROR, "SET gp_resource_group_bypass cannot run inside a transaction block");
 	return false;
+}
+
+static const char *
+assign_memory_spill_ratio(const char *newval, bool doit,
+						  GucSource source pg_attribute_unused())
+{
+	int32		value;
+
+	value = ResGroupMemorySpillFromStr(newval);
+
+	if (doit)
+		memory_spill_ratio = value;
+
+	return newval;
+}
+
+static const char *
+show_memory_spill_ratio(void)
+{
+	static char buf[16];
+
+	ResGroupMemorySpillToStr(memory_spill_ratio, buf, sizeof(buf));
+
+	return buf;
 }
 
 static const char *

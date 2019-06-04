@@ -104,6 +104,9 @@ typedef struct ReadTupleForUpdateInfo
 }
 
 static PersistentFileSysObjPrivateSharedMemory *persistentFileSysObjPrivateSharedData = NULL;
+static bool DebugPrintPersistentState_ShouldLog (Datum *values,
+												 PersistentFsObjType fsObjType,
+												 bool is_start);
 
 static inline bool
 PersistentFileSysObj_IsMirrorReCreate(
@@ -198,12 +201,12 @@ static void PersistentFileSysObj_PrintRelationFile(
 	if (relationStorageManager == PersistentFileSysRelStorageMgr_BufferPool)
 	{
 		elog(elevel,
-			 "%s gp_persistent_relation_node %s: %u/%u/%u, segment file #%d, relation storage manager '%s', persistent state '%s', create mirror data loss tracking session num " INT64_FORMAT ", "
-			 "mirror existence state '%s', data synchronization state '%s', "
-			 "Buffer Pool (marked for scan incremental resync = %s, "
-			 "resync changed page count " INT64_FORMAT ", "
-			 "resync checkpoint loc %s, resync checkpoint block num %u), "
-			 "relation buffer pool kind %u, parent xid %u, "
+			 "%s gp_persistent_relation_node %s: %u/%u/%u, segment file #%d, storage manager '%s', persistent state '%s', data loss tracking " INT64_FORMAT ", "
+			 "mirror existence state '%s', data sync state '%s', "
+			 "bufpool (incremental resync = %s, "
+			 "changed page count " INT64_FORMAT ", "
+			 "resync checkpoint loc %s, resync checkpoint block %u), "
+			 "bufpoolkind %u, parentXid %u, "
 			 "persistent serial num " INT64_FORMAT,
 			 prefix,
 			 ItemPointerToString(persistentTid),
@@ -4483,6 +4486,8 @@ typedef enum StateAction
 	StateAction_MirrorReDrop = 4,
 	StateAction_MirrorReDropped = 5,
 	StateAction_MirrorAdd = 6,
+	StateAction_DebugPrintPersistentStateStart = 7,
+	StateAction_DebugPrintPersistentStateEnd = 8,
 	MaxStateAction /* must always be last */
 } StateAction;
 
@@ -4970,6 +4975,22 @@ static void PersistentFileSysObj_ScanStateAction(
 
 			heap_freetuple(tupleCopy);
 			break;
+		case StateAction_DebugPrintPersistentStateStart:
+			if (DebugPrintPersistentState_ShouldLog(values, fsObjType, false))
+				(fileSysObjData->storeData.printTupleCallback)(
+					LOG,
+					"DebugPrintPersistentState",
+					&persistentTid,
+					values);
+			break;
+		case StateAction_DebugPrintPersistentStateEnd:
+			if (DebugPrintPersistentState_ShouldLog(values, fsObjType, false))
+				(fileSysObjData->storeData.printTupleCallback)(
+					LOG,
+					"DebugPrintPersistentState",
+					&persistentTid,
+					values);
+			break;
 
 		default:
 			elog(ERROR, "Unexpected state-action: %d",
@@ -4987,6 +5008,94 @@ static void PersistentFileSysObj_ScanStateAction(
 	PersistentStore_EndScan(&storeScan);
 
 	pfree(values);
+}
+
+static bool DebugPrintPersistentState_ShouldLog(
+	Datum *values,
+	PersistentFsObjType fsObjType,
+	bool is_start)
+{
+	if (fsObjType == PersistentFsObjType_RelationFile)
+	{
+		RelFileNode relFileNode;
+		int32       segmentFileNum;
+
+		PersistentFileSysRelStorageMgr      relationStorageManager;
+		PersistentFileSysState              persistentState;
+		int64	                            createMirrorDataLossTrackingSessionNum;
+		MirroredObjectExistenceState        mirrorExistenceState;
+		MirroredRelDataSynchronizationState mirrorDataSynchronizationState;
+		bool
+		                                    mirrorBufpoolMarkedForScanIncrementalResync;
+		int64                               mirrorBufpoolResyncChangedPageCount;
+		XLogRecPtr                          mirrorBufpoolResyncCkptLoc;
+		BlockNumber                         mirrorBufpoolResyncCkptBlockNum;
+		int64                               mirrorAppendOnlyLossEof;
+		int64                               mirrorAppendOnlyNewEof;
+		PersistentFileSysRelBufpoolKind     relBufpoolKind;
+		TransactionId                       parentXid;
+		int64                               persistentSerialNum;
+
+
+		GpPersistentRelationNode_GetValues(
+			values,
+			&relFileNode.spcNode,
+			&relFileNode.dbNode,
+			&relFileNode.relNode,
+			&segmentFileNum,
+			&relationStorageManager,
+			&persistentState,
+			&createMirrorDataLossTrackingSessionNum,
+			&mirrorExistenceState,
+			&mirrorDataSynchronizationState,
+			&mirrorBufpoolMarkedForScanIncrementalResync,
+			&mirrorBufpoolResyncChangedPageCount,
+			&mirrorBufpoolResyncCkptLoc,
+			&mirrorBufpoolResyncCkptBlockNum,
+			&mirrorAppendOnlyLossEof,
+			&mirrorAppendOnlyNewEof,
+			&relBufpoolKind,
+			&parentXid,
+			&persistentSerialNum);
+
+		if (is_start)
+		{
+			if (persistentState != PersistentFileSysState_Created &&
+				mirrorExistenceState != MirroredObjectExistenceState_MirrorDownBeforeCreate &&
+				mirrorDataSynchronizationState != MirroredRelDataSynchronizationState_DataSynchronized)
+				return true;
+		}
+		else
+		{
+			if (persistentState != PersistentFileSysState_Created &&
+				mirrorExistenceState != MirroredObjectExistenceState_MirrorCreated &&
+				mirrorDataSynchronizationState != MirroredRelDataSynchronizationState_FullCopy)
+				return true;
+		}
+		return false;
+	}
+	return true;
+}
+
+void PersistentFileSysObj_DebugPrintPersistentState(bool is_start)
+{
+	if (!isFullResync() || !Debug_filerep_config_print)
+		return;
+
+	PersistentFsObjType		fsObjType;
+
+	PersistentFileSysObj_VerifyInitScan();
+	StateAction action = is_start ? StateAction_DebugPrintPersistentStateStart :
+									StateAction_DebugPrintPersistentStateEnd;
+
+	for (fsObjType = PersistentFsObjType_First;
+	     fsObjType <= PersistentFsObjType_Last;
+	     fsObjType++)
+	{
+		PersistentFileSysObj_ScanStateAction(
+			action,
+			fsObjType);
+	}
 }
 
 void PersistentFileSysObj_MarkWholeMirrorFullCopy(void)

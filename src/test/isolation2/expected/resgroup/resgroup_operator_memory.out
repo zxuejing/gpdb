@@ -10,10 +10,8 @@ DROP VIEW IF EXISTS many_ops;
 DROP ROLE r1_opmem_test;
 DROP RESOURCE GROUP rg1_opmem_test;
 DROP RESOURCE GROUP rg2_opmem_test;
---end_ignore
-
 CREATE LANGUAGE plpythonu;
-CREATE
+--end_ignore
 
 -- a helper function to run query via SPI
 CREATE OR REPLACE FUNCTION f1_opmem_test() RETURNS void AS $$ plpy.execute("""select * from gp_dist_random('gp_id')""") $$ LANGUAGE plpythonu;
@@ -62,7 +60,7 @@ SET
 SELECT * FROM many_ops;
 groupid|groupname    |concurrency|proposed_concurrency|cpu_rate_limit|memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota|memory_spill_ratio|proposed_memory_spill_ratio
 -------+-------------+-----------+--------------------+--------------+------------+---------------------+-------------------+----------------------------+------------------+---------------------------
-6437   |default_group|20         |20                  |30            |30          |30                   |80                 |80                          |100 MB            |100 MB                     
+6437   |default_group|20         |20                  |30            |30          |30                   |80                 |80                          |10                |10                         
 (1 row)
 RESET role;
 RESET
@@ -74,7 +72,7 @@ SET
 SELECT * FROM many_ops;
 groupid|groupname    |concurrency|proposed_concurrency|cpu_rate_limit|memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota|memory_spill_ratio|proposed_memory_spill_ratio
 -------+-------------+-----------+--------------------+--------------+------------+---------------------+-------------------+----------------------------+------------------+---------------------------
-6437   |default_group|20         |20                  |30            |30          |30                   |80                 |80                          |100 MB            |100 MB                     
+6437   |default_group|20         |20                  |30            |30          |30                   |80                 |80                          |10                |10                         
 (1 row)
 RESET role;
 RESET
@@ -130,7 +128,7 @@ SET
 SELECT * FROM many_ops;
 groupid|groupname    |concurrency|proposed_concurrency|cpu_rate_limit|memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota|memory_spill_ratio|proposed_memory_spill_ratio
 -------+-------------+-----------+--------------------+--------------+------------+---------------------+-------------------+----------------------------+------------------+---------------------------
-6437   |default_group|20         |20                  |30            |30          |30                   |80                 |80                          |100 MB            |100 MB                     
+6437   |default_group|20         |20                  |30            |30          |30                   |80                 |80                          |10                |10                         
 (1 row)
 RESET role;
 RESET
@@ -142,7 +140,7 @@ SET
 SELECT * FROM many_ops;
 groupid|groupname    |concurrency|proposed_concurrency|cpu_rate_limit|memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota|memory_spill_ratio|proposed_memory_spill_ratio
 -------+-------------+-----------+--------------------+--------------+------------+---------------------+-------------------+----------------------------+------------------+---------------------------
-6437   |default_group|20         |20                  |30            |30          |30                   |80                 |80                          |100 MB            |100 MB                     
+6437   |default_group|20         |20                  |30            |30          |30                   |80                 |80                          |10                |10                         
 (1 row)
 RESET role;
 RESET
@@ -169,7 +167,7 @@ SET
 SELECT * FROM many_ops;
 groupid|groupname    |concurrency|proposed_concurrency|cpu_rate_limit|memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota|memory_spill_ratio|proposed_memory_spill_ratio
 -------+-------------+-----------+--------------------+--------------+------------+---------------------+-------------------+----------------------------+------------------+---------------------------
-6437   |default_group|20         |20                  |30            |30          |30                   |80                 |80                          |100 MB            |100 MB                     
+6437   |default_group|20         |20                  |30            |30          |30                   |80                 |80                          |10                |10                         
 (1 row)
 RESET role;
 RESET
@@ -181,7 +179,7 @@ SET
 SELECT * FROM many_ops;
 groupid|groupname    |concurrency|proposed_concurrency|cpu_rate_limit|memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota|memory_spill_ratio|proposed_memory_spill_ratio
 -------+-------------+-----------+--------------------+--------------+------------+---------------------+-------------------+----------------------------+------------------+---------------------------
-6437   |default_group|20         |20                  |30            |30          |30                   |80                 |80                          |100 MB            |100 MB                     
+6437   |default_group|20         |20                  |30            |30          |30                   |80                 |80                          |10                |10                         
 (1 row)
 RESET role;
 RESET
@@ -200,7 +198,7 @@ SET
 SELECT * FROM many_ops;
 groupid|groupname    |concurrency|proposed_concurrency|cpu_rate_limit|memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota|memory_spill_ratio|proposed_memory_spill_ratio
 -------+-------------+-----------+--------------------+--------------+------------+---------------------+-------------------+----------------------------+------------------+---------------------------
-6437   |default_group|20         |20                  |30            |30          |30                   |80                 |80                          |100 MB            |100 MB                     
+6437   |default_group|20         |20                  |30            |30          |30                   |80                 |80                          |10                |10                         
 (1 row)
 SELECT f1_opmem_test();
 f1_opmem_test
@@ -217,7 +215,7 @@ SET
 SELECT * FROM many_ops;
 groupid|groupname    |concurrency|proposed_concurrency|cpu_rate_limit|memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota|memory_spill_ratio|proposed_memory_spill_ratio
 -------+-------------+-----------+--------------------+--------------+------------+---------------------+-------------------+----------------------------+------------------+---------------------------
-6437   |default_group|20         |20                  |30            |30          |30                   |80                 |80                          |100 MB            |100 MB                     
+6437   |default_group|20         |20                  |30            |30          |30                   |80                 |80                          |10                |10                         
 (1 row)
 SELECT f1_opmem_test();
 f1_opmem_test

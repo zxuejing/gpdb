@@ -32,24 +32,16 @@
 #include "utils/builtins.h"
 #include "utils/datetime.h"
 #include "utils/fmgroids.h"
-#include "utils/guc_tables.h"
 #include "utils/resgroup.h"
 #include "utils/resgroup-ops.h"
 #include "utils/resource_manager.h"
 #include "utils/resowner.h"
 #include "utils/syscache.h"
 #include "utils/faultinjector.h"
-#include "utils/vmem_tracker.h"
 
 #define RESGROUP_DEFAULT_CONCURRENCY (20)
-#define RESGROUP_DEFAULT_MEMORY_LIMIT (0)
-#define RESGROUP_DEFAULT_MEM_SHARED_QUOTA (80)
-/*
- * The default memory_spill_ratio value is 128MB, it is in absolute value
- * format, so it is represented as a negative value, and as its unit is chunk,
- * so need a conversion.
- */
-#define RESGROUP_DEFAULT_MEM_SPILL_RATIO (-VmemTracker_ConvertVmemMBToChunks(128))
+#define RESGROUP_DEFAULT_MEM_SHARED_QUOTA (20)
+#define RESGROUP_DEFAULT_MEM_SPILL_RATIO (20)
 
 #define RESGROUP_DEFAULT_MEM_AUDITOR (RESGROUP_MEMORY_AUDITOR_VMTRACKER)
 #define RESGROUP_INVALID_MEM_AUDITOR (-1)
@@ -608,7 +600,8 @@ GetResGroupCapabilities(Relation rel, Oid groupId, ResGroupCaps *resgroupCaps)
 													   getResgroupOptionName(type));
 				break;
 			case RESGROUP_LIMIT_TYPE_MEMORY_SPILL_RATIO:
-				resgroupCaps->memSpillRatio = ResGroupMemorySpillFromStr(proposed);
+				resgroupCaps->memSpillRatio = str2Int(proposed,
+													  getResgroupOptionName(type));
 				break;
 			case RESGROUP_LIMIT_TYPE_MEMORY_AUDITOR:
 				resgroupCaps->memAuditor = str2Int(proposed,
@@ -836,10 +829,6 @@ getResgroupOptionValue(DefElem *defel, int type)
 		char *auditor_name = defGetString(defel);
 		value = getResGroupMemAuditor(auditor_name);
 	}
-	else if (type == RESGROUP_LIMIT_TYPE_MEMORY_SPILL_RATIO)
-	{
-		value = ResGroupMemorySpillFromStr(defGetString(defel));
-	}
 	else
 	{
 		value = defGetInt64(defel);
@@ -931,12 +920,13 @@ checkResgroupCapLimit(ResGroupLimitType type, int value)
 				break;
 
 			case RESGROUP_LIMIT_TYPE_MEMORY_SPILL_RATIO:
-				/*
-				 * memory_spill_ratio is already checked when parsing it.
-				 *
-				 * On the other hand negative value is used as absolute value,
-				 * there is no chance to check the range now, so nothing to do.
-				 */
+				if (value < RESGROUP_MIN_MEMORY_SPILL_RATIO ||
+					value > RESGROUP_MAX_MEMORY_SPILL_RATIO)
+					ereport(ERROR,
+							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+							errmsg("memory_spill_ratio range is [%d, %d]",
+								   RESGROUP_MIN_MEMORY_SPILL_RATIO,
+								   RESGROUP_MAX_MEMORY_SPILL_RATIO)));
 				break;
 
 			case RESGROUP_LIMIT_TYPE_MEMORY_AUDITOR:
@@ -962,13 +952,15 @@ static void
 checkResgroupCapConflicts(ResGroupCaps *caps)
 {
 	/*
-	 * When memory_limit is unlimited the memory_spill_ratio must be set in
-	 * absolute value format.
+	 * When memory_limit is unlimited the memory_spill_ratio must be set to
+	 * 'fallback' mode to use the statement_mem.
 	 */
-	if (caps->memLimit == 0 && caps->memSpillRatio > 0)
+	if (caps->memLimit == RESGROUP_UNLIMITED_MEMORY_LIMIT &&
+		caps->memSpillRatio != RESGROUP_FALLBACK_MEMORY_SPILL_RATIO)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("when memory_limit is unlimited memory_spill_ratio must be set in absolute value format")));
+				 errmsg("when memory_limit is unlimited memory_spill_ratio must be set to %d",
+						RESGROUP_FALLBACK_MEMORY_SPILL_RATIO)));
 
 	/*
 	 * When memory_auditor is cgroup the concurrency must be 0.
@@ -1068,6 +1060,11 @@ parseStmtOptions(CreateResourceGroupStmt *stmt, ResGroupCaps *caps)
 	if ((mask & (1 << RESGROUP_LIMIT_TYPE_CPUSET)))
 		EnsureCpusetIsAvailable(ERROR);
 
+	if (!(mask & (1 << RESGROUP_LIMIT_TYPE_MEMORY)))
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				errmsg("must specify memory_limit")));
+
 	if ((mask & (1 << RESGROUP_LIMIT_TYPE_CPU)) &&
 		(mask & (1 << RESGROUP_LIMIT_TYPE_CPUSET)))
 		ereport(ERROR,
@@ -1079,9 +1076,6 @@ parseStmtOptions(CreateResourceGroupStmt *stmt, ResGroupCaps *caps)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 				errmsg("must specify cpu_rate_limit or cpuset")));
-
-	if (!(mask & (1 << RESGROUP_LIMIT_TYPE_MEMORY)))
-		caps->memLimit = RESGROUP_DEFAULT_MEMORY_LIMIT;
 
 	if (!(mask & (1 << RESGROUP_LIMIT_TYPE_CONCURRENCY)))
 		caps->concurrency = RESGROUP_DEFAULT_CONCURRENCY;
@@ -1183,7 +1177,7 @@ insertResgroupCapabilities(Relation rel, Oid groupId, ResGroupCaps *caps)
 	insertResgroupCapabilityEntry(rel, groupId,
 								  RESGROUP_LIMIT_TYPE_MEMORY_SHARED_QUOTA, value);
 
-	ResGroupMemorySpillToStr(caps->memSpillRatio, value, sizeof(value));
+	sprintf(value, "%d", caps->memSpillRatio);
 	insertResgroupCapabilityEntry(rel, groupId,
 								  RESGROUP_LIMIT_TYPE_MEMORY_SPILL_RATIO, value);
 
@@ -1253,10 +1247,6 @@ updateResgroupCapabilityEntry(Relation rel,
 	if (limitType == RESGROUP_LIMIT_TYPE_CPUSET)
 	{
 		StrNCpy(stringBuffer, strValue, sizeof(stringBuffer));
-	}
-	else if (limitType == RESGROUP_LIMIT_TYPE_MEMORY_SPILL_RATIO)
-	{
-		ResGroupMemorySpillToStr((int32) value, stringBuffer, sizeof(stringBuffer));
 	}
 	else
 	{
@@ -1598,102 +1588,4 @@ checkCpusetSyntax(const char *cpuset)
 		return false;
 	}
 	return true;
-}
-
-/*
- * Parse memory_spill_ratio from string.
- *
- * It has two input formats:
- * - the percentage format is an integer value within [0, 100], return the
- *   percentage;
- * - the absolute value format is in "number unit" format, where "unit" can be
- *   "kB", "MB", "GB" or "TB", the "number" must be > 0, it is converted to
- *   chunks, return (-1 * chunks);
- */
-int32
-ResGroupMemorySpillFromStr(const char *str)
-{
-	const char *prop = "memory_spill_ratio";
-	int32		value;
-
-	/* if memory spill ratio is percentile value */
-	if (parse_int(str, &value, 0, NULL))
-	{
-		if (value < RESGROUP_MIN_MEMORY_SPILL_RATIO ||
-			value > RESGROUP_MAX_MEMORY_SPILL_RATIO)
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("%s in percentage format must be in the range [%d, %d]",
-							prop,
-							RESGROUP_MIN_MEMORY_SPILL_RATIO,
-							RESGROUP_MAX_MEMORY_SPILL_RATIO)));
-		return value;
-	}
-	/* for absolute value, all int value are allowed */
-	else if (parse_int(str, &value, GUC_UNIT_KB, NULL))
-	{
-		if (value <= 0)
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("%s in absolute value format must be > 0", prop)));
-
-		return -Max(1,
-					VmemTracker_ConvertVmemMBToChunks(value >> 10));
-	}
-	else
-		ereport(ERROR,
-				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("syntax error on capability %s", prop)));
-}
-
-/*
- * Convert memory_spill_ratio to a string.
- *
- * Refer to ResGroupMemorySpillFromStr() for details of the string format.
- */
-void
-ResGroupMemorySpillToStr(int32 value, char *buf, int bufsize)
-{
-	if (value >= 0)
-	{
-		/* The value is in the percentage format */
-		snprintf(buf, bufsize, "%d", value);
-	}
-	else
-	{
-		/* The value is in the absolute value format */
-
-		/* Below logic is derived from _ShowOption() */
-
-#define KB_PER_MB (1024)
-#define KB_PER_GB (1024*1024)
-#define KB_PER_TB (1024*1024*1024)
-
-		int64		result;
-		const char *unit;
-
-		result = -(VmemTracker_ConvertVmemChunksToMB(value) << 10);
-		if (result % KB_PER_TB == 0)
-		{
-			result /= KB_PER_TB;
-			unit = "TB";
-		}
-		else if (result % KB_PER_GB == 0)
-		{
-			result /= KB_PER_GB;
-			unit = "GB";
-		}
-		else if (result % KB_PER_MB == 0)
-		{
-			result /= KB_PER_MB;
-			unit = "MB";
-		}
-		else
-		{
-			unit = "kB";
-		}
-
-		snprintf(buf, bufsize, INT64_FORMAT " %s",
-				 result, unit);
-	}
 }

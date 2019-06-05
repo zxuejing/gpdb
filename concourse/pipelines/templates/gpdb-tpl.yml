@@ -329,6 +329,7 @@ resource_types:
   type: docker-image
   source:
     repository: ljfranklin/terraform-resource
+    tag: 0.11.14
 
 ## ======================================================================
 ##  _ __ ___  ___  ___  _   _ _ __ ___ ___  ___

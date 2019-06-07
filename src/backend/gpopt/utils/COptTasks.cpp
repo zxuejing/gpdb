@@ -808,8 +808,9 @@ COptTasks::CreateOptimizerConfig
 								array_expansion_threshold,
 								join_order_threshold,
 								broadcast_threshold,
-								false /* don't create Assert nodes for constraints, we'll
+								false, /* don't create Assert nodes for constraints, we'll
 								      * enforce them ourselves in the executor */
+								PUSH_GROUP_BY_BELOW_SETOP_THRESHOLD
 								),
 						GPOS_NEW(mp) CWindowOids(OID(F_WINDOW_DUMMY), OID(F_WINDOW_RANK_OID))
 						);

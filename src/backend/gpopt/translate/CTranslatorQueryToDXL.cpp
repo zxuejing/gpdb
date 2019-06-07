@@ -406,13 +406,9 @@ CTranslatorQueryToDXL::CheckSupportedCmdType
 
 	if (CMD_SELECT == query->commandType)
 	{
-		if (!optimizer_enable_ctas && (NULL != query->intoClause || query->isCopy))
+		if (!optimizer_enable_ctas && NULL != query->intoClause)
 		{
 			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("CTAS. Set optimizer_enable_ctas to on to enable CTAS with GPORCA"));
-		}
-		if (query->isCopy)
-		{
-			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("COPY. Copy select statement to file on segment is not supported with GPORCA"));
 		}
 		
 		// supported: regular select or CTAS when it is enabled
@@ -630,7 +626,7 @@ CTranslatorQueryToDXL::TranslateQueryToDXL()
 	switch (m_query->commandType)
 	{
 		case CMD_SELECT:
-			if (NULL == m_query->intoClause && !m_query->isCopy)
+			if (NULL == m_query->intoClause)
 			{
 				return TranslateSelectQueryToDXL();
 			}

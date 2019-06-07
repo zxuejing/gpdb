@@ -868,8 +868,6 @@ _equalQuery(Query *a, Query *b)
 	if (!GpPolicyEqual(a->intoPolicy, b->intoPolicy))
 		return false;
 
-	COMPARE_SCALAR_FIELD(isCopy);
-
 	return true;
 }
 

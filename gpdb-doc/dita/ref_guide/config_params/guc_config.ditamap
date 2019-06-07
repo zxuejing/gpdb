@@ -78,7 +78,6 @@
             <topicref href="guc-list.xml#gp_email_smtp_server"/>
             <topicref href="guc-list.xml#gp_email_smtp_userid"/>
             <topicref href="guc-list.xml#gp_email_to"/>
-            <topicref href="guc-list.xml#gp_enable_adaptive_nestloop"/>
             <topicref href="guc-list.xml#gp_enable_agg_distinct"/>
             <topicref href="guc-list.xml#gp_enable_agg_distinct_pruning"/>
             <topicref href="guc-list.xml#gp_enable_direct_dispatch"/>

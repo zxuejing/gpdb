@@ -3751,6 +3751,11 @@ select dat, count(*) from mpp7863 group by 1 order by 2,1;
 -- Test that pg_get_expr() can be used on the pg_partition_rule columns that
 -- store expressions, even by non-superusers. pg_get_expr() is restricted
 -- to specific system catalogs, for security reasons.
+--
+-- While we're at it, also test the same for pg_class.proargdefaults column,
+-- even though that's got nothing to do with partitions. We originally missed
+-- allowing that in the GPDB 5 release, because GPDB 5 is based on PostgreSQL
+-- 8.4, but function defaults was backported 9.0.
 create role part_expr_role;
 NOTICE:  resource queue required -- using default resource queue "pg_default"
 CREATE TABLE part_expr_test_range (id int) DISTRIBUTED BY (id)
@@ -3760,11 +3765,14 @@ NOTICE:  CREATE TABLE will create partition "part_expr_test_range_1_prt_2" for t
 CREATE TABLE part_expr_test_list (id int) DISTRIBUTED BY (id)
 PARTITION BY list(id) (partition p1 values(1, 2, 3));
 NOTICE:  CREATE TABLE will create partition "part_expr_test_list_1_prt_p1" for table "part_expr_test_list"
+CREATE FUNCTION dfunc_expr_test(a int = 1, int = 2) RETURNS int
+AS $$ select $1 + $2; $$
+LANGUAGE SQL;
 set session authorization part_expr_role;
 -- This should throw a "not allowed" error.
 select pg_get_expr('bogus', 'pg_class'::regclass);
 ERROR:  argument to pg_get_expr() must come from system catalogs
--- But this should
+-- But these should work.
 select p.parrelid::regclass, pr.parchildrelid::regclass,
        pg_get_expr(parrangestart, pr.parchildrelid),
        pg_get_expr(parrangeend, pr.parchildrelid),
@@ -3780,7 +3788,15 @@ and p.parrelid in ('part_expr_test_range'::regclass, 'part_expr_test_list'::regc
  part_expr_test_list  | part_expr_test_list_1_prt_p1 |             |             |             | 1, 2, 3
 (3 rows)
 
+select pg_get_expr(proargdefaults, 'pg_class'::regclass) from pg_proc pr
+where oid = 'dfunc_expr_test'::regproc;
+ pg_get_expr 
+-------------
+ 1, 2
+(1 row)
+
 reset session authorization;
 DROP TABLE part_expr_test_range;
 DROP TABLE part_expr_test_list;
+DROP FUNCTION dfunc_expr_test(int, int);
 DROP ROLE part_expr_role;

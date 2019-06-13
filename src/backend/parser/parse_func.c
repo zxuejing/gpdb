@@ -1993,6 +1993,11 @@ check_pg_get_expr_arg(ParseState *pstate, Node *arg, int netlevelsup)
 						return true;
 					break;
 
+				case ProcedureRelationId:
+					if (attnum == Anum_pg_proc_proargdefaults)
+						return true;
+					break;
+
 				case ConstraintRelationId:
 					if (attnum == Anum_pg_constraint_conbin)
 						return true;

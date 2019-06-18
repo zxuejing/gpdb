@@ -842,6 +842,7 @@ INFO:  Dispatch command to SINGLE content
 
 select count(*) from range_table where id=1;
 INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
  count 
 -------
      1

@@ -863,8 +863,19 @@ gp_add_segment_mirror(PG_FUNCTION_ARGS)
 
 	mirroring_sanity_check(MASTER_ONLY | SUPERUSER, "gp_add_segment_mirror");
 
-	/* avoid races */
-	rel = heap_open(GpSegmentConfigRelationId, AccessExclusiveLock);
+	/*
+	 * avoid races - no one else should be allowed to update
+	 * gp_segment_configuration when we read and add entry to this table. Use
+	 * ExclusiveLock to still allow FTS probe to proceed, because we ourselves
+	 * might request a fts probe in case of failure or timeout when QD polls
+	 * results of add_segment_persistent_entries() from QEs. Note that FTS
+	 * acquires an AccessShareLock when it reads from gp_segment_configuration,
+	 * and only acquires another RowExclusiveLock if it decides to modify it.
+	 *
+	 * FIXME: there exists an edge case that if any other segment failed during
+	 * the FTS probe requested by us, deadlock will still happen.
+	 */
+	rel = heap_open(GpSegmentConfigRelationId, ExclusiveLock);
 
 	pridbid = contentid_get_dbid(contentid, SEGMENT_ROLE_PRIMARY, false /* false == current, not preferred, role */);
 	if (!pridbid)
@@ -922,8 +933,19 @@ gp_remove_segment_mirror(PG_FUNCTION_ARGS)
 
 	mirroring_sanity_check(MASTER_ONLY | SUPERUSER, "gp_remove_segment_mirror");
 
-	/* avoid races */
-	rel = heap_open(GpSegmentConfigRelationId, AccessExclusiveLock);
+	/*
+	 * avoid races - no one else should be allowed to update
+	 * gp_segment_configuration when we read and add entry to this table. Use
+	 * ExclusiveLock to still allow FTS probe to proceed, because we ourselves
+	 * might request a fts probe in case of failure or timeout when QD polls
+	 * results of add_segment_persistent_entries() from QEs. Note that FTS
+	 * acquires an AccessShareLock when it reads from gp_segment_configuration,
+	 * and only acquires another RowExclusiveLock if it decides to modify it.
+	 *
+	 * FIXME: there exists an edge case that if any other segment failed during
+	 * the FTS probe requested by us, deadlock will still happen.
+	 */
+	rel = heap_open(GpSegmentConfigRelationId, ExclusiveLock);
 
 	pridbid = contentid_get_dbid(contentid, SEGMENT_ROLE_PRIMARY, false /* false == current, not preferred, role */);
 

@@ -52,7 +52,7 @@ pushd abi
     find . -name compat_report.html -exec sh -c 'html2text {} > `dirname {}`/compat_report.txt' \;
 popd
 
-if [ -n "$failed_binaries" ]; then
+if [ "${#failed_binaries[@]}" -ne 0 ]; then
     echo
     echo "The following binaries have ABI differences from $old:"
     echo

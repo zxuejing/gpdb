@@ -1972,3 +1972,5 @@ SELECT relname, relpages, reltuples FROM pg_class WHERE relname LIKE 'incr_analy
 
 INSERT INTO t900c SELECT i%130, i%8, 'something'||i::text FROM generate_series(1,100)i;
 ANALYZE t900c;
+INSERT INTO foo_900_numeric_cols SELECT i,i FROM generate_series(1,100)i;
+ANALYZE foo_900_numeric_cols;

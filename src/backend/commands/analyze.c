@@ -1568,6 +1568,7 @@ acquire_sample_rows_by_query(Relation onerel, int nattrs, VacAttrStats **attrsta
 									  attrstats[i]->attr->attlen == -1);
 			bool is_varwidth = (!attrstats[i]->attr->attbyval &&
 									   attrstats[i]->attr->attlen < 0);
+			bool is_numeric = attrstats[i]->attr->atttypid == NUMERICOID;
 
 			if (is_text)
 			{
@@ -1584,7 +1585,8 @@ acquire_sample_rows_by_query(Relation onerel, int nattrs, VacAttrStats **attrsta
 								 attname);
 
 			}
-			else if (is_varlena || is_varwidth)
+			// numeric can be safely ignored while considering large varlen type.
+			else if (!is_numeric && (is_varlena || is_varwidth))
 			{
 				appendStringInfo(&columnStr,
 								 "(case when pg_column_size(Ta.%s) > %d then NULL else Ta.%s  end) as %s, ",

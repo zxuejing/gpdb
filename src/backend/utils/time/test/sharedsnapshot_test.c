@@ -52,7 +52,6 @@ test_write_read_shared_snapshot_for_cursor(void **state)
 	slot.snapshot.xmax = 110;
 	slot.snapshot.xcnt = XCNT;
 	slot.snapshot.xip = xip;
-	slot.slotLock = NULL;
 
 	/* assume the role of a writer to write the snapshot */
 	Gp_role = GP_ROLE_EXECUTE;

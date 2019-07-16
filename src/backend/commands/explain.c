@@ -42,6 +42,7 @@
 #include "utils/tuplesort.h"
 #include "utils/tuplesort_mk.h"
 #include "cdb/cdbdisp.h"                /* CheckDispatchResult() */
+#include "cdb/cdbgang.h"                /* Gang */
 #include "cdb/cdbexplain.h"             /* cdbexplain_recvExecStats */
 #include "cdb/cdbpartition.h"
 #include "cdb/cdbpullup.h"              /* cdbpullup_targetlist() */
@@ -811,6 +812,9 @@ appendGangAndDirectDispatchInfo(StringInfo str, PlanState *planstate, int sliceI
 		{
 			int numSegments;
 			appendStringInfo(str, "  (slice%d;", sliceId);
+
+			if (slice->primaryGang && gp_log_gang >= GPVARS_VERBOSITY_DEBUG)
+				appendStringInfo(str, " gang%d;", slice->primaryGang->gang_id);
 
 			if (slice->directDispatch.isDirectDispatch)
 			{

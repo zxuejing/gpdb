@@ -2007,7 +2007,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 			NULL,
 		},
 		&gp_enable_gpperfmon,
-		false, gpvars_assign_gp_enable_gpperfmon, NULL
+		false, NULL, NULL
 	},
 
 	{
@@ -4293,13 +4293,13 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
-		{"gp_gpperfmon_send_interval", PGC_USERSET, LOGGING_WHAT,
+		{"gp_gpperfmon_send_interval", PGC_SUSET, LOGGING_WHAT,
 			gettext_noop("Interval in seconds between sending messages to gpperfmon."),
 			NULL,
 			GUC_GPDB_ADDOPT
 		},
 		&gp_gpperfmon_send_interval,
-		1, 1, 3600, gpvars_assign_gp_gpperfmon_send_interval, NULL
+		1, 1, 3600, NULL, NULL
 	},
 
 	{

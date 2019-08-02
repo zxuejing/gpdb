@@ -274,10 +274,6 @@
             <li>
               <xref href="#gp_enable_sort_limit"/>
             </li>
-          </ul>
-        </stentry>
-        <stentry>
-          <ul id="ul_wwy_bmx_wp">
             <li>
               <xref href="#gp_external_enable_exec"/>
             </li>
@@ -451,6 +447,10 @@
             <li>
               <xref href="#gp_set_proc_affinity"/>
             </li>
+          </ul>
+        </stentry>
+        <stentry>
+          <ul id="ul_wwy_bmx_wp">
             <li>
               <xref href="#gp_set_read_only"/>
             </li>
@@ -575,10 +575,6 @@
             <li>
               <xref href="#log_min_messages"/>
             </li>
-          </ul>
-        </stentry>
-        <stentry>
-          <ul id="ul_d5f_hmx_wp">
             <li>
               <xref href="#log_parser_stats"/>
             </li>

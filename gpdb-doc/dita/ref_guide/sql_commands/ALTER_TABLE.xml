@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1">
@@ -22,10 +22,11 @@ ALTER TABLE [ONLY] <varname>name</varname> <varname>action</varname> [, ... ]
 
 ALTER TABLE <varname>name</varname>
    [ ALTER PARTITION { <varname>partition_name</varname> | FOR (RANK(<varname>number</varname>)) 
-   | FOR (<varname>value</varname>) } <varname>partition_action</varname> [...] ] 
-   <varname>partition_action</varname></codeblock>
-                        <p>where <varname>action</varname> is one of:</p>
-                        <codeblock>  ADD [COLUMN] <varname>column_name type</varname> [ DEFAULT <varname>default_expr</varname> ]
+   | FOR (<varname>value</varname>) } [...] ] <varname>partition_action</varname>
+
+where <varname>action</varname> is one of:
+                        
+  ADD [COLUMN] <varname>column_name data_type</varname> [ DEFAULT <varname>default_expr</varname> ]
       [<varname>column_constraint</varname> [ ... ]]
       [ ENCODING ( <varname>storage_directive</varname> [,...] ) ]
   DROP [COLUMN] <varname>column</varname> [RESTRICT | CASCADE]
@@ -466,9 +467,13 @@ ALTER TABLE <varname>name</varname>
                                 <plentry>
                                         <pt>ALTER [DEFAULT] PARTITION</pt>
                                         <pd>If altering a partition deeper than the first level of
-                                                partitions, the <codeph>ALTER PARTITION</codeph>
-                                                clause is used to specify which subpartition in the
-                                                hierarchy you want to alter.</pd>
+                                                partitions, use <codeph>ALTER PARTITION</codeph>
+                                                clauses to specify which subpartition in the
+                                                hierarchy you want to alter. For each partition
+                                                level in the table hierarchy that is above the
+                                                target partition, specify the partition that is
+                                                related to the target partition in an <codeph>ALTER
+                                                  PARTITION</codeph> clause.</pd>
                                 </plentry>
                                 <plentry>
                                         <pt>DROP [DEFAULT] PARTITION</pt>
@@ -666,7 +671,11 @@ ALTER TABLE <varname>name</varname>
                                         <pt>
                                                 <varname>partition_name</varname>
                                         </pt>
-                                        <pd>The given name of a partition. </pd>
+                                        <pd>The given name of a partition. The given partition name
+                                                is the <codeph>partitionname</codeph> column value
+                                                in the <i><xref
+                                                  href="../../ref_guide/system_catalogs/pg_partitions.xml"
+                                                  >pg_partitions</xref></i> system view.</pd>
                                 </plentry>
                                 <plentry>
                                         <pt>FOR (RANK(number))</pt>
@@ -817,6 +826,16 @@ INTO (PARTITION jan09, PARTITION other);</codeblock>
                         <codeblock>ALTER TABLE sales SPLIT PARTITION FOR ('2016-01-01')
 AT ('2016-01-16')
 INTO (PARTITION jan081to15, PARTITION jan0816to31);</codeblock>
+                        <p>For a multi-level partitioned table that consists of three levels, year,
+                                quarter, and region, exchange a leaf partition
+                                        <codeph>region</codeph> with the table
+                                        <codeph>region_new</codeph>. </p>
+                        <codeblock>ALTER TABLE sales ALTER PARTITION year_1 ALTER PARTITION quarter_4 EXCHANGE PARTITION region WITH TABLE region_new ;</codeblock>
+                        <p>In the previous command, the two <codeph>ALTER PARTITION</codeph> clauses
+                                identify which <codeph>region</codeph> partition to exchange. Both
+                                clauses are required to identify the specific partition to
+                                exchange.</p>
+                        </codeblock>
                 </section>
                 <section id="section7">
                         <title>Compatibility</title>

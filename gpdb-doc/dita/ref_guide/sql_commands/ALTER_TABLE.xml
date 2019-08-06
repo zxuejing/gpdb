@@ -835,7 +835,6 @@ INTO (PARTITION jan081to15, PARTITION jan0816to31);</codeblock>
                                 identify which <codeph>region</codeph> partition to exchange. Both
                                 clauses are required to identify the specific partition to
                                 exchange.</p>
-                        </codeblock>
                 </section>
                 <section id="section7">
                         <title>Compatibility</title>

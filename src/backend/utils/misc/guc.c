@@ -5673,18 +5673,19 @@ set_config_by_name(PG_FUNCTION_ARGS)
 					  is_local ? GUC_ACTION_LOCAL : GUC_ACTION_SET,
 					  true);
 
-    if (Gp_role == GP_ROLE_DISPATCH && !IsBootstrapProcessingMode())
-    {
-			StringInfoData buffer;
-			initStringInfo(&buffer);
-			appendStringInfo(&buffer, "SET ");
-			if (is_local)
-					appendStringInfo(&buffer, "LOCAL ");
-			appendStringInfo(&buffer, "%s TO '%s'", name, value);
-			CdbDispatchSetCommand(buffer.data,
-								   false /* cancelOnError */,
-								   false /* no two phase commit */);
-    }
+	if (Gp_role == GP_ROLE_DISPATCH && !IsBootstrapProcessingMode())
+	{
+		StringInfoData buffer;
+
+		initStringInfo(&buffer);
+		appendStringInfo(&buffer, "SET ");
+		if (is_local)
+			appendStringInfo(&buffer, "LOCAL ");
+		appendStringInfo(&buffer, "%s TO '%s'", name, value);
+		CdbDispatchSetCommand(buffer.data,
+		                      false /* cancelOnError */,
+		                      false /* need two phase */);
+	}
 
 	/* get the new current value */
 	new_value = GetConfigOptionByName(name, NULL);

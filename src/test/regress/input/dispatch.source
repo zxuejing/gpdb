@@ -14,6 +14,27 @@ CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 
 -- Test quoting of GUC values and database names when they're sent to segments
 
+-- set_config() used to have quoting problems as well when dispatching to
+-- segments.
+DROP TABLE IF EXISTS should_be_visible;
+CREATE TABLE should_be_visible();
+
+CREATE TABLE distribute_table_oid_to_all_segs (distribution_key INT, tbl OID) DISTRIBUTED RANDOMLY;
+INSERT INTO distribute_table_oid_to_all_segs SELECT *, 'public.should_be_visible'::regclass FROM generate_series(1, 10);
+
+-- Spin up any gangs necessary to handle the SELECT DISTINCT so that they
+-- receive the new search_path setting from the set_config() dispatch.
+SELECT DISTINCT pg_catalog.pg_table_is_visible(tbl) FROM distribute_table_oid_to_all_segs;
+
+-- Now change search_path. This setting should not affect the visibility of the
+-- public schema if it's dispatched correctly.
+SELECT set_config('search_path', 'pg_catalog,public', false);
+
+-- Check that our test table is still visible.
+SELECT DISTINCT pg_catalog.pg_table_is_visible(tbl) FROM distribute_table_oid_to_all_segs;
+
+RESET search_path;
+
 -- There used to be a bug in the quoting when the search_path setting was sent
 -- to the segment. It was not easily visible when search_path was set with a
 -- SET command, only when the setting was sent as part of the startup packet.

@@ -5490,7 +5490,19 @@ open_relation_and_check_permission(VacuumStmt *vacstmt,
 		 * marked.
 		 */
 		lmode = AccessExclusiveLock;
-		dontWait = true;
+		/*
+		 * We don't block trying to acquire the Access Exclusive lock on QD.
+		 * Since lazy vacuum is a best-effort to reclaim space, it is okay to
+		 * defer a drop of the segfile and leave the segment file in the
+		 * AOSEG_STATE_AWAITING_DROP state. If this is the QE, we should not
+		 * skip the drop phase as the current QD code (post drop phase update of
+		 * AppendOnlyHash) assumes that if a dispatch is successful, the segfile
+		 * always is dropped successfully and put into the AVAILABLE state on
+		 * the QE (unless the drop phase transaction aborts on the QE). Hence,
+		 * we block on QE but not on QD.
+		 */
+		if (Gp_role == GP_ROLE_DISPATCH)
+			dontWait = true;
 		SIMPLE_FAULT_INJECTOR(VacuumRelationOpenRelationDuringDropPhase);
 	}
 	else if (!vacstmt->vacuum)

@@ -1505,13 +1505,12 @@ InitializeResultRelations(PlannedStmt *plannedstmt, EState *estate, CmdType oper
 	{
 		List 	*all_relids = NIL;
 		Oid		relid = getrelid(linitial_int(plannedstmt->resultRelations), rangeTable);
-		bool	is_child_partition = false;
+		bool	is_root_table = false;
 
 		if (rel_is_child_partition(relid))
-		{
 			relid = rel_partition_get_master(relid);
-			is_child_partition = true;
-		}
+		else if (rel_is_partitioned(relid))
+			is_root_table = true;
 
 		estate->es_result_partitions = BuildPartitionNodeFromRoot(relid);
 		
@@ -1540,7 +1539,7 @@ InitializeResultRelations(PlannedStmt *plannedstmt, EState *estate, CmdType oper
 		 * root table info in resultRelations. Similarly, INSERT plans
 		 * produced by planner only has the root table info as well.
 		 */
-		if (!is_child_partition && (operation == CMD_UPDATE || operation == CMD_DELETE || operation == CMD_INSERT))
+		if (is_root_table && (operation == CMD_UPDATE || operation == CMD_DELETE || operation == CMD_INSERT))
 		{
 			// On QD, the lockmode is RowExclusiveLock
 			Assert(lockmode == RowExclusiveLock);

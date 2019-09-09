@@ -21,6 +21,9 @@
 -- access shared lock
 1&: VACUUM ao_test_drop_phase;
 
+-- wait till vacuum halts for AccessExclusiveLock on content 0
+SELECT wait_until_waiting_for_required_lock('ao_test_drop_phase', 'AccessExclusiveLock', 0);
+
 2U: END;
 1<:
 

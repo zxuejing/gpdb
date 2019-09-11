@@ -5090,7 +5090,7 @@ struct config_string ConfigureNamesString_gp[] =
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_log_failure_str,
-		"all", assign_optimizer_log_failure, NULL
+		"unexpected", assign_optimizer_log_failure, NULL
 	},
 
 	{

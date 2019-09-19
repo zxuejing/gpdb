@@ -195,10 +195,8 @@ cdbsubselect_drop_orderby(Query *subselect)
  * safe_to_convert_NOT_EXISTS
  */
 static bool
-safe_to_convert_NOT_EXISTS(SubLink *sublink, ConvertSubqueryToJoinContext *ctx1)
+safe_to_convert_NOT_EXISTS(Query *subselect, ConvertSubqueryToJoinContext *ctx1)
 {
-	Query	   *subselect = (Query *) sublink->subselect;
-
 	if (subselect->jointree->fromlist == NULL)
 		return false;
 
@@ -241,6 +239,12 @@ safe_to_convert_NOT_EXISTS(SubLink *sublink, ConvertSubqueryToJoinContext *ctx1)
 	 * If there is a limit offset, then don't bother.
 	 */
 	if (subselect->limitOffset)
+		return false;
+
+	/**
+	 * If there is a limit count, then don't bother.
+	 */
+	if (subselect->limitCount)
 		return false;
 
 	ProcessSubqueryToJoin(subselect, ctx1);
@@ -786,38 +790,38 @@ convert_NOT_EXISTS_to_antijoin(PlannerInfo *root, List **rtrlist_inout, SubLink 
 	InitConvertSubqueryToJoinContext(&ctx1);
 	ctx1.considerNonEqualQual = true;
 
-	if (safe_to_convert_NOT_EXISTS(sublink, &ctx1))
+	/*
+	 * 'LIMIT n' makes NOT EXISTS true when n <= 0, and doesn't affect the
+	 * outcome when n > 0. Return true to be ANDed into the parent qual if n <=
+	 * 0. If there's a LIMIT with positive value (or NULL), though, just ignore
+	 * such clauses.
+	 *
+	 */
+	if (subselect->limitCount != NULL)
+	{
+
+		Node    *node = eval_const_expressions(root, subselect->limitCount);
+
+		subselect->limitCount = node;
+
+		if (IsA(node, Const))
+		{
+			Const   *limit = (Const *) node;
+
+			Assert(limit->consttype == INT8OID);
+			if (!limit->constisnull && DatumGetInt64(limit->constvalue) <= 0)
+				return makeBoolConst(true, false);
+
+			subselect->limitCount = NULL;
+		}
+	}
+
+	if (safe_to_convert_NOT_EXISTS(subselect, &ctx1))
 	{
 
 		/* Delete ORDER BY and DISTINCT. */
 		cdbsubselect_drop_orderby(subselect);
 		cdbsubselect_drop_distinct(subselect);
-
-		/*
-		 * 'LIMIT n' makes NOT EXISTS true when n <= 0, and doesn't affect the
-		 * outcome when n > 0.  Delete subquery's LIMIT and build (0 < n) expr to
-		 * be ANDed into the parent qual.
-		 *
-		 */
-		if (subselect->limitCount != NULL)
-		{
-			Node	   *limitqual = NULL;
-			Expr	   *lnode;
-			Expr	   *rnode;
-
-			/* Do not handle limit offset for now */
-			Assert(!subselect->limitOffset);
-
-			rnode = copyObject(subselect->limitCount);
-			IncrementVarSublevelsUp((Node *) rnode, -1, 1);
-			lnode = (Expr *) makeConst(INT8OID, -1, sizeof(int64), Int64GetDatum(0),
-									   false, true);
-			limitqual = (Node *) make_opclause(Int8LessOperator, BOOLOID, false, lnode, rnode);
-
-			subselect->limitCount = NULL;
-
-			return (Node *) make_notclause((Expr *) limitqual);
-		}
 
 		/*
 		 * Trivial NOT EXISTS subquery without a LIMIT can be eliminated altogether.

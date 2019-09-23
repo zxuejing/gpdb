@@ -76,6 +76,7 @@ groups:
   - gate_icw_end
   - QP_memory-accounting
   - QP_optimizer-functional
+  - fips_centos6
 {% endif %}
 {% if "CS" in test_sections %}
   ## --------------------------------------------------------------------
@@ -206,6 +207,7 @@ groups:
   - icw_extensions_gpcloud
   - QP_memory-accounting
   - QP_optimizer-functional
+  - fips_centos6
   - gate_icw_end
 
 {% endif %}
@@ -344,6 +346,7 @@ resources:
       "FileRep" in test_sections or
       "MPP"     in test_sections or
       "UD"      in test_sections or
+      "ICW"     in test_sections or
       "MM"      in test_sections %}
 - name: ccp_src
   type: git
@@ -351,6 +354,12 @@ resources:
     branch: {{ccp-git-branch}}
     private_key: {{ccp-git-key}}
     uri: {{ccp-git-remote}}
+
+- name: ccp-image
+  type: docker-image
+  source:
+    repository: pivotaldata/ccp
+    tag: '7'
 
 - name: terraform
   type: terraform
@@ -1933,6 +1942,44 @@ jobs:
         TEST_OS: centos
         CONFIGURE_FLAGS: {{configure_flags}}
 
+- name: fips_centos6
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [gate_icw_start]
+    - get: gpdb_binary
+      resource: bin_gpdb_centos6
+      passed: [gate_icw_start]
+      trigger: [[ test_trigger ]]
+    - get: ccp_src
+    - get: ccp-image
+  - put: terraform
+    params:
+      action: create
+      delete_on_failure: true
+      generate_random_name: true
+      terraform_source: ccp_src/google/
+      vars:
+        PLATFORM: "centos6-fips"
+        instance_type: n1-standard-2
+  - task: gen_cluster
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
+      AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
+      AWS_DEFAULT_REGION: {{aws-region}}
+      BUCKET_PATH: clusters-google/
+      BUCKET_NAME: {{tf-bucket-name}}
+      CLOUD_PROVIDER: google
+  - task: gpinitsystem
+    file: ccp_src/ci/tasks/gpinitsystem.yml
+  - task: test_fips
+    file: gpdb_src/concourse/tasks/test_fips.yml
+    on_success:
+      <<: *ccp_destroy
+  ensure:
+    <<: *set_failed
+
 - name: gate_icw_end
   plan:
   - aggregate:
@@ -1953,6 +2000,7 @@ jobs:
       - icw_extensions_gpcloud
       - QP_memory-accounting
       - QP_optimizer-functional
+      - fips_centos6
       trigger: true
     - get: bin_gpdb_centos6
       passed:
@@ -1962,6 +2010,7 @@ jobs:
       - icw_extensions_gpcloud
       - QP_memory-accounting
       - QP_optimizer-functional
+      - fips_centos6
     - get: bin_gpdb_centos7
       passed:
       - icw_planner_centos7
@@ -3819,6 +3868,7 @@ jobs:
       - icw_gporca_ubuntu16
       - icw_gporca_ubuntu16_oss
       - icw_extensions_gpcloud
+      - fips_centos6
       - mpp_resource_group_centos6
       - mpp_resource_group_centos7
       - MU_check_centos

@@ -71,46 +71,6 @@
 #define AES_DECRYPT 0
 #define AES_KEY		rijndael_ctx
 
-static int
-AES_set_encrypt_key(const uint8 *key, int kbits, AES_KEY *ctx)
-{
-	aes_set_key(ctx, key, kbits, 1);
-	return 0;
-}
-
-static int
-AES_set_decrypt_key(const uint8 *key, int kbits, AES_KEY *ctx)
-{
-	aes_set_key(ctx, key, kbits, 0);
-	return 0;
-}
-
-static void
-AES_ecb_encrypt(const uint8 *src, uint8 *dst, AES_KEY *ctx, int enc)
-{
-	memcpy(dst, src, 16);
-	if (enc)
-		aes_ecb_encrypt(ctx, dst, 16);
-	else
-		aes_ecb_decrypt(ctx, dst, 16);
-}
-
-static void
-AES_cbc_encrypt(const uint8 *src, uint8 *dst, int len, AES_KEY *ctx, uint8 *iv, int enc)
-{
-	memcpy(dst, src, len);
-	if (enc)
-	{
-		aes_cbc_encrypt(ctx, iv, dst, len);
-		memcpy(iv, dst + len - 16, 16);
-	}
-	else
-	{
-		aes_cbc_decrypt(ctx, iv, dst, len);
-		memcpy(iv, src + len - 16, 16);
-	}
-}
-
 /*
  * Emulate DES_* API
  */
@@ -666,6 +626,15 @@ static PX_Alias ossl_aliases_all[] = {
 	{NULL}
 };
 
+static PX_Alias ossl_aliases_fips[] = {
+	{"des", "des-cbc"},
+	{"3des", "des3-cbc"},
+	{"3des-ecb", "des3-ecb"},
+	{"3des-cbc", "des3-cbc"},
+	{"aes", "aes-cbc"},
+	{NULL}
+};
+
 static PX_Alias *ossl_aliases = ossl_aliases_all;
 
 static const struct ossl_cipher ossl_bf_cbc = {
@@ -758,6 +727,16 @@ static const struct ossl_cipher_lookup ossl_cipher_types_all[] = {
 	{NULL}
 };
 
+static const struct ossl_cipher_lookup ossl_cipher_types_fips[] = {
+	{"des-ecb", &ossl_des_ecb},
+	{"des-cbc", &ossl_des_cbc},
+	{"des3-ecb", &ossl_des3_ecb},
+	{"des3-cbc", &ossl_des3_cbc},
+	{"aes-ecb", &ossl_aes_ecb},
+	{"aes-cbc", &ossl_aes_cbc},
+	{NULL}
+};
+
 static const struct ossl_cipher_lookup *ossl_cipher_types = ossl_cipher_types_all;
 
 /* PUBLIC functions */
@@ -769,12 +748,12 @@ px_find_cipher(const char *name, PX_Cipher **res)
 	PX_Cipher  *c = NULL;
 	ossldata   *od;
 
-	NOT_FIPS_CERTIFIED
-
 	name = px_resolve_alias(ossl_aliases, name);
 	for (i = ossl_cipher_types; i->name; i++)
 		if (!strcmp(i->name, name))
 			break;
+	if (i->name == NULL)
+		NOT_FIPS_CERTIFIED
 	if (i->name == NULL)
 		return PXE_NO_CIPHER;
 
@@ -887,15 +866,8 @@ px_enable_fipsmode(void)
 			 errhint("Recompile OpenSSL with the FIPS module, or install a FIPS enabled OpenSSL distribution.")));
 #else
 
-	/*
-	 * While AES and 3DES are allowed ciphers under FIPS-140 level 2, pgcrypto
-	 * is calling the lowlevel API for these which is disallowed under FIPS.
-	 * However, rather than returning NULL as is done when calling the high
-	 * level functions, the lowlevel API throws a SIGABORT so we need to avoid
-	 * calling this altogether.
-	 */
-	ossl_aliases = NULL;
-	ossl_cipher_types = NULL;
+	ossl_aliases = ossl_aliases_fips;
+	ossl_cipher_types = ossl_cipher_types_fips;
 
 	/* Make sure that we are linked against a FIPS enabled OpenSSL */
 	if (!FIPS_mode_set)

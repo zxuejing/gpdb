@@ -75,7 +75,11 @@ SELECT 'Test pgp : EXPECTED PASS' as comment;
 (1 row)
 
 select pgp_sym_decrypt(pgp_sym_encrypt('santa clause', 'mypass', 'cipher-algo=aes256'), 'mypass');
-ERROR:  requested functionality not allowed in FIPS mode (openssl.c:972)
+ pgp_sym_decrypt 
+-----------------
+ santa clause
+(1 row)
+
 SELECT 'Test pgp : EXPECTED FAIL FIPS' as comment;
             comment            
 -------------------------------
@@ -91,7 +95,11 @@ SELECT 'Test raw encrypt : EXPECTED PASS' as comment;
 (1 row)
 
 SELECT encrypt('santa claus', 'mypass', 'aes') as raw_aes;
-ERROR:  requested functionality not allowed in FIPS mode (openssl.c:972)
+                      raw_aes                      
+---------------------------------------------------
+ \347\254:\325{\336Y\305\267\214\010\200Z\375\267t
+(1 row)
+
 SELECT 'Test raw encrypt : EXPECTED FAIL FIPS' as comment;
                 comment                
 ---------------------------------------

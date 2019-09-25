@@ -1913,6 +1913,7 @@ CheckCOConsistencyWithGpRelationNode( Snapshot snapshot, Relation rel, int total
 
 		if (segmentCount > totalsegs + 1)
 		{
+			PrintPgaocssegAndGprelationNodeEntries(allseginfo, totalsegs, segmentFileNumMap);
 			elog(ERROR, "gp_relation_node (%d) has more entries than pg_aocsseg (%d) for relation %s",
 				segmentCount,
 				totalsegs,

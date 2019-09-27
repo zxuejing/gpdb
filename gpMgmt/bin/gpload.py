@@ -55,7 +55,14 @@ try:
 except:
     import subprocess
 import uuid
-import socket
+
+try:
+    from gppylib.gpversion import GpVersion
+except ImportError:
+    sys.stderr.write("gpload can't import gpversion, will run in GPDB5 compatibility mode.\n")
+    noGpVersion = True
+else:
+    noGpVersion = False
 
 thePlatform = platform.system()
 if thePlatform in ['Windows', 'Microsoft']:
@@ -71,7 +78,7 @@ EXECNAME = 'gpload'
 
 NUM_WARN_ROWS = 0
 
-# Mapping for validing our configuration file. We're only concerned with
+# Mapping for validating our configuration file. We're only concerned with
 # keys -- stuff left of ':'. It gets complex in two cases: firstly when
 # we handle blocks which have keys which are not keywords -- such as under
 # COLUMNS:. Secondly, we want to detect when users put keywords in the wrong
@@ -122,7 +129,6 @@ valid_tokens = {
     "update_columns": {'parse_children': False, 'parent': "output"},
     "update_condition": {'parse_children': True, 'parent': "output"},
     "mapping": {'parse_children': False, 'parent': "output"},
-    "including_defaults": {'parse_children': False, 'parent': 'output'},
     "preload": {'parse_children': True, 'parent': 'gpload'},
     "truncate": {'parse_children': False, 'parent': 'preload'},
     "reuse_tables": {'parse_children': False, 'parent': 'preload'},
@@ -566,7 +572,7 @@ def sqlIdentifierCompare(x, y):
     and non-delimited identifiers. Return True if they are equivalent or False
     if they are not equivalent.
     """
-    if x == None or y == None:
+    if x is None or y is None:
        return False
 
     if isDelimited(x):
@@ -617,7 +623,7 @@ def convertListToDelimited(identifiers):
 
 def splitUpMultipartIdentifier(id):
     """
-    Given a sql identifer like sch.tab, return a list of its
+    Given a sql identifier like sch.tab, return a list of its
     individual elements (e.g.  sch.tab would return ['sch','tab']
     """
     returnList = []
@@ -707,10 +713,10 @@ def notice_processor(self):
        return
 
     theNotices = self.db.notices()
-    r = re.compile("^NOTICE:  Found (\d+) data formatting errors.*")
+    r = re.compile("^NOTICE:  found (\d+) data formatting errors.*")
     messageNumber = 0
     m = None
-    while messageNumber < len(theNotices) and m == None:
+    while messageNumber < len(theNotices) and m is None:
        aNotice = theNotices[messageNumber]
        m = r.match(aNotice)
        messageNumber = messageNumber + 1
@@ -941,7 +947,7 @@ def test_key(gp, key, crumb):
     it has the parent we expect
     """
     val = valid_tokens.get(key)
-    if val == None:
+    if val is None:
         gp.log(gp.ERROR, 'unrecognized key: "%s"' % key)
 
     p = val['parent']
@@ -1150,6 +1156,7 @@ class gpload:
         self.formatOpts = ""
         self.startTimestamp = time.time()
         self.error_table = False
+        self.gpdb_version = ""
         seenv = False
         seenq = False
 
@@ -1323,7 +1330,6 @@ class gpload:
         Level is either DEBUG, LOG, INFO, ERROR. a is the message
         """
         try:
-            t = time.localtime()
             str = '|'.join(
                        [datetime.datetime.today().strftime('%Y-%m-%d %H:%M:%S'),
                         self.elevel2str(level), a]) + '\n'
@@ -1430,7 +1436,7 @@ class gpload:
            self.schema = None
            self.table  = schemaTableList[0]
 
-        # Precendence for configuration: command line > config file > env
+        # Precedence for configuration: command line > config file > env
         # variable
 
         # host to connect to
@@ -1820,6 +1826,13 @@ class gpload:
                            , passwd=self.options.password
                            )
             self.log(self.DEBUG, "Successfully connected to database")
+
+            if noGpVersion == False:
+                # Get GPDB version
+                curs = self.db.query("SELECT version()")
+                self.gpdb_version = GpVersion(curs.getresult()[0][0])
+                self.log(self.DEBUG, "GPDB version is: %s" % self.gpdb_version)
+
         except Exception, e:
             errorMessage = str(e)
             if errorMessage.find("no password supplied") != -1:
@@ -1846,7 +1859,7 @@ class gpload:
                 """ remove leading or trailing spaces """
                 d = { tempkey.strip() : value }
                 key = d.keys()[0]
-                if d[key] == None:
+                if d[key] is None:
                     self.log(self.DEBUG,
                              'getting source column data type from target')
                     for name, typ, mapto, hasseq in self.into_columns:
@@ -1869,7 +1882,7 @@ class gpload:
 
         # make sure that all columns have a type
         for name, typ, map, hasseq in self.from_columns:
-            if typ == None:
+            if typ is None:
                 self.log(self.ERROR, 'column "%s" has no type ' % name +
                        'and does not appear in target table "%s"' % self.schemaTable)
         self.log(self.DEBUG, 'from columns are:')
@@ -1885,7 +1898,7 @@ class gpload:
 
         # find the shema name for this table (according to search_path)
         # if it was not explicitly specified in the configuration file.
-        if self.schema == None:
+        if self.schema is None:
             queryString = """SELECT n.nspname
                              FROM pg_catalog.pg_class c
                              LEFT JOIN pg_catalog.pg_namespace n
@@ -1983,10 +1996,9 @@ class gpload:
                     for a in self.into_columns:
                         if sqlIdentifierCompare(a[0], x[0]) == True:
                            i = a
-                           found = True
                            break
                     if i:
-                        if i[2] == None: i[2] = i[0]
+                        if i[2] is None: i[2] = i[0]
                     else:
                         self.log(self.ERROR, 'no mapping for input column ' +
                                  '"%s" to output table' % x[0])
@@ -2044,10 +2056,16 @@ class gpload:
 
         sql = sqlFormat % (joinStr, conditionStr)
 
-        if log_errors:
-            sql += " WHERE pgext.fmterrtbl = pgext.reloid "
+        if noGpVersion or self.gpdb_version < "6.0.0":
+            if log_errors:
+                sql += " WHERE pgext.fmterrtbl = pgext.reloid "
+            else:
+                sql += " WHERE pgext.fmterrtbl IS NULL "
         else:
-            sql += " WHERE pgext.fmterrtbl IS NULL "
+            if log_errors:
+                sql += " WHERE pgext.logerrors "
+            else:
+                sql += " WHERE NOT pgext.logerrors "
 
         for i, l in enumerate(self.locations):
             sql += " and pgext.urilocation[%s] = %s\n" % (i + 1, quote(l))
@@ -2120,10 +2138,16 @@ class gpload:
 
         sql = sqlFormat % (joinStr, conditionStr)
 
-        if log_errors:
-            sql += " and pgext.fmterrtbl = pgext.reloid "
+        if noGpVersion or self.gpdb_version < "6.0.0":
+            if log_errors:
+                sql += " and pgext.fmterrtbl = pgext.reloid "
+            else:
+                sql += " and pgext.fmterrtbl IS NULL "
         else:
-            sql += " and pgext.fmterrtbl IS NULL "
+            if log_errors:
+                sql += " and pgext.logerrors "
+            else:
+                sql += " and NOT pgext.logerrors "
 
         for i, l in enumerate(self.locations):
             sql += " and pgext.urilocation[%s] = %s\n" % (i + 1, quote(l))
@@ -2150,7 +2174,7 @@ class gpload:
     # 1. same target table
     # 2. same number of columns
     # 3. same names and types, in the same order
-    # 4. same distribution key (according to columns' names and thier order)
+    # 4. same distribution key (according to columns' names and their order)
     #
     def get_staging_conditions_string(self, target_table_name, staging_cols, distribution_cols):
 			
@@ -2166,7 +2190,7 @@ class gpload:
     #
     # This function will return the SQL to run in order to find out whether
     # we have an existing staging table in the catalog which could be reused for this
-    # operation, according to the mathod and the encoding conditions.
+    # operation, according to the method and the encoding conditions.
     #
     def get_reuse_staging_table_query(self, encoding_conditions):
 		
@@ -2191,7 +2215,7 @@ class gpload:
         return None
 
     def get_ext_schematable(self, schemaName, tableName):
-        if schemaName == None:
+        if schemaName is None:
             return tableName
         else:
             schemaTable = "%s.%s" % (schemaName, tableName)
@@ -2229,7 +2253,6 @@ class gpload:
             if val.startswith("E'") and val.endswith("'") and len(val[2:-1].decode('unicode-escape')) == 1:
                 subval = val[2:-1]
                 if subval == "\\'":
-                    val = val
                     self.formatOpts += "%s %s " % (specify_str, val)
                 else:
                     val = subval.decode('unicode-escape')
@@ -2239,7 +2262,7 @@ class gpload:
                 self.formatOpts += "%s '%s' " % (specify_str, val)
 
             else:
-                self.control_file_warning(option +''' must be single ASCII charactor, you can also use unprintable characters(for example: '\\x1c' / E'\\x1c' or '\\u001c' / E'\\u001c' ''')
+                self.control_file_warning(option +''' must be single ASCII character, you can also use unprintable characters(for example: '\\x1c' / E'\\x1c' or '\\u001c' / E'\\u001c' ''')
                 self.control_file_error("Invalid option, gpload quit immediately")
                 sys.exit(2);
         else:
@@ -2426,21 +2449,8 @@ class gpload:
     #
     def create_staging_table(self):
 
-        # Do some initial work to extract the update_columns and metadata
-        # that may be needed in order to create or reuse a temp table
-        if not self.from_cols_from_user:
-            # don't put values serial columns
-            from_cols = filter(lambda a: a[3] != True, self.from_columns)
-        else:
-            from_cols = self.from_columns
-
         # make sure we set the correct distribution policy
         distcols = self.getconfig('gpload:output:match_columns', list)
-
-        # MPP-13399, CR-2227
-        including_defaults = ""
-        if self.getconfig('gpload:output:including_defaults',bool,True):
-            including_defaults = " including defaults"
 
         sql = "SELECT * FROM pg_class WHERE relname LIKE 'temp_gpload_reusable_%%';"
         resultList = self.db.query(sql.encode('utf-8')).getresult()
@@ -2622,7 +2632,6 @@ class gpload:
                 temp_update_condition = update_condition
                 updateConditionList = splitIntoLiteralsAndNonLiterals(update_condition)
                 skip = False
-                newUpdateConditionList = []
                 update_condition = ''
                 for uc in updateConditionList:
                     if skip == False:
@@ -2658,16 +2667,22 @@ class gpload:
         return tblname
 
     def get_table_dist_key(self):
-
         # NOTE: this query should be re-written better. the problem is that it is
         # not possible to perform a cast on a table name with spaces...
-        sql = "select attname from pg_attribute a, gp_distribution_policy p , pg_class c, pg_namespace n "+\
-              "where a.attrelid = c.oid and " + \
-              "a.attrelid = p.localoid and " + \
-              "a.attnum = any (p.attrnums) and " + \
-              "c.relnamespace = n.oid and " + \
-              "n.nspname = '%s' and c.relname = '%s'; " % (quote_unident(self.schema), quote_unident(self.table))
-
+        if noGpVersion or self.gpdb_version < "6.0.0":
+            sql = "select attname from pg_attribute a, gp_distribution_policy p , pg_class c, pg_namespace n "+\
+                "where a.attrelid = c.oid and " + \
+                "a.attrelid = p.localoid and " + \
+                "a.attnum = any (p.attrnums) and " + \
+                "c.relnamespace = n.oid and " + \
+                "n.nspname = '%s' and c.relname = '%s'; " % (quote_unident(self.schema), quote_unident(self.table))
+        else:
+            sql = "select attname from pg_attribute a, gp_distribution_policy p , pg_class c, pg_namespace n "+\
+                "where a.attrelid = c.oid and " + \
+                "a.attrelid = p.localoid and " + \
+                "a.attnum = any (p.distkey) and " + \
+                "c.relnamespace = n.oid and " + \
+                "n.nspname = '%s' and c.relname = '%s'; " % (quote_unident(self.schema), quote_unident(self.table))
 
         resultList = self.db.query(sql.encode('utf-8')).getresult()
         attrs = []
@@ -2911,12 +2926,10 @@ class gpload:
             else:
                 self.log(self.INFO, 'gpload failed')
 
-            ## MPP-19015 - Extra python thread shutdown time is needed on HP-UX
-            if platform.uname()[0] == 'HP-UX':
-                time.sleep(1)
-
 
 if __name__ == '__main__':
     g = gpload(sys.argv[1:])
     g.run()
-    sys.exit(g.exitValue)
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os._exit(g.exitValue)

@@ -1759,6 +1759,15 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 					(errcode(ERRCODE_GP_FEATURE_NOT_SUPPORTED),
 					 errmsg("COPY single row error handling only available for distributed user tables")));
 
+		if (!allowSystemTableModsDML && IsUnderPostmaster && IsSystemRelation(cstate->rel))
+		{
+			ereport(ERROR,
+					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+							errmsg("permission denied: \"%s\" is a system catalog",
+								   RelationGetRelationName(cstate->rel)),
+							errhint("Make sure the configuration parameter allow_system_table_mods is set.")));
+		}
+
 		if (pipe)
 		{
 			if (whereToSendOutput == DestRemote)

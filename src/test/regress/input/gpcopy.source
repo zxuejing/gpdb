@@ -1212,3 +1212,12 @@ COPY copy_from_same_txn FROM stdin;
 3	3
 \.
 COMMIT;
+-- Test COPY FROM for catalog tables
+SET allow_system_table_mods=DML;
+COPY gp_configuration_history from stdin with delimiter '|';
+1900-01-01 00:00:00.000000-07|12345|Just testing COPY
+\.
+COPY (select dbid from gp_configuration_history where dbid=12345) to stdin;
+RESET allow_system_table_mods;
+-- cannot copy to a catalog table with allow_system_table_mods=NONE
+COPY gp_configuration_history from stdin with delimiter '|';

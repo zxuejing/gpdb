@@ -8433,9 +8433,9 @@
   <topic id="optimizer_use_gpdb_allocators">
     <title>optimizer_use_gpdb_allocators</title>
     <body>
-      <p>When GPORCA is enabled (the default) and this parameter is <codeph>true</codeph> (the
-        default), GPORCA uses Greenplum Database memory management when executing queries. When set
-        to <codeph>false</codeph>, GPORCA uses GPORCA-specific memory management. Greenplum Database
+      <p>When GPORCA is enabled (the default) and this parameter is <codeph>true</codeph>, GPORCA
+        uses Greenplum Database memory management when executing queries. The default is
+          <codeph>false</codeph>, GPORCA uses GPORCA-specific memory management. Greenplum Database
         memory management allows for faster optimization, reduced memory usage during optimization,
         and improves GPORCA support of vmem limits when compared to GPORCA-specific memory
         management.</p>
@@ -8457,7 +8457,7 @@
           <tbody>
             <row>
               <entry colname="col1">Boolean</entry>
-              <entry colname="col2">true</entry>
+              <entry colname="col2">false</entry>
               <entry colname="col3">master<p>system</p><p>restart</p></entry>
             </row>
           </tbody>

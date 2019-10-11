@@ -178,15 +178,6 @@ def display_params(options, dburl, standby, segments, dumpDirsExist):
     else:
         raise GpDeleteSystemException('User canceled')
 
-
-# -------------------------------------------------------------------------
-# check_for_dump_files() - checks if there are database dump files
-# -------------------------------------------------------------------------
-def check_for_dump_files(options):
-    logger.info('Checking for database dump files...')
-    return gp.GpDirsExist.local('check for dump dirs', baseDir=options.master_data_dir, dirName="'*dump*'") \
-           or gp.GpDirsExist.local('check for dump dirs', baseDir=options.master_data_dir, dirName="'*backups*'")
-
 def getTablespaceDirs():
     ''' Create list of user-created tablespace locations for each host '''
     tblspclocs = {}
@@ -216,14 +207,6 @@ def getTablespaceDirs():
 # -------------------------------------------------------------------------
 def delete_cluster(options):
     global g_warnings_generated
-
-    # check for dumps if needed
-    dump_files_exist = check_for_dump_files(options)
-    if not options.force and dump_files_exist:
-        logger.fatal('Located possible database backup file on Master instance host')
-        logger.fatal('in directory %s' % options.master_data_dir)
-        logger.fatal('To override database backup file checking use -f option')
-        raise GpDeleteSystemException('Backup files exist')
 
     # get gparray object
     logger.info('Getting segment information...')

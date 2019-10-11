@@ -139,6 +139,7 @@
             <topicref href="guc-list.xml#gp_reject_percent_threshold"/>
             <topicref href="guc-list.xml#gp_reraise_signal"/>
             <topicref href="guc-list.xml#gp_resgroup_memory_policy"/>
+            <topicref href="guc-list.xml#gp_resource_group_bypass"/>
             <topicref href="guc-list.xml#gp_resource_group_cpu_limit"/>
             <topicref href="guc-list.xml#gp_resource_group_memory_limit"/>
             <topicref href="guc-list.xml#gp_resource_manager"/>
@@ -146,11 +147,6 @@
             <topicref href="guc-list.xml#gp_resqueue_priority"/>
             <topicref href="guc-list.xml#gp_resqueue_priority_cpucores_per_segment"/>
             <topicref href="guc-list.xml#gp_resqueue_priority_sweeper_interval"/>
-            <topicref href="guc-list.xml#gp_resgroup_memory_policy"/>
-            <topicref href="guc-list.xml#gp_resource_group_bypass"/>
-            <topicref href="guc-list.xml#gp_resource_group_cpu_limit"/>
-            <topicref href="guc-list.xml#gp_resource_group_memory_limit"/>
-            <topicref href="guc-list.xml#gp_resource_manager"/>
             <topicref href="guc-list.xml#gp_role"/>
             <topicref href="guc-list.xml#gp_safefswritesize"/>
             <topicref href="guc-list.xml#gp_segment_connect_timeout"/>
@@ -246,7 +242,7 @@
             <topicref href="guc-list.xml#optimizer_print_missing_stats"/>
             <topicref href="guc-list.xml#optimizer_print_optimization_stats"/>
             <topicref href="guc-list.xml#optimizer_sort_factor"/>
-            <topicref href="guc-list.xml#optimizer_use_gpdb_allocatorsr"/>
+            <topicref href="guc-list.xml#optimizer_use_gpdb_allocators"/>
             <topicref href="guc-list.xml#password_encryption"/>
             <topicref href="guc-list.xml#password_hash_algorithm"/>
             <topicref href="guc-list.xml#pgcrypto.fips"/>

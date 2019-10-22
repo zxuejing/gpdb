@@ -287,7 +287,12 @@ calculate_tablespace_size(Oid tblspcOid)
 	else if (tblspcOid == GLOBALTABLESPACE_OID)
 		snprintf(tblspcPath, MAXPGPATH, "global");
 	else
-		snprintf(tblspcPath, MAXPGPATH, "pg_tblspc/%u", tblspcOid);
+	{
+		char *primaryFs, *mirrorFs;
+		PersistentTablespace_GetPrimaryAndMirrorFilespaces(
+			tblspcOid, &primaryFs, &mirrorFs);
+		snprintf(tblspcPath, MAXPGPATH, "%s/%u", primaryFs, tblspcOid);
+	}
 
 	dirdesc = AllocateDir(tblspcPath);
 

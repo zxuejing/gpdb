@@ -539,21 +539,20 @@ select * from t1 left join t2 on (t1.a = t2.a) join t3 on (t1.b = t3.b) where (t
 
 -- ensure plan has two inner joins with the where clause & join predicates ANDed
 explain select * from t1 left join t2 on (t1.a = t2.a) join t3 on (t1.b = t3.b) where (t2.a = t3.a);
-                                                   QUERY PLAN                                                   
-----------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1293.18 rows=2 width=36)
-   ->  Hash Join  (cost=0.00..1293.18 rows=1 width=36)
-         Hash Cond: t2.a = t3.a AND t2.a = t1.a
-         ->  Table Scan on t2  (cost=0.00..431.01 rows=333 width=12)
+                                     QUERY PLAN                                      
+-------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1293.21 rows=2 width=36)
+   ->  Hash Join  (cost=0.00..1293.21 rows=1 width=36)
+         Hash Cond: t1.a = t2.a AND t1.b = t3.b
+         ->  Table Scan on t1  (cost=0.00..431.01 rows=334 width=12)
          ->  Hash  (cost=862.08..862.08 rows=1 width=24)
                ->  Hash Join  (cost=0.00..862.08 rows=1 width=24)
-                     Hash Cond: t1.b = t3.b
-                     ->  Table Scan on t1  (cost=0.00..431.01 rows=334 width=12)
-                     ->  Hash  (cost=431.00..431.00 rows=2 width=12)
-                           ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=2 width=12)
-                                 ->  Table Scan on t3  (cost=0.00..431.00 rows=1 width=12)
- Optimizer status: PQO version 3.24.0
-(12 rows)
+                     Hash Cond: t2.a = t3.a
+                     ->  Table Scan on t2  (cost=0.00..431.01 rows=333 width=12)
+                     ->  Hash  (cost=431.00..431.00 rows=1 width=12)
+                           ->  Table Scan on t3  (cost=0.00..431.00 rows=1 width=12)
+ Optimizer status: PQO version 3.76.0
+(11 rows)
 
 select * from t1 left join t2 on (t1.a = t2.a) join t3 on (t1.b = t3.b) where (t2.a = t3.a);
  a | b | c | a | b | c | a | b | c 

@@ -588,6 +588,7 @@ bool		optimizer_prune_unused_columns;
 /* Analyze related GUCs for Optimizer */
 bool		optimizer_analyze_root_partition;
 bool		optimizer_analyze_midlevel_partition;
+bool		optimizer_analyze_enable_merge_of_leaf_stats;
 
 /* GUCs for slice table*/
 int			gp_max_slices;
@@ -3104,6 +3105,15 @@ struct config_bool ConfigureNamesBool_gp[] =
 		},
 		&optimizer_analyze_midlevel_partition,
 		false, NULL, NULL
+	},
+
+	{
+		{"optimizer_analyze_enable_merge_of_leaf_stats", PGC_USERSET, STATS_ANALYZE,
+			gettext_noop("Enable merging of leaf stats into the root stats during ANALYZE when analyzing partitions"),
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&optimizer_analyze_enable_merge_of_leaf_stats,
+		true, NULL, NULL
 	},
 
 	{

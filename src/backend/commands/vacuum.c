@@ -1558,7 +1558,9 @@ get_rel_oids(List *relids, VacuumStmt *vacstmt, bool isVacuum)
 					}
 					RelationClose(onerel);
 				}
-				if(leaf_parts_analyzed(root_rel_oid, relationOid, va_root_attnums))
+				if(optimizer_analyze_enable_merge_of_leaf_stats &&
+				   leaf_parts_analyzed(root_rel_oid, relationOid, va_root_attnums))
+					/* remember to merge the partition stats into the root partition */
 					oid_list = lappend_oid(oid_list, root_rel_oid);
 			}
 			else if (ps == PART_STATUS_INTERIOR) /* analyze an interior partition directly */

@@ -10204,47 +10204,43 @@ drop table canSetTag_input_data;
 CREATE TABLE btree_test as SELECT * FROM generate_series(1,100) as a distributed randomly;
 CREATE INDEX btree_test_index ON btree_test(a);
 EXPLAIN SELECT * FROM btree_test WHERE a in (1, 47);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-                                 QUERY PLAN
-----------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..4.25 rows=2 width=4)
-   ->  Seq Scan on btree_test  (cost=0.00..4.25 rows=1 width=4)
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=3 width=4)
+   ->  Table Scan on btree_test  (cost=0.00..431.00 rows=1 width=4)
          Filter: a = ANY ('{1,47}'::integer[])
- Settings:  optimizer=on; optimizer_metadata_caching=on
- Optimizer status: legacy query optimizer
+ Settings:  optimizer_cte_inlining_bound=1000; optimizer_metadata_caching=on
+ Optimizer status: PQO version 3.82.0
 (5 rows)
 
 EXPLAIN SELECT * FROM btree_test WHERE a in ('2', 47);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-                                 QUERY PLAN
-----------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..4.25 rows=2 width=4)
-   ->  Seq Scan on btree_test  (cost=0.00..4.25 rows=1 width=4)
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=3 width=4)
+   ->  Table Scan on btree_test  (cost=0.00..431.00 rows=1 width=4)
          Filter: a = ANY ('{2,47}'::integer[])
- Settings:  optimizer=on; optimizer_metadata_caching=on
- Optimizer status: legacy query optimizer
+ Settings:  optimizer_cte_inlining_bound=1000; optimizer_metadata_caching=on
+ Optimizer status: PQO version 3.82.0
 (5 rows)
 
 EXPLAIN SELECT * FROM btree_test WHERE a in ('1', '2');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-                                 QUERY PLAN
-----------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..4.25 rows=2 width=4)
-   ->  Seq Scan on btree_test  (cost=0.00..4.25 rows=1 width=4)
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=3 width=4)
+   ->  Table Scan on btree_test  (cost=0.00..431.00 rows=1 width=4)
          Filter: a = ANY ('{1,2}'::integer[])
- Settings:  optimizer=on; optimizer_metadata_caching=on
- Optimizer status: legacy query optimizer
+ Settings:  optimizer_cte_inlining_bound=1000; optimizer_metadata_caching=on
+ Optimizer status: PQO version 3.82.0
 (5 rows)
 
 EXPLAIN SELECT * FROM btree_test WHERE a in ('1', '2', 47);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-                                 QUERY PLAN
-----------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..4.38 rows=3 width=4)
-   ->  Seq Scan on btree_test  (cost=0.00..4.38 rows=1 width=4)
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=4 width=4)
+   ->  Table Scan on btree_test  (cost=0.00..431.00 rows=2 width=4)
          Filter: a = ANY ('{1,2,47}'::integer[])
- Settings:  optimizer=on; optimizer_metadata_caching=on
- Optimizer status: legacy query optimizer
+ Settings:  optimizer_cte_inlining_bound=1000; optimizer_metadata_caching=on
+ Optimizer status: PQO version 3.82.0
 (5 rows)
 
 -- Test Bitmap index scan with in list

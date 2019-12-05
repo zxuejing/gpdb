@@ -119,5 +119,12 @@ test: uao/insert_should_not_use_awaiting_drop_column
 test: add_column_after_vacuum_skip_drop_column
 test: vacuum_after_vacuum_skip_drop_column
 
+# Tests for packcore, will use the coredumps generated in previous tests.
+#
+# On 5X branch no test will generate a coredump unless on exceptions, in such a
+# case we will only make basic verifications on the packcore command, but once
+# a coredump is generated we will run the full packcore test automatically.
+test: packcore
+
 # Cancel test
 test: cancel_plpython

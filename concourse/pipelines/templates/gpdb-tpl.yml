@@ -23,7 +23,8 @@
 {% set MM_2_suites = ['analyzedb',
                       'reindexdb',
                       'gpperfmon',
-                      'gpinitsystem'] %}
+                      'gpinitsystem',
+                      'gpstart'] %}
 {% set aa_Test_suites = ['Planner_centos6',
                          'Orca_centos6',
                          'Planner_centos7',

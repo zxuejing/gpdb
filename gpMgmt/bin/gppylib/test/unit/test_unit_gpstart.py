@@ -176,6 +176,30 @@ class GpStart(GpTestCase):
         messages = [msg[0][0] for msg in self.subject.logger.info.call_args_list]
         self.assertIn("DBID:5  FAILED  host:'sdw1' datadir:'/data/mirror1' with reason:'fictitious reason'", messages)
 
+    def test_prepare_segment_start_returns_up_and_down_segments(self):
+        # Boilerplate: create a gpstart object
+        parser = self.subject.GpStart.createParser()
+        options, args = parser.parse_args([])
+        gpstart = self.subject.GpStart.createProgram(options, args)
+
+        # Up segments
+        master = GpDB.initFromString("1|-1|p|p|n|u|mdw|mdw|5432|5532|/data/master||")
+        primary1 = GpDB.initFromString("3|1|p|p|n|u|sdw2|sdw2|40001|41001|/data/primary1||")
+        mirror0 = GpDB.initFromString("4|0|m|m|n|u|sdw2|sdw2|50000|51000|/data/mirror0||")
+
+        # Down segments
+        primary0 = GpDB.initFromString("2|0|p|p|n|d|sdw1|sdw1|40000|41000|/data/primary0||")
+        mirror1 = GpDB.initFromString("5|1|m|m|n|d|sdw1|sdw1|50001|51001|/data/mirror1||")
+        standby = GpDB.initFromString("6|-1|m|m|n|d|sdw3|sdw3|5433|5533|/data/standby||")
+
+        gpstart.gparray = GpArray([master, primary0, primary1, mirror0, mirror1, standby])
+
+        up, down = gpstart._prepare_segment_start()
+
+        # The master and standby should not be accounted for in these lists.
+        self.assertItemsEqual(up, [primary1, mirror0])
+        self.assertItemsEqual(down, [primary0, mirror1])
+
     def _createGpArrayWith2Primary2Mirrors(self):
         self.master = GpDB.initFromString(
             "1|-1|p|p|s|u|mdw|mdw|5432|5532|/data/master||/data/master/base/10899,/data/master/base/1,/data/master/base/10898,/data/master/base/25780,/data/master/base/34782")

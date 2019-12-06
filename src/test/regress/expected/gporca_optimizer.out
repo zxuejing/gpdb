@@ -11365,3 +11365,133 @@ SELECT * from tc4 where a IS NULL;
    |  
 (1 row)
 
+-- test simulated gpexpand phase 1
+-- alter partitions to be random-partitioned, similar to what happens in gpexpand
+-- ORCA should handle these plans unless noted
+drop table if exists noexp_hash, gpexp_hash;
+NOTICE:  table "noexp_hash" does not exist, skipping
+NOTICE:  table "gpexp_hash" does not exist, skipping
+create table noexp_hash(a int, b int) distributed by (a);
+insert into  noexp_hash select i, i from generate_series(1,20) i;
+-- simulated expanded table
+create table gpexp_hash(a int, b int) distributed by (a)
+  partition by range (b) (start (1) end (21) every (5));
+NOTICE:  CREATE TABLE will create partition "gpexp_hash_1_prt_1" for table "gpexp_hash"
+NOTICE:  CREATE TABLE will create partition "gpexp_hash_1_prt_2" for table "gpexp_hash"
+NOTICE:  CREATE TABLE will create partition "gpexp_hash_1_prt_3" for table "gpexp_hash"
+NOTICE:  CREATE TABLE will create partition "gpexp_hash_1_prt_4" for table "gpexp_hash"
+insert into gpexp_hash select i, i from generate_series(1,10) i;
+alter table gpexp_hash_1_prt_1 set distributed randomly;
+alter table gpexp_hash_1_prt_3 set distributed randomly;
+explain insert into  gpexp_hash select i, i from generate_series(11,20) i;
+                                             QUERY PLAN                                             
+----------------------------------------------------------------------------------------------------
+ Insert  (cost=0.00..10.45 rows=334 width=4)
+   ->  Redistribute Motion 1:3  (slice1)  (cost=0.00..0.04 rows=1000 width=8)
+         Hash Key: generate_series.generate_series
+         ->  Result  (cost=0.00..0.02 rows=334 width=8)
+               ->  Result  (cost=0.00..0.02 rows=334 width=8)
+                     ->  Partition Selector for gpexp_hash  (cost=0.00..0.01 rows=334 width=4)
+                           ->  Function Scan on generate_series  (cost=0.00..0.00 rows=334 width=4)
+ Settings:  optimizer_cte_inlining_bound=1000; optimizer_metadata_caching=on
+ Optimizer status: PQO version 3.85.0
+(9 rows)
+
+insert into  gpexp_hash select i, i from generate_series(11,20) i;
+-- join should have a redistribute motion for gpexp_hash
+explain select count(*) from noexp_hash n join gpexp_hash x on n.a=x.a;
+                                                               QUERY PLAN                                                               
+----------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..862.00 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..862.00 rows=1 width=8)
+         ->  Aggregate  (cost=0.00..862.00 rows=1 width=8)
+               ->  Hash Join  (cost=0.00..862.00 rows=1 width=1)
+                     Hash Cond: noexp_hash.a = gpexp_hash.a
+                     ->  Table Scan on noexp_hash  (cost=0.00..431.00 rows=7 width=4)
+                     ->  Hash  (cost=431.00..431.00 rows=1 width=4)
+                           ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                                 Hash Key: gpexp_hash.a
+                                 ->  Sequence  (cost=0.00..431.00 rows=1 width=4)
+                                       ->  Partition Selector for gpexp_hash (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                             Partitions selected: 4 (out of 4)
+                                       ->  Dynamic Table Scan on gpexp_hash (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=4)
+ Settings:  optimizer_cte_inlining_bound=1000; optimizer_metadata_caching=on
+ Optimizer status: PQO version 3.85.0
+(15 rows)
+
+select count(*) from noexp_hash n join gpexp_hash x on n.a=x.a;
+ count 
+-------
+    20
+(1 row)
+
+delete from gpexp_hash where b between 16 and 20;
+select count(*) expect_15 from gpexp_hash;
+ expect_15 
+-----------
+        15
+(1 row)
+
+update gpexp_hash set b=1 where b between 11 and 100;
+select b, count(*) from gpexp_hash group by b order by b;
+ b  | count 
+----+-------
+  1 |     6
+  2 |     1
+  3 |     1
+  4 |     1
+  5 |     1
+  6 |     1
+  7 |     1
+  8 |     1
+  9 |     1
+ 10 |     1
+(10 rows)
+
+explain update gpexp_hash o set b=(select a from gpexp_hash i where o.a = i.a) where a > 5;
+                                                                      QUERY PLAN                                                                      
+------------------------------------------------------------------------------------------------------------------------------------------------------
+ Update  (cost=0.00..1324061.08 rows=1 width=1)
+   ->  Partition Selector for gpexp_hash  (cost=0.00..1324061.01 rows=1 width=26)
+         ->  Explicit Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..1324061.01 rows=1 width=26)
+               ->  Split  (cost=0.00..1324061.01 rows=1 width=26)
+                     ->  Result  (cost=0.00..1324061.01 rows=1 width=22)
+                           ->  Sequence  (cost=0.00..431.00 rows=1 width=18)
+                                 ->  Partition Selector for gpexp_hash (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                       Partitions selected: 4 (out of 4)
+                                 ->  Dynamic Table Scan on gpexp_hash (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=18)
+                                       Filter: a > 5
+                           SubPlan 1
+                             ->  Result  (cost=0.00..431.00 rows=1 width=4)
+                                   Filter: $0 = orca.gpexp_hash.a
+                                   ->  Materialize  (cost=0.00..431.00 rows=1 width=4)
+                                         ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                                               ->  Sequence  (cost=0.00..431.00 rows=1 width=4)
+                                                     ->  Partition Selector for gpexp_hash (dynamic scan id: 2)  (cost=10.00..100.00 rows=34 width=4)
+                                                           Partitions selected: 4 (out of 4)
+                                                     ->  Dynamic Table Scan on gpexp_hash (dynamic scan id: 2)  (cost=0.00..431.00 rows=1 width=4)
+ Settings:  optimizer_cte_inlining_bound=1000; optimizer_metadata_caching=on
+ Optimizer status: PQO version 3.85.0
+(21 rows)
+
+update gpexp_hash o set b=(select a from gpexp_hash i where o.a = i.a) where a > 5;
+select * from gpexp_hash order by a;
+ a  | b  
+----+----
+  1 |  1
+  2 |  2
+  3 |  3
+  4 |  4
+  5 |  5
+  6 |  6
+  7 |  7
+  8 |  8
+  9 |  9
+ 10 | 10
+ 11 | 11
+ 12 | 12
+ 13 | 13
+ 14 | 14
+ 15 | 15
+(15 rows)
+

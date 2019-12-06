@@ -1848,6 +1848,37 @@ CREATE TABLE tc4 (a int, b int, check(a + b > 1 and a = b));
 INSERT INTO tc4 VALUES(NULL, NULL);
 SELECT * from tc4 where a IS NULL;
 
+-- test simulated gpexpand phase 1
+-- alter partitions to be random-partitioned, similar to what happens in gpexpand
+-- ORCA should handle these plans unless noted
+
+drop table if exists noexp_hash, gpexp_hash;
+create table noexp_hash(a int, b int) distributed by (a);
+insert into  noexp_hash select i, i from generate_series(1,20) i;
+
+-- simulated expanded table
+create table gpexp_hash(a int, b int) distributed by (a)
+  partition by range (b) (start (1) end (21) every (5));
+insert into gpexp_hash select i, i from generate_series(1,10) i;
+
+alter table gpexp_hash_1_prt_1 set distributed randomly;
+alter table gpexp_hash_1_prt_3 set distributed randomly;
+
+explain insert into  gpexp_hash select i, i from generate_series(11,20) i;
+insert into  gpexp_hash select i, i from generate_series(11,20) i;
+
+-- join should have a redistribute motion for gpexp_hash
+explain select count(*) from noexp_hash n join gpexp_hash x on n.a=x.a;
+select count(*) from noexp_hash n join gpexp_hash x on n.a=x.a;
+delete from gpexp_hash where b between 16 and 20;
+select count(*) expect_15 from gpexp_hash;
+update gpexp_hash set b=1 where b between 11 and 100;
+select b, count(*) from gpexp_hash group by b order by b;
+
+explain update gpexp_hash o set b=(select a from gpexp_hash i where o.a = i.a) where a > 5;
+update gpexp_hash o set b=(select a from gpexp_hash i where o.a = i.a) where a > 5;
+select * from gpexp_hash order by a;
+
 -- start_ignore
 DROP SCHEMA orca CASCADE;
 -- end_ignore

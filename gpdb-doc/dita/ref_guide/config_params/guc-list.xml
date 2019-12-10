@@ -8550,8 +8550,8 @@
         </ul></p>
       <p><b>To enable <codeph>pgcrypto.fips</codeph></b><ol id="ol_hrj_vhq_gjb">
           <li>Enable the <codeph>pgcrypto</codeph> functions as an extension if it is not enabled.
-            See <xref href="../../install_guide/install_pgcrypto.xml" scope="peer">pgcrypto
-              Cryptographic Functions</xref>. This example <codeph>psql</codeph> command creates the
+            <ph otherprops="pivotal">See <xref href="../../install_guide/install_pgcrypto.xml" scope="peer">pgcrypto
+              Cryptographic Functions</xref>. </ph>This example <codeph>psql</codeph> command creates the
               <codeph>pgcrypto</codeph> extension in the database
             <codeph>testdb</codeph>.<codeblock>psql -d testdb -c 'CREATE EXTENSION pgcrypto'</codeblock></li>
           <li>Configure the Greenplum Database server configuration parameter
@@ -8578,9 +8578,9 @@
       <p><b>To disable <codeph>pgcrypto.fips</codeph></b></p>
       <ol id="ol_j3s_rxw_gjb">
         <li>If the database does not use <codeph>pgcrypto</codeph> functions, disable the
-            <codeph>pgcrypto</codeph> extension. See <xref
+            <codeph>pgcrypto</codeph> extension. <ph otherprops="pivotal">See <xref
             href="../../install_guide/install_pgcrypto.xml" scope="peer">pgcrypto Cryptographic
-            Functions</xref>. This example <codeph>psql</codeph> command drops the
+            Functions</xref>. </ph>This example <codeph>psql</codeph> command drops the
             <codeph>pgcrypto</codeph> extension in the database
           <codeph>testdb</codeph>.<codeblock>psql -d testdb -c 'DROP EXTENSION pgcrypto'</codeblock></li>
         <li>Remove <codeph>\$libdir/pgcrypto</codeph> from the

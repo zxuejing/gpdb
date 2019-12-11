@@ -54,11 +54,11 @@ stderr: {stderr}
             # load the coredump and run some simple gdb commands
             os.chdir(dirname)
             check_call(['./runGDB.sh',
-                        '--batch',
-                        '--nx',
-                        '--eval-command=bt',
-                        '--eval-command=p main',
-                        '--eval-command=p fork'])
+                        '-' '-batch',
+                        '-' '-nx',
+                        '-' '-eval-command=bt',
+                        '-' '-eval-command=p main',
+                        '-' '-eval-command=p fork'])
             os.chdir('..')
 
     # gzip runs much faster with -1
@@ -77,12 +77,15 @@ stderr: {stderr}
     packcore = '{}/sbin/packcore'.format(gphome)
     assert os.path.exists(packcore)
 
+    # XXX: on gpdb 5 the isolation2 framework will consider '--help' as a sql
+    # comment, so we have to write it as '-' '-help'.
+
     # 'packcore --help' should return 0
-    check_call([packcore, '--help'])
+    check_call([packcore, '-' '-help'])
     check_call([packcore, '-h'])
 
     # 'packcore --version' should return 0
-    check_call([packcore, '--version'])
+    check_call([packcore, '-' '-version'])
 
     cores = glob.glob('/tmp/core.*')
     if not cores:
@@ -100,10 +103,10 @@ stderr: {stderr}
 
     # 'packcore -b postgres core' should work
     test_packcore([packcore,
-                   '--binary={}'.format(postgres),
+                   '-' '-binary={}'.format(postgres),
                    corefile])
     test_packcore([packcore,
-                   '--binary', postgres,
+                   '-' '-binary', postgres,
                    corefile])
     test_packcore([packcore,
                    '-b', postgres,

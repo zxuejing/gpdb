@@ -16,6 +16,7 @@
 #include "postgres.h"
 
 #include "access/htup.h"
+#include "access/tuptoaster.h"
 #include "catalog/pg_type.h"
 #include "cdb/cdbmotion.h"
 #include "cdb/cdbsrlz.h"
@@ -672,12 +673,21 @@ SerializeTuple(TupleTableSlot *slot, SerTupInfo *pSerInfo, struct directTranspor
 					char	   *data;
 
 					/*
-					 * If we have a toasted datum, forcibly detoast it here to avoid
-					 * memory leakage: we want to force the detoast allocation(s) to
-					 * happen in our reset-able serialization context.
+					 * If we have a toasted datum, forcibly detoast it here to
+					 * avoid memory leakage: we want to force the detoast
+					 * allocation(s) to happen in our reset-able serialization
+					 * context.
+					 *
+					 * Only detoast, don't decompress. It saves network bandwidth
+					 * to let the receiver decompress it. Furthermore, it's possible
+					 * that the receiver doesn't need to decompress it at all, which
+					 * can be a very big win.
 					 */
 					oldCtxt = MemoryContextSwitchTo(s_tupSerMemCtxt);
-					attr = PointerGetDatum(PG_DETOAST_DATUM_PACKED(origattr));
+					if (VARATT_IS_EXTERNAL(origattr))
+						attr = PointerGetDatum(heap_tuple_fetch_attr((struct varlena *) DatumGetPointer(origattr)));
+					else
+						attr = origattr;
 					MemoryContextSwitchTo(oldCtxt);
 
 					sz = VARSIZE_ANY_EXHDR(attr);

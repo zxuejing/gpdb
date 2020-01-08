@@ -17,7 +17,6 @@ INSERT INTO a_table_with_multi_column_index SELECT i||'id', 'some data', i%10 FR
 -- purpose of that is to prevent the allocator from hiding a stale pointer
 -- where it would reuse the stale address and populate it with valid data.
 SELECT gp_inject_fault('dynamic_index_scan_context_reset', 'skip', dbid) FROM pg_catalog.gp_segment_configuration WHERE role = 'p';
-1&:SELECT gp_wait_until_triggered_fault('dynamic_index_scan_context_reset', 1, dbid) FROM pg_catalog.gp_segment_configuration WHERE role = 'p' AND content=2;
 
 SELECT count(b.id)
 FROM a_table_with_multi_column_index a, a_table_with_multi_column_index b
@@ -25,6 +24,6 @@ WHERE a.id = b.id
 AND Upper(a.id) LIKE '%ID'
 AND a.data = 'some data';
 
-1<:
+SELECT gp_inject_fault('dynamic_index_scan_context_reset', 'status', dbid) FROM pg_catalog.gp_segment_configuration WHERE role = 'p';
 
 SELECT gp_inject_fault('dynamic_index_scan_context_reset', 'reset', dbid) FROM pg_catalog.gp_segment_configuration WHERE role = 'p';

@@ -177,11 +177,21 @@ get_control_data(ClusterInfo *cluster, bool live_check)
 				pg_fatal("The target cluster lacks cluster state information:\n");
 		}
 	}
+	if (GET_MAJOR_VERSION(old_cluster.major_version) <= 803 && live_check)
+	{
+		/* on gpdb5
+		 */
+		snprintf(cmd, sizeof(cmd), "\"%s/%s \"%s\"",
+				 cluster->bindir,
+				 "pg_resetxlog\" -nc",
+				 cluster->pgdata);
+	} else {
+		snprintf(cmd, sizeof(cmd), "\"%s/%s \"%s\"",
+				 cluster->bindir,
+				 live_check ? "pg_controldata\"" : "pg_resetxlog\" -n",
+				 cluster->pgdata);
+	}
 
-	snprintf(cmd, sizeof(cmd), "\"%s/%s \"%s\"",
-			 cluster->bindir,
-			 live_check ? "pg_controldata\"" : "pg_resetxlog\" -n",
-			 cluster->pgdata);
 	fflush(stdout);
 	fflush(stderr);
 

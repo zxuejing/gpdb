@@ -417,8 +417,14 @@ setup(char *argv0, bool *live_check)
 
 	verify_directories();
 
+	if (GET_MAJOR_VERSION(old_cluster.major_version) <= 803)
+	{
+		Assert(pid_lock_file_exists(old_cluster.pgdata))
+		*live_check = true;
+
+	}
 	/* no postmasters should be running, except for a live check */
-	if (pid_lock_file_exists(old_cluster.pgdata))
+	else if (pid_lock_file_exists(old_cluster.pgdata))
 	{
 		/*
 		 * If we have a postmaster.pid file, try to start the server.  If it

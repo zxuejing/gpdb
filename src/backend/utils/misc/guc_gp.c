@@ -128,8 +128,6 @@ extern struct config_generic *find_option(const char *name, bool create_placehol
 
 extern bool enable_partition_rules;
 
-extern int listenerBacklog;
-
 /* GUC lists for gp_guc_list_show().  (List of struct config_generic) */
 List	   *gp_guc_list_for_explain;
 List	   *gp_guc_list_for_no_plan;
@@ -4116,7 +4114,7 @@ struct config_int ConfigureNamesInt_gp[] =
 
 	{
 		{"gp_interconnect_tcp_listener_backlog", PGC_USERSET, GP_ARRAY_TUNING,
-			gettext_noop("Size of the listening queue for each TCP interconnect socket"),
+			gettext_noop("Size of the listening queue for each TCP interconnect socket and sequence server socket"),
 			gettext_noop("Cooperate with kernel parameter net.core.somaxconn and net.ipv4.tcp_max_syn_backlog to tune network performance."),
 			GUC_NOT_IN_SAMPLE | GUC_GPDB_ADDOPT
 		},

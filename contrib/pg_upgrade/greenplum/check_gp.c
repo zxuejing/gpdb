@@ -28,6 +28,7 @@ static void check_gphdfs_external_tables(void);
 static void check_gphdfs_user_roles(void);
 static void check_unique_primary_constraint(void);
 static void check_for_array_of_partition_table_types(ClusterInfo *cluster);
+static void check_preferred_roles(void);
 
 
 /*
@@ -41,6 +42,7 @@ static void check_for_array_of_partition_table_types(ClusterInfo *cluster);
 void
 check_greenplum(void)
 {
+	check_preferred_roles();
 	check_online_expansion();
 	check_external_partition();
 	check_covering_aoindex();
@@ -896,4 +898,74 @@ check_for_array_of_partition_table_types(ClusterInfo *cluster)
 	pfree(dependee_partition_report);
 
 	check_ok();
+}
+
+/*
+ *	check_preferred_roles
+ *
+ *	Check for any segment which is not currently in their preferred role
+ */
+static void
+check_preferred_roles(void)
+{
+	char		output_path[MAXPGPATH];
+	FILE	   *script = NULL;
+	PGresult   *res;
+	int			ntups;
+	int			rowno;
+	int			dbid;
+	int			preferred_role;
+	int 		role;
+	int 		content;
+	PGconn	   *conn;
+
+	prep_status("Checking for segments not in preferred role");
+
+	snprintf(output_path, sizeof(output_path), "segment_roles_switched.txt");
+
+	conn = connectToServer(&old_cluster, "template1");
+	res = executeQueryOrDie(conn,
+							"SELECT dbid, content, role, preferred_role "
+							"FROM pg_catalog.gp_segment_configuration"
+							"       WHERE role != preferred_role");
+
+	ntups = PQntuples(res);
+
+	if (ntups > 0)
+	{
+		if ((script = fopen(output_path, "w")) == NULL)
+			pg_log(PG_FATAL, "Could not create necessary file:  %s\n",
+				   output_path);
+
+		dbid = PQfnumber(res, "dbid");
+		content = PQfnumber(res, "content");
+		role = PQfnumber(res, "role");
+		preferred_role = PQfnumber(res, "preferred_role");
+
+		for (rowno = 0; rowno < ntups; rowno++)
+		{
+			fprintf(script, "dbid \"%s\" with content id \"%s\" has switched role:",
+					PQgetvalue(res, rowno, dbid), PQgetvalue(res, rowno, content));
+			fprintf(script, " role: \"%s\"", PQgetvalue(res, rowno, role));
+			fprintf(script, " preferred_role: \"%s\"", PQgetvalue(res, rowno, preferred_role));
+			fprintf(script, " \n");
+		}
+	}
+
+	PQclear(res);
+	PQfinish(conn);
+
+	if (ntups > 0)
+	{
+		fclose(script);
+		pg_log(PG_REPORT, "fatal\n");
+		pg_log(PG_FATAL,
+			   "| The segments should be in their preferred roles for upgrade.\n"
+			   "| Segments not operating in the preferred roles must be recovered \n"
+			   "| and/or rebalanced using gprecoverseg. The list of such segments \n"
+			   "| is in the file:\n\t%s\n\n", output_path);
+	}
+	else
+		check_ok();
+
 }

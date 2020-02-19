@@ -919,6 +919,12 @@ check_preferred_roles(void)
 	int 		content;
 	PGconn	   *conn;
 
+	/*
+	 * We only need to check the segment roles on master
+ 	 */
+	if (!is_greenplum_dispatcher_mode())
+		return;
+
 	prep_status("Checking for segments not in preferred role");
 
 	snprintf(output_path, sizeof(output_path), "segment_roles_switched.txt");

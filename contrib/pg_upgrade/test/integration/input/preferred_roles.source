@@ -1,0 +1,40 @@
+-- start_ignore
+create language plpythonu;
+-- end_ignore
+
+
+-- stop a primary in order to trigger a mirror promotion
+create or replace function stop_segment(datadir text)
+returns text as $$
+    import subprocess
+    cmd = 'pg_ctl -l postmaster.log -D %s -w -m immediate stop' % datadir
+    return subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).replace('.', '')
+$$ language plpythonu;
+
+
+-- function to wait for a segment to take a role
+create or replace function wait_for_content0(target_mode char) /*in func*/ returns void as $$ /*in func*/ declare /*in func*/ iterations int := 0; /*in func*/ begin /*in func*/ while iterations < 120 loop /*in func*/ perform pg_sleep(1); /*in func*/ if exists (select * from gp_segment_configuration where content = 0 and mode = target_mode) then /*in func*/ return; /*in func*/ end if; /*in func*/ iterations := iterations + 1; /*in func*/ end loop; /*in func*/ end $$ /*in func*/ language plpgsql;
+
+
+checkpoint;
+-- the check should not return any failure
+! ./gpdb6/bin/pg_upgrade --mode=dispatcher --old-gp-dbid=1 --new-gp-dbid=1 --check --old-bindir=@upgrade_test_path@/gpdb5/bin --new-bindir=@upgrade_test_path@/gpdb6/bin --old-datadir=@upgrade_test_path@/gpdb5-data/qddir/demoDataDir-1 --new-datadir=@upgrade_test_path@/gpdb6-data/qddir/demoDataDir-1 --old-port=@old_port@;
+
+-- Stop content 0 primary and let the mirror take over
+select stop_segment(fselocation) from pg_filespace_entry fe, gp_segment_configuration c, pg_filespace f
+where fe.fsedbid = c.dbid and c.content=0 and c.role='p' and f.oid = fe.fsefsoid and f.fsname = 'pg_system';
+
+select wait_for_content0('c');
+
+-- one of the segment has switched role, the check should catch it
+! ./gpdb6/bin/pg_upgrade --mode=dispatcher --old-gp-dbid=1 --new-gp-dbid=1 --check --old-bindir=@upgrade_test_path@/gpdb5/bin --new-bindir=@upgrade_test_path@/gpdb6/bin --old-datadir=@upgrade_test_path@/gpdb5-data/qddir/demoDataDir-1 --new-datadir=@upgrade_test_path@/gpdb6-data/qddir/demoDataDir-1 --old-port=@old_port@;
+
+-- start_ignore
+! ./gpdb5/bin/gprecoverseg -a -d @upgrade_test_path@/gpdb5-data/qddir/demoDataDir-1;
+
+select wait_for_content0('s');
+
+! ./gpdb5/bin/gprecoverseg -a -r -d @upgrade_test_path@/gpdb5-data/qddir/demoDataDir-1;
+
+select wait_for_content0('s');
+-- end_ignore

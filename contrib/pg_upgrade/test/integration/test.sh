@@ -13,7 +13,7 @@ main() {
 	local new_port=60000
 
 	# need python for sql isolation test modules.
-	source gpdb6/greenplum_path.sh
+	source gpdb5/greenplum_path.sh
 
 	if [ $# -eq 0 ]
 	then
@@ -34,6 +34,9 @@ main() {
 						 --old-port=$old_port \
 						 $gpdb5_input
 	./scripts/gpdb5-cluster stop
+	# need python for sql isolation test modules.
+	source gpdb6/greenplum_path.sh
+
 	./scripts/upgrade-cluster
 	./scripts/gpdb6-cluster start
 	./pg_upgrade_regress --use-existing \

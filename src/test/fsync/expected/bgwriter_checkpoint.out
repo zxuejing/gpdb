@@ -51,6 +51,7 @@ create table fsync_test2(a int, b int) distributed by (a);
 insert into fsync_test1 select i, i from generate_series(1,100)i;
 insert into fsync_test2 select -i, i from generate_series(1,100)i;
 end;
+vacuum pg_proc;
 -- Reset all faults.
 select gp_inject_fault('all', 'reset', '', '', '', 0, 0, dbid) from gp_segment_configuration;
 NOTICE:  Success:
@@ -214,7 +215,7 @@ select dirty_buffers() from gp_dist_random('gp_id')
 -- fsync_test1 and fsync_test2 tables. `num times hit` is corresponding
 -- to the number of files synced by `fsync_counter` fault type.
 select gp_inject_fault('fsync_counter', 'status', '', '', '', 0, 0, 2::smallint);
-NOTICE:  Success: fault name:'fsync_counter' fault type:'skip' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'-1' extra arg:'0' fault injection state:'triggered'  num times hit:'5'
+NOTICE:  Success: fault name:'fsync_counter' fault type:'skip' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'-1' extra arg:'0' fault injection state:'triggered'  num times hit:'4'
  gp_inject_fault 
 -----------------
  t

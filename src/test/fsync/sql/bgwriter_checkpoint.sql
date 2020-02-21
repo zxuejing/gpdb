@@ -55,6 +55,7 @@ insert into fsync_test1 select i, i from generate_series(1,100)i;
 insert into fsync_test2 select -i, i from generate_series(1,100)i;
 end;
 
+vacuum pg_proc;
 -- Reset all faults.
 select gp_inject_fault('all', 'reset', '', '', '', 0, 0, dbid) from gp_segment_configuration;
 

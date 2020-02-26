@@ -519,9 +519,10 @@ extern int	gp_max_slices;
 extern bool	optimizer_partition_selection_log;
 
 /* optimizer join heuristic models */
-#define JOIN_ORDER_IN_QUERY                 0
-#define JOIN_ORDER_GREEDY_SEARCH            1
-#define JOIN_ORDER_EXHAUSTIVE_SEARCH        2
+#define JOIN_ORDER_IN_QUERY                  0
+#define JOIN_ORDER_GREEDY_SEARCH             1
+#define JOIN_ORDER_EXHAUSTIVE_SEARCH         2
+#define JOIN_ORDER_EXHAUSTIVE2_SEARCH        3
 
 extern char  *gp_email_smtp_server;
 extern char  *gp_email_smtp_userid;

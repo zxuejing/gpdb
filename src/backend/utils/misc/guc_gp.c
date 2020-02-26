@@ -5910,6 +5910,11 @@ assign_optimizer_join_order_options(const char *newval, bool doit, GucSource sou
 		if (doit)
 			optimizer_join_order = JOIN_ORDER_EXHAUSTIVE_SEARCH;
 	}
+	else if (pg_strcasecmp(newval, "exhaustive2") == 0)
+	{
+		if (doit)
+			optimizer_join_order = JOIN_ORDER_EXHAUSTIVE2_SEARCH;
+	}
 	else
 	{
 		printf("Unknown memory verbosity.");

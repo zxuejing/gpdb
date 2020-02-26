@@ -1025,7 +1025,8 @@ static struct config_bool ConfigureNamesBool[] =
 	{
 		{"check_function_bodies", PGC_USERSET, CLIENT_CONN_STATEMENT,
 			gettext_noop("Check function bodies during CREATE FUNCTION."),
-			NULL
+			NULL,
+			GUC_GPDB_ADDOPT
 		},
 		&check_function_bodies,
 		true, NULL, NULL

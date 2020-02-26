@@ -1332,7 +1332,7 @@ static struct config_int ConfigureNamesInt[] =
 			NULL
 		},
 		&ReservedBackends,
-		3, 0, INT_MAX / 4, NULL, NULL
+		10, 0, INT_MAX / 4, NULL, NULL
 	},
 
 	{

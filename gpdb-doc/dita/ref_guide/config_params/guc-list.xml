@@ -9910,7 +9910,7 @@ statement_mem = rg_perseg_mem / max_expected_concurrent_queries</codeblock></li>
     </body>
   </topic>
   <topic id="unix_socket_directory">
-    <title>unix_socket_directories</title>
+    <title>unix_socket_directory</title>
     <body>
       <p>Specifies the directory of the UNIX-domain socket on which the server is to listen for
         connections from client applications. The default is an empty string which is the directory

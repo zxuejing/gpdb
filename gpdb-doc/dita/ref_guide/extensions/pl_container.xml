@@ -243,17 +243,17 @@
               install the images on all Greenplum Database hosts where <codeph>-f</codeph> indicates
               the location of the downloaded files: </p>
             <codeblock># Install a Python 2 based Docker image
-$ plcontainer image-add -f /home/gpadmin/plcontainer-python-image-1.6.0-gp6.tar.gz
+$ plcontainer image-add -f /home/gpadmin/plcontainer-python-image-1.6.0.tar.gz
             
 # Install a Python 3 based Docker image
-$ plcontainer image-add -f /home/gpadmin/plcontainer-python3-image-1.6.0-gp6.tar.gz
+$ plcontainer image-add -f /home/gpadmin/plcontainer-python3-image-1.6.0.tar.gz
             
 # Install an R based Docker image
-$ plcontainer image-add -f /home/gpadmin/plcontainer-r-image-1.6.0-gp6.tar.gz
+$ plcontainer image-add -f /home/gpadmin/plcontainer-r-image-1.6.0.tar.gz
 </codeblock>
             <p>The utility displays progress information, similar to:</p>
             <codeblock>20200127:21:54:43:004607 plcontainer:mdw:gpadmin-[INFO]:-Checking whether docker is installed on all hosts...
-20200127:21:54:43:004607 plcontainer:mdw:gpadmin-[INFO]:-Distributing image file /home/gpadmin/plcontainer-python-images-1.5.0.tar to all hosts...
+20200127:21:54:43:004607 plcontainer:mdw:gpadmin-[INFO]:-Distributing image file /home/gpadmin/plcontainer-python-images-1.6.0.tar to all hosts...
 20200127:21:54:55:004607 plcontainer:mdw:gpadmin-[INFO]:-Loading image on all hosts...
 20200127:21:55:37:004607 plcontainer:mdw:gpadmin-[INFO]:-Removing temporary image files on all hosts...</codeblock>
             <p>For more information on <codeph>image-add</codeph> options, visit the <xref

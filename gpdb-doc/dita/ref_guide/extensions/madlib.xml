@@ -72,10 +72,10 @@
               >Pivotal Network</xref>.</li>
           <li>Copy the MADlib package to the Greenplum Database master host.</li>
           <li>Unpack the MADlib distribution package. For
-            example:<codeblock>$ tar xzvf madlib-1.16-gp5-rhel7-x86_64.tar.gz</codeblock></li>
+            example:<codeblock>$ tar xzvf madlib-1.17.0-gp5-rhel7-x86_64.tar.gz</codeblock></li>
           <li id="pz216990">Install the software package by running the <codeph>gppkg</codeph>
             command. For
-            example:<codeblock>$ gppkg -i ./madlib-1.16-gp5-rhel7-x86_64/madlib-1.16-gp5-rhel7-x86_64.gppkg</codeblock></li>
+            example:<codeblock>$ gppkg -i ./madlib-1.17.0-gp5-rhel7-x86_64/madlib-1.17.0-gp5-rhel7-x86_64.gppkg</codeblock></li>
         </ol>
       </body>
     </topic>
@@ -119,7 +119,7 @@
       <body>
         <p>To upgrade MADlib, run the <codeph>gppkg</codeph> utility with the <codeph>-u</codeph>
           option. This command upgrades an installed MADlib package to MADlib
-          1.16.<codeblock>$ gppkg -u madlib-1.16-gp5-rhel7-x86_64.gppkg</codeblock></p>
+          1.17.<codeblock>$ gppkg -u madlib-1.17.0-gp5-rhel7-x86_64.gppkg</codeblock></p>
         <note>Upgrading from MADlib version 1.15 using <codeph>gppkg -U</codeph> does not work
           because of a change in the post-uninstall script that was introduced in version 1.15.1. If
           you are upgrading from MADlib version 1.15 to version 1.15.1 or newer, follow these
@@ -129,7 +129,7 @@
             <li>Manually remove the remaining MADlib
               files:<codeblock>rm -rf /usr/local/greenplum-db-5.13.0/madlib/Versions</codeblock></li>
             <li>Install the newer MADlib version. For
-              example:<codeblock>$ gppkg -i ./madlib-1.16-gp5-rhel7-x86_64.gppkg</codeblock></li>
+              example:<codeblock>$ gppkg -i ./madlib-1.17.0-gp5-rhel7-x86_64.gppkg</codeblock></li>
             <li>Upgrade the MADlib functions in each database. For
               example:<codeblock>madpack -p greenplum -c gpadmin@mdw:5432/testdb upgrade</codeblock></li>
           </ol></note>
@@ -182,8 +182,8 @@ psql <varname>db_name</varname> -c "DROP FUNCTION IF EXISTS <varname>schema</var
         <p>If no databases use the MADlib functions, use the Greenplum <codeph>gppkg</codeph>
           utility with the <codeph>-r</codeph> option to uninstall the MADlib package. When removing
           the package you must specify the package and version. This example uninstalls MADlib
-          package version 1.4.</p>
-        <codeblock>$ gppkg -r madlib-1.14-gp5-rhel7-x86_64</codeblock>
+          package version 1.17.</p>
+        <codeblock>$ gppkg -r madlib-1.17.0-gp5-rhel7-x86_64</codeblock>
         <p>You can run the <codeph>gppkg</codeph> utility with the options <codeph>-q --all</codeph>
           to list the installed extensions and their versions.</p>
         <p>After you uninstall the package, restart the database.</p>

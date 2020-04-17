@@ -689,15 +689,16 @@ OFFSET <varname>start</varname></codeblock><p>where
           if an <codeph>UPDATE</codeph>, <codeph>DELETE</codeph>, or <codeph>SELECT FOR
             UPDATE</codeph> from another transaction has already locked a selected table,
             <codeph>SELECT FOR UPDATE</codeph> will wait for the other transaction to complete, and
-          will then lock and return the updated table.</p><p>To prevent the operation from waiting
-          for other transactions to commit, use the <codeph>NOWAIT</codeph> option. <codeph>SELECT
-            FOR UPDATE NOWAIT</codeph> reports an error, rather than waiting, if a selected row
-          cannot be locked immediately. Note that <codeph>NOWAIT</codeph> applies only to the
-          row-level lock(s) — the required <codeph>ROW SHARE</codeph> table-level lock is still
-          taken in the ordinary way. You can use the <codeph>NOWAIT</codeph> option of
-            <codeph>LOCK</codeph> if you need to acquire the table-level lock without waiting (see
-              <codeph><xref href="LOCK.xml#topic1" type="topic" format="dita"/></codeph>).
-            </p><p><codeph>FOR SHARE</codeph> behaves similarly, except that it acquires a shared
+          will then lock and return the updated table.</p><p>To
+          prevent the operation from waiting for other transactions to commit, use the
+            <codeph>NOWAIT</codeph> option. With <codeph>NOWAIT</codeph>, the statement reports an
+          error, rather than waiting, if a selected row cannot be locked immediately. Note that
+            <codeph>NOWAIT</codeph> only affects whether the <codeph>SELECT</codeph> statement waits
+          to obtain row-level locks. A required table-level lock is always taken in the ordinary
+          way. For example, a <codeph>SELECT FOR UPDATE NOWAIT</codeph> statement will always wait
+          for the required table-level lock; it behaves as if <codeph>NOWAIT</codeph> was omitted.
+          You can use <codeph>LOCK</codeph> with the <codeph>NOWAIT</codeph> option first, if you
+          need to acquire the table-level lock without waiting.</p><p><codeph>FOR SHARE</codeph> behaves similarly, except that it acquires a shared
           rather than exclusive lock on the table. A shared lock blocks other transactions from
           performing <codeph>UPDATE</codeph>, <codeph>DELETE</codeph>, or <codeph>SELECT FOR
             UPDATE</codeph> on the table, but it does not prevent them from performing

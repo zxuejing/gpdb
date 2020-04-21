@@ -40,10 +40,10 @@ AC_RUN_IFELSE([AC_LANG_PROGRAM([[
 #include <string.h>
 ]],
 [
-return strncmp("3.100.", GPORCA_VERSION_STRING, 6);
+return strncmp("3.101.", GPORCA_VERSION_STRING, 6);
 ])],
 [AC_MSG_RESULT([[ok]])],
-[AC_MSG_ERROR([Your ORCA version is expected to be 3.100.XXX])]
+[AC_MSG_ERROR([Your ORCA version is expected to be 3.101.XXX])]
 )
 AC_LANG_POP([C++])
 ])# PGAC_CHECK_ORCA_VERSION

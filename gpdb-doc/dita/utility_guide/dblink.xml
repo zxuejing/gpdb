@@ -168,7 +168,7 @@ testdb=# <b>GRANT EXECUTE ON FUNCTION dblink_connect_u(text, text) TO test_user;
           unencrypted transfers. For example:</p>
         <codeblock>testdb=# SELECT dblink_connect('greenplum_con_sales', 'dbname=sales host=gpmaster user=gpadmin sslmode=require');</codeblock>
         <p>Refer to <xref
-            href="../../security-guide/topics/Authenticate.xml#topic_fzv_wb2_jr/ssl_postgresql"
+            href="../security-guide/topics/Authenticate.xml#topic_fzv_wb2_jr/ssl_postgresql"
             format="dita" scope="peer">SSL Client Authentication</xref> for information about
           configuring Greenplum Database to use SSL.</p>
       </section>

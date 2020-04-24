@@ -294,11 +294,11 @@
           <li><xref href="../admin_guide/managing/monitor.xml"/></li>
           <li><xref href="../admin_guide/highavail/topics/g-recovering-a-failed-segment.xml"/></li>
         </ul><p><i>Greenplum Database Utility Guide</i>:<ul id="ul_fk2_hyl_v4">
-            <li><codeph><xref href="../utility_guide/ref/gpstate.xml">gpstate</xref></codeph> - view
+            <li><codeph><xref href="../utility_guide/admin_utilities/gpstate.xml" scope="peer">gpstate</xref></codeph> - view
               state of the Greenplum system</li>
-            <li><codeph><xref href="../utility_guide/ref/gprecoverseg.xml"
+            <li><codeph><xref href="../utility_guide/admin_utilities/gprecoverseg.xml" scope="peer"
                 >gprecoverseg</xref></codeph> - recover a failed segment</li>
-            <li><codeph><xref href="../utility_guide/ref/gpactivatestandby.xml"
+            <li><codeph><xref href="../utility_guide/admin_utilities/gpactivatestandby.xml"  scope="peer"
                   >gpactivatestandby</xref></codeph> - make the standby master the active
               master</li>
           </ul></p><p><xref href="http://tools.ietf.org/html/rfc1697" format="html" scope="external"

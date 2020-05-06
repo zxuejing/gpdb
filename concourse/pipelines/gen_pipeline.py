@@ -165,25 +165,29 @@ def how_to_use_generated_pipeline_message():
     msg += '  test_trigger ............. : %s\n' % ARGS.test_trigger_false
     msg += '======================================================================\n\n'
     if ARGS.pipeline_type == 'prod':
+        pipeline_name = '5X_STABLE'
         msg += 'NOTE: You can set the production pipelines with the following:\n\n'
         msg += 'fly -t gpdb-prod \\\n'
         msg += '    set-pipeline \\\n'
-        msg += '    -p 5X_STABLE \\\n'
+        msg += '    -p %s \\\n' % pipeline_name
         msg += '    -c %s \\\n' % ARGS.output_filepath
         msg += '    -l ~/workspace/gp-continuous-integration/secrets/gpdb_common-ci-secrets.yml \\\n'
-        msg += '    -l ~/workspace/gp-continuous-integration/secrets/gpdb_5X_STABLE-ci-secrets.yml\n'
+        msg += '    -l ~/workspace/gp-continuous-integration/secrets/gpdb_5X_STABLE-ci-secrets.yml\\\n'
+        msg += '    -v pipeline-name=%s\n' % pipeline_name
     else:
+        pipeline_name  = os.path.basename(ARGS.output_filepath).rsplit('.', 1)[0]
         msg += 'NOTE: You can set the developer pipeline with the following:\n\n'
         msg += 'fly -t gpdb-dev \\\n'
         msg += '    set-pipeline \\\n'
-        msg += '    -p %s \\\n' % os.path.basename(ARGS.output_filepath).rsplit('.', 1)[0]
+        msg += '    -p %s \\\n' % pipeline_name
         msg += '    -c %s \\\n' % ARGS.output_filepath
         msg += '    -l ~/workspace/gp-continuous-integration/secrets/gpdb_common-ci-secrets.yml \\\n'
         msg += '    -l ~/workspace/gp-continuous-integration/secrets/gpdb_5X_STABLE-ci-secrets.dev.yml \\\n'
         msg += '    -l ~/workspace/gp-continuous-integration/secrets/ccp_ci_secrets_dev.yml \\\n'
         msg += '    -v bucket-name=gpdb5-concourse-builds-dev \\\n'
         msg += '    -v gpdb-git-remote=%s \\\n' % suggested_git_remote()
-        msg += '    -v gpdb-git-branch=%s \n' % suggested_git_branch()
+        msg += '    -v gpdb-git-branch=%s \\\n' % suggested_git_branch()
+        msg += '    -v pipeline-name=%s\n' % pipeline_name
 
     return msg
 

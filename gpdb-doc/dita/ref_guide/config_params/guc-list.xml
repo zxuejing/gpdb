@@ -7158,7 +7158,7 @@
           </thead>
           <tbody>
             <row>
-              <entry colname="col1">10-<i>n</i></entry>
+              <entry colname="col1">10 - 65535</entry>
               <entry colname="col2">250 on master<p>750 on segments</p></entry>
               <entry colname="col3">local<p>system</p><p>restart</p></entry>
             </row>

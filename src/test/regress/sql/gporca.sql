@@ -2452,6 +2452,30 @@ EXPLAIN SELECT a, b FROM atab_old_hash FULL JOIN btab_old_hash ON a |=| b;
 SELECT a, b FROM atab_old_hash FULL JOIN btab_old_hash ON a |=| b;
 reset optimizer_expand_fulljoin;
 
+drop table if exists t55;
+drop table if exists tp;
+
+create table t55 (c int, lid int);
+insert into t55 select i, i from generate_series(1, 1000) i;
+
+set optimizer_join_order = query;
+
+explain verbose
+CREATE TABLE TP AS
+WITH META AS (SELECT '2020-01-01' AS VALID_DT, '99' AS LOAD_ID)
+SELECT DISTINCT L1.c, L1.lid
+FROM t55 L1 CROSS JOIN META
+WHERE L1.lid = META.LOAD_ID;
+
+CREATE TABLE TP AS
+WITH META AS (SELECT '2020-01-01' AS VALID_DT, '99' AS LOAD_ID)
+SELECT DISTINCT L1.c, L1.lid
+FROM t55 L1 CROSS JOIN META
+WHERE L1.lid = META.LOAD_ID;
+
+reset optimizer_join_order;
+SELECT * from tp;
+
 -- start_ignore
 DROP SCHEMA orca CASCADE;
 -- end_ignore

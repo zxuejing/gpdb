@@ -1055,7 +1055,7 @@ COptTasks::OptimizeTask
 		}
 		else
 		{
-			opt_ctxt->m_is_unexpected_failure = IsUnexpectedFailure(ex);
+			opt_ctxt->m_is_unexpected_failure = IsLoggableFailure(ex);
 		}
 		GPOS_RETHROW(ex);
 	}

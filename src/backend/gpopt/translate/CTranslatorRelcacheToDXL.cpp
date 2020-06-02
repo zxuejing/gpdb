@@ -1753,6 +1753,7 @@ CTranslatorRelcacheToDXL::RetrieveScOp
 	}
 
 	BOOL returns_null_on_null_input = gpdb::IsOpStrict(op_oid);
+	BOOL is_ndv_preserving = gpdb::IsOpNDVPreserving(op_oid);
 
 	mdid->AddRef();
 	CMDScalarOpGPDB *md_scalar_op = GPOS_NEW(mp) CMDScalarOpGPDB
@@ -1768,6 +1769,7 @@ CTranslatorRelcacheToDXL::RetrieveScOp
 											m_mdid_inverse_opr,
 											cmp_type,
 											returns_null_on_null_input,
+											is_ndv_preserving,
 											RetrieveScOpOpFamilies(mp, mdid)
 											);
 	return md_scalar_op;
@@ -1789,12 +1791,14 @@ CTranslatorRelcacheToDXL::LookupFuncProps
 	IMDFunction::EFuncStbl *stability, // output: function stability
 	IMDFunction::EFuncDataAcc *access, // output: function datya access
 	BOOL *is_strict, // output: is function strict?
+	BOOL *is_ndv_preserving, // output: preserves NDVs of inputs
 	BOOL *returns_set // output: does function return set?
 	)
 {
 	GPOS_ASSERT(NULL != stability);
 	GPOS_ASSERT(NULL != access);
 	GPOS_ASSERT(NULL != is_strict);
+	GPOS_ASSERT(NULL != is_ndv_preserving);
 	GPOS_ASSERT(NULL != returns_set);
 
 	CHAR cFuncStability = gpdb::FuncStability(func_oid);
@@ -1805,6 +1809,7 @@ CTranslatorRelcacheToDXL::LookupFuncProps
 
 	*returns_set = gpdb::GetFuncRetset(func_oid);
 	*is_strict = gpdb::FuncStrict(func_oid);
+	*is_ndv_preserving = gpdb::IsFuncNDVPreserving(func_oid);
 }
 
 
@@ -1873,7 +1878,8 @@ CTranslatorRelcacheToDXL::RetrieveFunc
 	IMDFunction::EFuncDataAcc access = IMDFunction::EfdaNoSQL;
 	BOOL is_strict = true;
 	BOOL returns_set = true;
-	LookupFuncProps(func_oid, &stability, &access, &is_strict, &returns_set);
+	BOOL is_ndv_preserving = true;
+	LookupFuncProps(func_oid, &stability, &access, &is_strict, &is_ndv_preserving, &returns_set);
 
 	mdid->AddRef();
 	CMDFunctionGPDB *md_func = GPOS_NEW(mp) CMDFunctionGPDB
@@ -1886,7 +1892,8 @@ CTranslatorRelcacheToDXL::RetrieveFunc
 											returns_set,
 											stability,
 											access,
-											is_strict
+											is_strict,
+											is_ndv_preserving
 											);
 
 	return md_func;

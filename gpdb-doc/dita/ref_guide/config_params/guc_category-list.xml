@@ -967,12 +967,17 @@
             <p>
               <xref href="guc-list.xml#stats_queue_level" type="section">stats_queue_level</xref>
             </p>
+            <p>
+              <xref href="guc-list.xml#track_activities" type="section">track_activities</xref>
+            </p>
           </stentry>
           <stentry>
             <p>
-              <xref href="guc-list.xml#update_process_title" type="section"
-                >update_process_title</xref>
+              <xref href="guc-list.xml#track_counts" type="section">track_counts</xref>
             </p>
+            <p>
+              <xref href="guc-list.xml#update_process_title" type="section"
+                >update_process_title</xref></p>
           </stentry>
         </strow>
       </simpletable>
@@ -1136,7 +1141,8 @@
     <body>
       <simpletable id="d1e1187" frame="none">
         <strow>
-          <stentry><p>
+          <stentry>
+            <p>
               <xref href="guc-list.xml#deadlock_timeout" type="section">deadlock_timeout</xref>
             </p>
             <p>

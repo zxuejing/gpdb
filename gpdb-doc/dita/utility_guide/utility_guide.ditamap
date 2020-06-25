@@ -52,8 +52,8 @@
             <topicref href="admin_utilities/pgbouncer-admin.xml"/>
             <topicref href="admin_utilities/plcontainer.xml"/>
             <topicref href="admin_utilities/plcontainer-configuration.xml"/>
-            <topicref href="../pxf/ref/pxf.html" scope="peer" navtitle="pxf"/>
-            <topicref href="../pxf/ref/pxf-cluster.html" scope="peer" navtitle="pxf cluster"/>
+            <topicref href="../../pxf/5-13/ref/pxf.html" scope="external" navtitle="pxf"/>
+            <topicref href="../../pxf/5-13/ref/pxf-cluster.html" scope="external" navtitle="pxf cluster"/>
         </topicref>
         <topicref href="cli_ref.xml" linking="targetonly">
             <topicref href="client_utilities/clusterdb.xml"/>

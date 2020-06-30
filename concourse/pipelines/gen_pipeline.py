@@ -25,6 +25,8 @@ Python module requirements:
   - jinja2 (install through pip or easy_install)
 """
 
+from __future__ import print_function
+
 import argparse
 import datetime
 import os
@@ -91,12 +93,12 @@ def render_template(template_filename, context):
     return TEMPLATE_ENVIRONMENT.get_template(template_filename).render(context)
 
 def validate_pipeline_release_jobs(raw_pipeline_yml):
-    print "======================================================================"
-    print "Validate Pipeline Release Jobs"
-    print "----------------------------------------------------------------------"
+    print("======================================================================")
+    print("Validate Pipeline Release Jobs")
+    print("----------------------------------------------------------------------")
 
     pipeline_yml_cleaned = re.sub('{{', '', re.sub('}}', '', raw_pipeline_yml)) # ignore concourse v2.x variable interpolation
-    pipeline = yaml.load(pipeline_yml_cleaned)
+    pipeline = yaml.safe_load(pipeline_yml_cleaned)
 
     jobs_raw = pipeline['jobs']
     all_job_names = [job['name'] for job in jobs_raw]
@@ -109,12 +111,12 @@ def validate_pipeline_release_jobs(raw_pipeline_yml):
     unaccounted_for_jobs = [job for job in jobs_that_are_not_blocking_release if job not in JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE]
 
     if unaccounted_for_jobs:
-        print "Please add the following jobs as a Release_Candidate dependency or ignore them"
-        print "by adding them to JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE in "+ __file__
-        print unaccounted_for_jobs
+        print("Please add the following jobs as a Release_Candidate dependency or ignore them")
+        print("by adding them to JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE in "+ __file__)
+        print(unaccounted_for_jobs)
         return False
 
-    print "Pipeline validated: all jobs accounted for"
+    print("Pipeline validated: all jobs accounted for")
     return True
 
 def create_pipeline():
@@ -144,7 +146,7 @@ def create_pipeline():
     if ARGS.pipeline_type == 'prod':
         validated = validate_pipeline_release_jobs(pipeline_yml)
         if not validated:
-            print "Refusing to update the pipeline file"
+            print("Refusing to update the pipeline file")
             return False
 
     with open(ARGS.output_filepath, 'w') as output:
@@ -260,7 +262,7 @@ if __name__ == "__main__":
     pipeline_created = create_pipeline()
 
     if pipeline_created:
-        print how_to_use_generated_pipeline_message()
+        print(how_to_use_generated_pipeline_message())
     else:
         exit(1)
 

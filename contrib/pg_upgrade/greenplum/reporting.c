@@ -126,3 +126,21 @@ close_progress(void)
 	progress_counter = 0;
 	progress_prev = epoch_us();
 }
+
+void
+duration(instr_time duration, char *res)
+{
+    int seconds = INSTR_TIME_GET_DOUBLE(duration);
+    int h = (seconds/3600);
+    int m = (seconds -(3600*h))/60;
+    int s = (seconds -(3600*h)-(m*60));
+    if (h>0) {
+        sprintf(res, "[ %dh%dm%ds ]", h, m, s);
+    } else if (m>0) {
+        sprintf(res, "[ %dm%ds ]", m, s);
+    } else if (s>0){
+        sprintf(res, "[ %ds ]", s);
+    } else {
+        sprintf(res, "[ %.3f ms ]", INSTR_TIME_GET_MILLISEC(duration));
+    }
+}

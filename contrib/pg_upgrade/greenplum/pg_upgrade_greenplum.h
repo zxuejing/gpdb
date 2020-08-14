@@ -9,6 +9,7 @@
 
 
 #include "pg_upgrade.h"
+#include <portability/instr_time.h>
 
 
 #define PG_OPTIONS_UTILITY_MODE " PGOPTIONS='-c gp_session_role=utility' "
@@ -43,7 +44,8 @@ typedef enum {
 	GREENPLUM_REMOVE_CHECKSUM_OPTION = 4,
 	GREENPLUM_OLD_GP_DBID = 5,
 	GREENPLUM_NEW_GP_DBID = 6,
-	GREENPLUM_OLD_TABLESPACES_FILE = 7
+	GREENPLUM_OLD_TABLESPACES_FILE = 7,
+	GREENPLUM_TIMING = 8,
 } greenplumOption;
 
 
@@ -54,7 +56,8 @@ typedef enum {
 	{"remove-checksum", no_argument, NULL, GREENPLUM_REMOVE_CHECKSUM_OPTION}, \
 	{"old-gp-dbid", required_argument, NULL, GREENPLUM_OLD_GP_DBID}, \
 	{"new-gp-dbid", required_argument, NULL, GREENPLUM_NEW_GP_DBID}, \
-	{"old-tablespaces-file", required_argument, NULL, GREENPLUM_OLD_TABLESPACES_FILE},
+	{"old-tablespaces-file", required_argument, NULL, GREENPLUM_OLD_TABLESPACES_FILE}, \
+	{"timing", no_argument, NULL, GREENPLUM_TIMING},
 
 #define GREENPLUM_USAGE "\
       --mode=TYPE               designate node type to upgrade, \"segment\" or \"dispatcher\" (default \"segment\")\n\
@@ -64,6 +67,7 @@ typedef enum {
       --old-gp-dbid             greenplum database id of the old segment\n\
       --new-gp-dbid             greenplum database id of the new segment\n\
       --old-tablespaces-file    file containing the tablespaces from an old gpdb five cluster\n\
+      --timing                  enable timing\n\
 "
 
 /* option_gp.c */
@@ -73,6 +77,7 @@ bool is_greenplum_dispatcher_mode(void);
 bool is_checksum_mode(checksumMode mode);
 bool is_show_progress_mode(void);
 void validate_greenplum_options(void);
+bool is_timing_on(void);
 
 /* pg_upgrade_greenplum.c */
 void freeze_all_databases(void);
@@ -118,6 +123,7 @@ void check_greenplum(void);
 void report_progress(ClusterInfo *cluster, progress_type op, char *fmt,...)
 pg_attribute_printf(3, 4);
 void close_progress(void);
+void duration(instr_time duration, char *res);
 
 /* tablespace_gp.c */
 
@@ -134,5 +140,12 @@ is_gpdb6(ClusterInfo *cluster)
 {
 	return GET_MAJOR_VERSION(cluster->major_version) == 904;
 }
+
+static struct {
+	instr_time start_time;
+	instr_time end_time;
+} step_timing;
+
+void check_ok_with_timing(void);
 
 #endif /* PG_UPGRADE_GREENPLUM_H */

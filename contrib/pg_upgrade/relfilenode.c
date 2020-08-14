@@ -38,6 +38,9 @@ void
 transfer_all_new_tablespaces(DbInfoArr *old_db_arr, DbInfoArr *new_db_arr,
 							 char *old_pgdata, char *new_pgdata)
 {
+	if (is_timing_on())
+        INSTR_TIME_SET_CURRENT(step_timing.start_time);
+
 	pg_log(PG_REPORT, "%s user relation files\n",
 	  user_opts.transfer_mode == TRANSFER_MODE_LINK ? "Linking" : "Copying");
 

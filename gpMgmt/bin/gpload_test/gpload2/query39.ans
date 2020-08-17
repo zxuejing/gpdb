@@ -1,0 +1,30 @@
+2020-08-17 16:12:26|INFO|gpload session started 2020-08-17 16:12:26
+2020-08-17 16:12:26|INFO|setting schema 'public' for table 'testpk'
+2020-08-17 16:12:26|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2020-08-17 16:12:26|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_9cfc886e8f484d05619f4e7cb992ce20
+2020-08-17 16:12:26|INFO|did not find an external table to reuse. creating ext_gpload_reusable_62d0fa4e_e061_11ea_aee0_00505698d059
+2020-08-17 16:12:26|INFO|running time: 0.12 seconds
+2020-08-17 16:12:26|INFO|rows Inserted          = 4
+2020-08-17 16:12:26|INFO|rows Updated           = 0
+2020-08-17 16:12:26|INFO|data formatting errors = 0
+2020-08-17 16:12:26|INFO|gpload succeeded
+2020-08-17 16:12:26|INFO|gpload session started 2020-08-17 16:12:26
+2020-08-17 16:12:26|INFO|setting schema 'public' for table 'testpk'
+2020-08-17 16:12:26|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2020-08-17 16:12:26|INFO|reusing staging table staging_gpload_reusable_9cfc886e8f484d05619f4e7cb992ce20
+2020-08-17 16:12:26|INFO|reusing external table ext_gpload_reusable_62d0fa4e_e061_11ea_aee0_00505698d059
+2020-08-17 16:12:26|INFO|running time: 0.11 seconds
+2020-08-17 16:12:26|INFO|rows Inserted          = 0
+2020-08-17 16:12:26|INFO|rows Updated           = 4
+2020-08-17 16:12:26|INFO|data formatting errors = 0
+2020-08-17 16:12:26|INFO|gpload succeeded
+2020-08-17 16:12:26|INFO|gpload session started 2020-08-17 16:12:26
+2020-08-17 16:12:26|INFO|setting schema 'public' for table 'testpk'
+2020-08-17 16:12:26|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file2.txt" -t 30
+2020-08-17 16:12:26|INFO|reusing staging table staging_gpload_reusable_9cfc886e8f484d05619f4e7cb992ce20
+2020-08-17 16:12:26|INFO|did not find an external table to reuse. creating ext_gpload_reusable_631ae46a_e061_11ea_993b_00505698d059
+2020-08-17 16:12:26|INFO|running time: 0.16 seconds
+2020-08-17 16:12:26|INFO|rows Inserted          = 1
+2020-08-17 16:12:26|INFO|rows Updated           = 4
+2020-08-17 16:12:26|INFO|data formatting errors = 0
+2020-08-17 16:12:26|INFO|gpload succeeded

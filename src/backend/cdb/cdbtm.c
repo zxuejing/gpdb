@@ -1676,6 +1676,7 @@ tmShmemInit(void)
 			elog(PANIC, "cannot generate global transaction id");
 		}
 
+		MemSet(shared, 0, tmShmemSize());
 		*shmDistribTimeStamp = (DistributedTransactionTimeStamp)t;
   		elog(DEBUG1, "DTM start timestamp %u", *shmDistribTimeStamp);
 
@@ -1827,9 +1828,10 @@ isMppTxOptions_ExplicitBegin(int txnOptions)
 void
 getTmLock(void)
 {
-
 	if (ControlLockCount++ == 0)
 		LWLockAcquire(shmControlLock, LW_EXCLUSIVE);
+
+	Assert(LWLockHeldByMe(shmControlLock));
 }
 
 /* release tm lw lock */
@@ -1838,7 +1840,6 @@ releaseTmLock(void)
 {
 	if (--ControlLockCount == 0)
 		LWLockRelease(shmControlLock);
-
 }
 
 /*
@@ -2650,6 +2651,7 @@ releaseGxact_UnderLocks(void)
 {
 	int			i;
 	int			curr;
+	int			numGxacts;
 
 	if (currentGxact == NULL)
 	{
@@ -2661,8 +2663,8 @@ releaseGxact_UnderLocks(void)
 		 currentGxact->gid, currentGxact->debugIndex);
 
 	/* find slot of current transaction */
-	curr = *shmNumGxacts;	/* A bad value we can safely test. */
-	for (i = 0; i < *shmNumGxacts; i++)
+	numGxacts = curr = *shmNumGxacts;	/* A bad value we can safely test. */
+	for (i = 0; i < numGxacts; i++)
 	{
 		if (shmGxactArray[i] == currentGxact)
 		{
@@ -2671,6 +2673,12 @@ releaseGxact_UnderLocks(void)
 		}
 	}
 
+	if (curr == numGxacts)
+		ereport(PANIC, (errcode(ERRCODE_INTERNAL_ERROR),
+						errmsg("Cannot find my global transaction in the array"),
+						errdetail("ControlLockCount: %u, numGxacts: %u, gid: %s, currentGxact: %p",
+								   ControlLockCount, numGxacts, currentGxact->gid, currentGxact)));
+
 	/* move this to the next available slot */
 	(*shmNumGxacts)--;
 	if (curr != *shmNumGxacts)
@@ -2678,6 +2686,10 @@ releaseGxact_UnderLocks(void)
 		shmGxactArray[curr] = shmGxactArray[*shmNumGxacts];
 		shmGxactArray[*shmNumGxacts] = currentGxact;
 	}
+
+	if (*shmNumGxacts != numGxacts - 1)
+		ereport(PANIC, (errcode(ERRCODE_INTERNAL_ERROR),
+						errmsg("Shared memory corrupted")));
 
 	currentGxact = NULL;
 }

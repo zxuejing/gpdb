@@ -281,10 +281,9 @@ class CheckFilespaceConsistency(Operation):
         files are consistent on all segments
     """
 
-    def __init__(self, gparray, file_type, skip_standby):
+    def __init__(self, gparray, file_type):
         self.gparray = gparray
         self.file_type = file_type
-        self.skip_standby = skip_standby
 
     def execute(self):
         logger.info('Checking for filespace consistency')
@@ -302,7 +301,7 @@ class CheckFilespaceConsistency(Operation):
             dbid = seg.getSegmentDbId()
             flat_file_location = os.path.join(pg_system_fs_entries[dbid][2],
                                               flat_file)
-            if seg.isSegmentDown() or (seg.isSegmentStandby() and self.skip_standby):
+            if seg.isSegmentDown():
                 logger.warning("Segment with DBID %s on host %s is down, skipping checking the filespace info file %s." % (dbid, seg.getSegmentHostName(), flat_file_location))
                 continue
             logger.debug('flat file location = %s' % flat_file_location)
@@ -341,7 +340,7 @@ class CheckFilespaceConsistency(Operation):
         operation_list = []
         for seg in self.gparray.getDbList():
             dbid = seg.getSegmentDbId()
-            if seg.isSegmentDown() or (seg.isSegmentStandby() and self.skip_standby):
+            if seg.isSegmentDown():
                 logger.warning("Segment with DBID %s on host %s is down, skipping verifying the filespace entries with the corresponding primary segment." % (dbid, seg.getSegmentHostName()))
                 continue
             cur_filespace_entry = cur_filespace_entries[dbid]

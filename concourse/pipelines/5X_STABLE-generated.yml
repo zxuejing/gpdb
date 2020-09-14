@@ -308,17 +308,17 @@ groups:
 
 resource_types:
 - name: terraform
-  type: docker-image
+  type: registry-image
   source:
     repository: ljfranklin/terraform-resource
     tag: 0.11.14
 - name: pivnet
-  type: docker-image
+  type: registry-image
   source:
     repository: pivotalcf/pivnet-resource
     tag: latest-final
 - name: gcs
-  type: docker-image
+  type: registry-image
   source:
     repository: frodenas/gcs-resource
 
@@ -338,7 +338,7 @@ resources:
     uri: {{ccp-git-remote}}
 
 - name: ccp-image
-  type: docker-image
+  type: registry-image
   source:
     repository: pivotaldata/ccp
     tag: '7'
@@ -444,43 +444,43 @@ resources:
     uri: ((debian-release-git-remote))
 
 - name: centos-gpdb-dev-6
-  type: docker-image
+  type: registry-image
   source:
     repository: pivotaldata/centos-gpdb-dev
     tag: '6-gcc6.2-llvm3.7'
 
 - name: centos-gpdb-dev-7
-  type: docker-image
+  type: registry-image
   source:
     repository: pivotaldata/centos-gpdb-dev
     tag: 7-gcc6.2-llvm3.7
 
 - name: oracle-gpdb-test-7
-  type: docker-image
+  type: registry-image
   source:
     repository: pivotaldata/oracle7-test
     tag: gpdb5-latest
 
 - name: ubuntu-gpdb-dev-16
-  type: docker-image
+  type: registry-image
   source:
     repository: pivotaldata/ubuntu-gpdb-dev
     tag: '16.04'
 
 - name: ubuntu16.04-test
-  type: docker-image
+  type: registry-image
   source:
     repository: pivotaldata/ubuntu16.04-test
     tag: gpdb5-latest
 
 - name: ubuntu-gpdb-debian-dev-16
-  type: docker-image
+  type: registry-image
   source:
     repository: pivotaldata/ubuntu-gpdb-debian-dev
     tag: '16.04'
 
 - name: ubuntu-gpcloud-dev-16
-  type: docker-image
+  type: registry-image
   source:
     repository: pivotaldata/ubuntu-gpcloud-dev
     tag: '16.04'
@@ -488,7 +488,7 @@ resources:
     password: {{docker_password}}
 
 - name: centos-mingw
-  type: docker-image
+  type: registry-image
   source:
     repository: pivotaldata/centos-mingw
 
@@ -857,7 +857,7 @@ anchors:
     config:
       platform: linux
       image_resource:
-        type: docker-image
+        type: registry-image
         source:
           repository: alpine
       run:
@@ -952,7 +952,7 @@ set_failed_anchor: &set_failed
     config:
       platform: linux
       image_resource:
-        type: docker-image
+        type: registry-image
         source:
           repository: pivotaldata/ccp
           tag: "7"
@@ -979,7 +979,7 @@ set_failed_two_clusters_anchor: &set_failed_two_clusters
     config:
       platform: linux
       image_resource:
-        type: docker-image
+        type: registry-image
         source:
           repository: pivotaldata/ccp
           tag: "7"
@@ -1005,7 +1005,7 @@ dpm_debug_sleep_anchor: &dpm_debug_sleep
     config:
       platform: linux
       image_resource:
-        type: docker-image
+        type: registry-image
         source:
           repository: alpine
           tag: latest
@@ -2011,7 +2011,7 @@ jobs:
     config:
       platform: linux
       image_resource:
-        type: docker-image
+        type: registry-image
         source:
           repository: alpine
       run:
@@ -2525,7 +2525,7 @@ jobs:
     config:
       platform: linux
       image_resource:
-        type: docker-image
+        type: registry-image
         source:
           repository: alpine
       run:
@@ -2688,7 +2688,7 @@ jobs:
     config:
       platform: linux
       image_resource:
-        type: docker-image
+        type: registry-image
         source:
           repository: alpine
       run:
@@ -3122,7 +3122,7 @@ jobs:
     config:
       platform: linux
       image_resource:
-        type: docker-image
+        type: registry-image
         source:
           repository: alpine
       run:
@@ -3221,7 +3221,7 @@ jobs:
        - name: cluster_env_files
        - name: ddboost_rpm
       image_resource:
-        type: docker-image
+        type: registry-image
         source:
           repository: pivotaldata/ccp
           tag: '7'
@@ -3299,7 +3299,7 @@ jobs:
        - name: cluster_env_files
        - name: ddboost_rpm
       image_resource:
-        type: docker-image
+        type: registry-image
         source:
           repository: pivotaldata/ccp
           tag: '7'
@@ -3377,7 +3377,7 @@ jobs:
        - name: cluster_env_files
        - name: ddboost_rpm
       image_resource:
-        type: docker-image
+        type: registry-image
         source:
           repository: pivotaldata/ccp
           tag: '7'
@@ -3662,7 +3662,7 @@ jobs:
         config:
           platform: linux
           image_resource:
-            type: docker-image
+            type: registry-image
             source:
               repository: pivotaldata/ccp
               tag: "7"
@@ -3695,7 +3695,7 @@ jobs:
         config:
           platform: linux
           image_resource:
-            type: docker-image
+            type: registry-image
             source:
               repository: pivotaldata/ccp
               tag: "7"
@@ -3715,7 +3715,7 @@ jobs:
         - name: ccp_src
         - name: gpdb_src
       image_resource:
-        type: docker-image
+        type: registry-image
         source:
           repository: pivotaldata/ccp
           tag: '7'
@@ -3766,7 +3766,7 @@ jobs:
         config:
           platform: linux
           image_resource:
-            type: docker-image
+            type: registry-image
             source:
               repository: pivotaldata/ccp
               tag: "7"
@@ -3798,7 +3798,7 @@ jobs:
         config:
           platform: linux
           image_resource:
-            type: docker-image
+            type: registry-image
             source:
               repository: pivotaldata/ccp
               tag: "7"
@@ -3818,7 +3818,7 @@ jobs:
         - name: ccp_src
         - name: gpdb_src
       image_resource:
-        type: docker-image
+        type: registry-image
         source:
           repository: pivotaldata/ccp
           tag: '7'
@@ -3883,7 +3883,7 @@ jobs:
     config:
       platform: linux
       image_resource:
-        type: docker-image
+        type: registry-image
         source:
           repository: alpine
       run:
@@ -3943,7 +3943,7 @@ jobs:
     config:
       platform: linux
       image_resource:
-        type: docker-image
+        type: registry-image
         source:
           repository: alpine
       run:
@@ -4283,7 +4283,7 @@ jobs:
     config:
       platform: linux
       image_resource:
-        type: docker-image
+        type: registry-image
         source:
           repository: alpine
       run:

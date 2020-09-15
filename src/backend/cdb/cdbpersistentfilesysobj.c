@@ -1567,11 +1567,26 @@ PersistentFileSysObjStateChangeResult PersistentFileSysObj_StateChange(
 
 		pfree(newValues);
 		pfree(replaces);
+
+		if (Debug_persistent_print)
+		{
+			heap_freetuple(tupleCopy);
+
+			PersistentFileSysObj_ReadTuple(
+				fsObjType,
+				persistentTid,
+				values,
+				&tupleCopy);
+
+			(*fileSysObjData->storeData.printTupleCallback)(
+				Persistent_DebugPrintLevel(),
+				"STATE CHANGE",
+				persistentTid,
+				values);
+		}
 	}
 	else
 	{
-		heap_freetuple(tupleCopy);
-
 		PersistentFileSysObj_FreeTuple(
 									fileSysObjData,
 									fileSysObjSharedData,
@@ -1580,23 +1595,7 @@ PersistentFileSysObjStateChangeResult PersistentFileSysObj_StateChange(
 									flushToXLog);
 	}
 
-	if (Debug_persistent_print)
-	{
-		PersistentFileSysObj_ReadTuple(
-								fsObjType,
-								persistentTid,
-								values,
-								&tupleCopy);
-
-		(*fileSysObjData->storeData.printTupleCallback)(
-									Persistent_DebugPrintLevel(),
-									"STATE CHANGE",
-									persistentTid,
-									values);
-
-		heap_freetuple(tupleCopy);
-	}
-
+	heap_freetuple(tupleCopy);
 	pfree(values);
 
 	return PersistentFileSysObjStateChangeResult_StateChangeOk;

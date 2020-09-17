@@ -3626,7 +3626,15 @@ CTranslatorQueryToDXL::TranslateTargetListToDXLProject
 		BOOL is_grouping_col = CTranslatorUtils::IsGroupingColumn(target_entry, plgrpcl);
 		if (!is_groupby || (is_groupby && is_grouping_col))
 		{
-			CDXLNode *project_elem_dxlnode =  TranslateExprToDXLProject(target_entry->expr, target_entry->resname);
+			// Insist projection for any outer refs to ensure any decorelation of a
+			// subquery results in a correct plan using the projected reference,
+			// instead of the outer ref directly.
+			// TODO: Remove is_grouping_col from this check once const projections in
+			// subqueries no longer prevent decorrelation
+			BOOL insist_proj = (IsA(target_entry->expr, Var) &&
+				 ((Var *) (target_entry->expr))->varlevelsup > 0 &&
+				 !is_grouping_col);
+			CDXLNode *project_elem_dxlnode =  TranslateExprToDXLProject(target_entry->expr, target_entry->resname, insist_proj /* insist_new_colids */);
 			ULONG colid = CDXLScalarProjElem::Cast(project_elem_dxlnode->GetOperator())->Id();
 
 			AddSortingGroupingColumn(target_entry, sort_grpref_to_colid_mapping, colid);
@@ -3634,9 +3642,9 @@ CTranslatorQueryToDXL::TranslateTargetListToDXLProject
 			// add column to the list of output columns of the query
 			StoreAttnoColIdMapping(output_attno_to_colid_mapping, resno, colid);
 
-			if (!IsA(target_entry->expr, Var))
+			if (!IsA(target_entry->expr, Var) || insist_proj)
 			{
-				// only add computed columns to the project list
+				// only add computed columns to the project list or if it's an outerref
 				project_list_dxlnode->AddChild(project_elem_dxlnode);
 			}
 			else

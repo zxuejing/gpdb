@@ -935,8 +935,6 @@ buildGpQueryString(struct CdbDispatcherState *ds,
 		 *pos;
 	char one = 1;
 	char zero = 0;
-	int			cnt,
-				character_len;
 
 	/*
 	 * If either querytree or plantree is set then the query string is not so
@@ -944,19 +942,14 @@ buildGpQueryString(struct CdbDispatcherState *ds,
 	 *
 	 * Here we only need to determine the truncated size, the actual work is
 	 * done later when copying it to the result buffer.
+	 *
+	 * The +1 and -1 below are adjustments to accommodate terminating null
+	 * character.
 	 */
-	cnt = 0;
-	if (querytree || plantree)
-	{
-		while (cnt < QUERY_STRING_TRUNCATE_SIZE)
-		{
-			character_len = pg_encoding_mblen(GetDatabaseEncoding(), command + cnt);
-			cnt += character_len;
-		}
-		command_len = strnlen(command, cnt - character_len) + 1;
-	}
-	else
-		command_len = strlen(command) + 1;
+	command_len = strlen(command) + 1;
+	if ((querytree || plantree) && command_len > QUERY_STRING_TRUNCATE_SIZE)
+		command_len = pg_mbcliplen(command, command_len,
+								   QUERY_STRING_TRUNCATE_SIZE-1) + 1;
 
 	initStringInfo(&resgroupInfo);
 	if (IsResGroupActivated())

@@ -104,7 +104,7 @@ def validate_pipeline_release_jobs(raw_pipeline_yml):
     all_job_names = [job['name'] for job in jobs_raw]
 
     release_candidate_job = [ job for job in jobs_raw if job['name'] == 'gate_release_candidate_start' ][0]
-    release_qualifying_job_names = release_candidate_job['plan'][0]['aggregate'][0]['passed']
+    release_qualifying_job_names = release_candidate_job['plan'][0]['in_parallel'][0]['passed']
 
     jobs_that_are_not_blocking_release = [job for job in all_job_names if job not in release_qualifying_job_names]
 

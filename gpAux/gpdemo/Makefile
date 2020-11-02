@@ -45,6 +45,9 @@ cluster create-demo-cluster:
 	@./demo_cluster.sh
 	@echo ""
 
+autofailover:
+	@./demo_cluster.sh -A
+	@echo ""
 probe:
 	@./probe_config.sh
 	@echo ""

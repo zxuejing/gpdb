@@ -6,6 +6,7 @@
 # THIS IMPORT MUST COME FIRST
 #
 # import mainUtils FIRST to get python version check
+import logging
 import sys
 from optparse import OptionGroup, SUPPRESS_HELP
 
@@ -63,6 +64,7 @@ class GpStart:
         self.quiet = quiet
         self.masteronly = masteronly
         self.master_datadir = master_datadir
+        self.monitor = gp.MonitorNode.fromEnv()
         self.interactive = interactive
         self.timeout = timeout
         self.wrapper = wrapper
@@ -82,6 +84,7 @@ class GpStart:
         self.dburl = None
         self.max_connections = None
         logger.debug("Setting level of parallelism to: %d" % self.parallel)
+        logger.info("Monitor: %s" % self.monitor)
 
     ######
     def run(self):
@@ -111,6 +114,7 @@ class GpStart:
             if self.masteronly:
                 return 0
 
+            self.shutdown_master_only()
             num_workers = min(len(self.gparray.get_hostlist()), self.parallel)
             # We check for unreachable segment hosts first thing, because if a host is down but its segments
             # are marked up, later checks can return invalid or misleading results and the cluster may not
@@ -133,12 +137,11 @@ class GpStart:
                 logger.info("Skipping Standby activation status checking.")
 
             logger.info("Shutting down master")
-            self.shutdown_master_only()
-            # TODO: check results of command.
 
         finally:
             # Reenable Ctrl-C
             signal.signal(signal.SIGINT, signal.default_int_handler)
+
 
         (segmentsToStart, invalidSegments) = self._prepare_segment_start()
 
@@ -170,6 +173,44 @@ class GpStart:
 
             # ------------------------------- Internal Helper --------------------------------
 
+    def _start_pgautoctl_node(self, host, pgdata, pmstatus):
+        logger.info("start pg_autoctl for %s - %s, expected pmstatus=%s" % (host, pgdata, pmstatus))
+        cmd = gp.PgautoctlCommand('start', host, pgdata)
+        cmd.run(validateAfter=True)
+        gp.wait_for_server_ready(host, pgdata, pmstatus)
+
+    def _start_pgautoctl_nodes(self):
+        m = self.gparray.master
+        s = self.gparray.standbyMaster
+        logger.info("master node %s" % (m))
+        logger.info("standby node %s" % (s))
+        mOK, sOK = False, False
+        assert m is not None
+        self._start_pgautoctl_node(m.getSegmentHostName(), m.getSegmentDataDirectory(), pmstatus='dtmready')
+        mOK = True
+
+        if s is not None:
+            self._start_pgautoctl_node(s.getSegmentHostName(), s.getSegmentDataDirectory(), pmstatus=('ready','standby'))
+            sOK = True
+        return mOK, sOK
+
+    def _check_and_run_monitor(self):
+        m = self.monitor
+        assert m is not None
+        logger.info("start monitor...")
+        try:
+            pgautoctl = gp.PgautoctlCommand('start', m.host, m.datadir)
+            pgautoctl.run(validateAfter=True)
+            ok = gp.wait_for_server_ready(m.host, m.datadir, 'ready', timeout=60)
+            if not ok:
+                logger.warning("Failed to start the monitor: %s %s" % (m.host, m.datadir))
+                logger.warning("Fall back with pg_auto_failover")
+                self.monitor = None
+        except:
+            logger.warning("Failed to start the monitor: %s %s" % (m.host, m.datadir))
+            logger.warning("Fall back with pg_auto_failover")
+            self.monitor = None
+        pass
     ######
     def _prepare(self):
         logger.info("Gathering information and validating the environment...")
@@ -177,6 +218,8 @@ class GpStart:
 
         self._check_version()
         self._check_master_running()
+        if self.monitor is not None:
+            self._check_and_run_monitor()
 
     ######
     def _basic_setup(self):
@@ -502,12 +545,21 @@ class GpStart:
             raise ExceptionNoStackTraceNeeded("Do not have enough valid segments to start the array.")
 
         failedToStart = segmentStartResult.getFailedSegmentObjs()
-        master_result, message = self._start_final_master()
-        if not master_result:
-            return False
 
-        # start standby after master in dispatch mode comes up
-        standby_was_started = self._start_standby()
+        # TODO:
+        # 1. without coordinator auto failover: start master, start standby
+        # 2. with coordinator auto failover: start master and standby under pg_autoctl
+        #       if only one node registered, we don't start standby node
+        if self.monitor is None:
+            master_result, message = self._start_final_master()
+            if not master_result:
+                return False
+
+            # start standby after master in dispatch mode comes up
+            standby_was_started = self._start_standby()
+        else:
+            master_result, standby_was_started = self._start_pgautoctl_nodes()
+            message = None
 
         # report if we complete operations
         return self._check_final_result(
@@ -716,8 +768,9 @@ class GpStart:
         self.gparray.master.hostname, self.master_datadir, restrict_txt))
 
         # attempt to start master
-        gp.MasterStart.local("Starting Master instance",
-                             self.master_datadir, self.port, self.era,
+        gp.MasterStart.remote("Starting Master instance",
+                             self.master_datadir, self.gparray.master.hostname,
+                             self.port, self.era,
                              wrapper=self.wrapper, wrapper_args=self.wrapper_args,
                              specialMode=self.specialMode, restrictedMode=self.restricted, timeout=self.timeout,
                              max_connections=self.max_connections

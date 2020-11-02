@@ -18,6 +18,7 @@ import re, socket
 from gppylib.gplog import *
 from gppylib.db import dbconn
 from gppylib import gparray
+from gppylib.commands import pg
 from gppylib.commands.base import *
 from .unix import *
 from gppylib import pgconf
@@ -65,6 +66,93 @@ def getPostmasterPID(hostname, datadir):
         return int(sout.split()[1])
     except:
         return -1
+
+#-----------------------------------------------
+class MonitorNode:
+    def __init__(self):
+        self.host = None
+        self.port = None
+        self.datadir = None
+    @staticmethod
+    def fromEnv():
+        host = os.environ.get('MONITOR_HOST', '')
+        if host == '':
+            return None
+        port = os.environ.get('MONITOR_PORT', '')
+        datadir = os.environ.get('MONITOR_DATADIR', '')
+        if port == '' or datadir == '':
+            raise Exception('port or datadir is unset for the monitor')
+        node = MonitorNode()
+        node.setOptions(host=host, port=port, datadir=datadir)
+        print('monitor node = %s' % (node))
+        return node
+
+    def setOptions(self, host=None, port=None, datadir=None):
+        if host is not None:
+            self.host = host
+        if port is not None:
+            self.port = port
+        if datadir is not None:
+            self.datadir = datadir
+        return self
+    def toURI(self):
+        return "postgres://autoctl_node@%s:%s/pg_auto_failover?sslmode=prefer" % (self.host, self.port)
+    def __str__(self):
+        return "%s:%s/%s" % (self.host, self.port, self.datadir)
+
+# start/stop pg_autoctl
+# monitor and the postgres node have the same command line
+# options to start/stop
+class PgautoctlCommand(Command):
+    def __init__(self, action, host, pgdata):
+        if not action in ['start', 'stop', 'restart']:
+            raise Exception('Invalid action: %s' % (action))
+        self.action = action
+        self.host = host
+        self.pgdata = pgdata
+        cmdStr = None
+        if action == 'start':
+            cmdStr = "PGAUTOCTL_DAEMON=yes pg_autoctl run --pgdata %s" % (pgdata)
+            cmdStr = "export PGAUTOCTL_DAEMON=yes; pg_autoctl run --pgdata %s" % (pgdata)
+#            cmdStr = "bash -c 'setsid pg_autoctl run --pgdata %s &'" % (pgdata)
+#            cmdStr = "bash -c 'export PGAUTOCTL_DAEMON=yes; env > /tmp/runtime.env'"
+        elif action == 'stop':
+            cmdStr = 'pg_autoctl stop --pgdata %s' % (pgdata)
+        else:
+            raise Exception('not implemented yet')
+        self.cmdStr = cmdStr
+        name = '%s instance: %s/%s' % (action, host, pgdata)
+        Command.__init__(self, name, self.cmdStr, REMOTE, host)
+
+    def getAction(self):
+        return self.action
+    def getCmdStr(self):
+        return self.cmdStr
+
+def wait_for_server_ready(host, pgdata, pmstatus='ready', timeout=120):
+    counter = 0
+    result = None
+    ready = False
+    if type(pmstatus) is str:
+        pmstatus = (pmstatus,)
+    elif type(pmstatus) is not tuple:
+        raise Exception("invalid type of pmstatus, MUST be str or tuple")
+
+    while not ready and counter < timeout:
+        cmd = pg.ReadPostmasterPidFile('read postmaster.pid', pgdata, host)
+        cmd.run()
+        result = cmd.getResult()
+        logger.debug("result = " + str(result))
+        ready = result is not None and result['pmstatus'] in pmstatus
+        if result is not None:
+            logger.debug("%s in %s? ready=%s" % (result['pmstatus'], pmstatus, ready))
+        if not ready:
+            counter = counter + 1
+            time.sleep(1)
+    logger.info("wait server result = " + str(result))
+    if not ready:
+        return False
+    return result['pmstatus'] in pmstatus
 
 #-----------------------------------------------
 
@@ -304,6 +392,18 @@ class MasterStart(Command):
         self.cmdStr = str(c)
 
         Command.__init__(self, name, self.cmdStr, ctxt, remoteHost)
+
+    # TODO: run master remotely.
+    # We shouldn't assume we're on the node where the master is deployed.
+    @staticmethod
+    def remote(name, dataDir, host, port, era,
+              wrapper, wrapper_args, specialMode=None, restrictedMode=False, timeout=SEGMENT_TIMEOUT_DEFAULT,
+              max_connections=1, utilityMode=False):
+        cmd=MasterStart(name, dataDir, port, era,
+                        wrapper, wrapper_args, specialMode, restrictedMode, timeout,
+                        max_connections, utilityMode,
+                        ctxt=REMOTE, remoteHost=host)
+        cmd.run(validateAfter=True)
 
     @staticmethod
     def local(name, dataDir, port, era,
@@ -720,24 +820,6 @@ class GpStandbyStart(MasterStart, object):
                              wrapper=wrapper, wrapper_args=wrapper_args)
         cmd.run(validateAfter=True)
         return cmd
-
-#-----------------------------------------------
-class GpStart(Command):
-    def __init__(self, name, masterOnly=False, restricted=False, verbose=False,ctxt=LOCAL, remoteHost=None):
-        self.cmdStr="$GPHOME/bin/gpstart -a"
-        if masterOnly:
-            self.cmdStr += " -m"
-            self.propagate_env_map['GPSTART_INTERNAL_MASTER_ONLY'] = 1
-        if restricted:
-            self.cmdStr += " -R"
-        if verbose or logging_is_verbose():
-            self.cmdStr += " -v"
-        Command.__init__(self,name,self.cmdStr,ctxt,remoteHost)
-
-    @staticmethod
-    def local(name,masterOnly=False,restricted=False):
-        cmd=GpStart(name,masterOnly,restricted)
-        cmd.run(validateAfter=True)
 
 #-----------------------------------------------
 class NewGpStart(Command):

@@ -1,0 +1,21 @@
+
+all:
+	@pkill -9 pg_autoctl 2> /dev/null || echo "" > /dev/null
+	@pkill -9 postgres 2> /dev/null || echo "" > /dev/null
+	@rm -rf /tmp/.s* /tmp/pg_autoctl 2> /dev/null || echo "" > /dev/null
+	@rm -rf ~/.local/share/pg_autoctl ~/.config/pg_autoctl 2> /dev/null || echo "" > /dev/null
+	$(MAKE) -f Makefile all
+	# add monitor and create primary and secondary
+	./demo_auto_failover.sh init_nodes
+	echo "Finished initialization, now the monitor is running"
+
+cluster create-demo-cluster:
+	$(MAKE) -f Makefile cluster
+	./demo_auto_failover.sh init_nodes
+
+clean destory-demo-cluster:
+	$(MAKE) -f Makefile clean
+	@pkill -9 pg_autoctl 2> /dev/null || echo "" > /dev/null
+	@pkill -9 postgres 2> /dev/null || echo "" > /dev/null
+	@rm -rf /tmp/.s* /tmp/pg_autoctl 2> /dev/null || echo "" > /dev/null
+	@rm -rf ~/.local/share/pg_autoctl ~/.config/pg_autoctl 2> /dev/null || echo "" > /dev/null

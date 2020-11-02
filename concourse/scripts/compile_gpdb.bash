@@ -277,6 +277,15 @@ function _main() {
   build_gpdb "${BLD_TARGET_OPTION[@]}"
   git_info
 
+# pg_auto_failover should compile separately.
+# place it here for quick test
+  pushd ${GPDB_SRC_PATH}/contrib
+  git clone https://github.com/gfphoenix78/pg_auto_failover.git
+  cd pg_auto_failover
+  git checkout autofailover
+  bash -c ". ${GREENPLUM_INSTALL_DIR}/greenplum_path.sh ; make -j4 install "
+  popd
+
   if [[ "${TARGET_OS}" != "win32" ]] && [[ -z "${SKIP_UNITTESTS}" ]]; then
       # Don't unit test when cross compiling. Tests don't build because they
       # require `./configure --with-zlib`.

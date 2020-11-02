@@ -136,6 +136,20 @@ cleanDemo(){
             echo "Deleting ${DATADIRS}"
             rm -rf ${DATADIRS}
         fi
+        pushd ~
+        if [ -d ".config/pg_autoctl" ]; then
+            echo "Deleting ~/.config/pg_autoctl"
+            rm -rf ~/.config/pg_autoctl
+        fi
+        if [ -d ".local/share/pg_autoctl" ]; then
+            echo "Deleting ~/.local/share/pg_autoctl"
+            rm -rf ~/.local/share/pg_autoctl
+        fi
+        popd
+        if [ -d "/tmp/pg_autoctl" ]; then
+            echo "Deleting /tmp/pg_autoctl"
+            rm -rf /tmp/pg_autoctl
+        fi
         if [ -d logs ];  then
             rm -rf logs
         fi
@@ -147,7 +161,7 @@ cleanDemo(){
 # Main Section
 #*****************************************************************************
 
-while getopts ":cdK'?'" opt
+while getopts ":cdAK'?'" opt
 do
 	case $opt in 
 		'?' ) USAGE ;;
@@ -161,6 +175,9 @@ do
            ;;
         d) cleanDemo
            exit 0
+           ;;
+        A) AUTOFAILOVER='-A'
+           shift
            ;;
         K) DATACHECKSUMS=0
            shift
@@ -341,6 +358,20 @@ cat >> $CLUSTER_CONFIG <<-EOF
 
 EOF
 
+if [ -n "$AUTOFAILOVER" ]; then
+MONITOR_HOST=`hostname`
+MONITOR_PORT=7999
+MONITOR_DATADIR=$DATADIRS/gpmonitor
+cat >> $CLUSTER_CONFIG <<-EOF
+
+# Coordinator auto failover
+MONITOR_HOST=${MONITOR_HOST}
+MONITOR_PORT=${MONITOR_PORT}
+MONITOR_DATADIR=${MONITOR_DATADIR}
+
+EOF
+fi
+
 if [ -n "${STATEMENT_MEM}" ]; then
 	cat >> $CLUSTER_CONFIG_POSTGRES_ADDONS<<-EOF
 		statement_mem = ${STATEMENT_MEM}
@@ -388,17 +419,17 @@ fi
 if [ -f "${CLUSTER_CONFIG_POSTGRES_ADDONS}" ]; then
     echo "=========================================================================================="
     echo "executing:"
-    echo "  $GPPATH/gpinitsystem -a -c $CLUSTER_CONFIG -l $DATADIRS/gpAdminLogs -p ${CLUSTER_CONFIG_POSTGRES_ADDONS} ${STANDBY_INIT_OPTS} \"$@\""
+    echo "  $GPPATH/gpinitsystem -a $AUTOFAILOVER -c $CLUSTER_CONFIG -l $DATADIRS/gpAdminLogs -p ${CLUSTER_CONFIG_POSTGRES_ADDONS} ${STANDBY_INIT_OPTS} \"$@\""
     echo "=========================================================================================="
     echo ""
-    $GPPATH/gpinitsystem -a -c $CLUSTER_CONFIG -l $DATADIRS/gpAdminLogs -p ${CLUSTER_CONFIG_POSTGRES_ADDONS} ${STANDBY_INIT_OPTS} "$@"
+    $GPPATH/gpinitsystem -a $AUTOFAILOVER -c $CLUSTER_CONFIG -l $DATADIRS/gpAdminLogs -p ${CLUSTER_CONFIG_POSTGRES_ADDONS} ${STANDBY_INIT_OPTS} "$@"
 else
     echo "=========================================================================================="
     echo "executing:"
-    echo "  $GPPATH/gpinitsystem -a -c $CLUSTER_CONFIG -l $DATADIRS/gpAdminLogs ${STANDBY_INIT_OPTS} \"$@\""
+    echo "  $GPPATH/gpinitsystem -a $AUTOFAILOVER -c $CLUSTER_CONFIG -l $DATADIRS/gpAdminLogs ${STANDBY_INIT_OPTS} \"$@\""
     echo "=========================================================================================="
     echo ""
-    $GPPATH/gpinitsystem -a -c $CLUSTER_CONFIG -l $DATADIRS/gpAdminLogs ${STANDBY_INIT_OPTS} "$@"
+    $GPPATH/gpinitsystem -a $AUTOFAILOVER -c $CLUSTER_CONFIG -l $DATADIRS/gpAdminLogs ${STANDBY_INIT_OPTS} "$@"
 fi
 RETURN=$?
 
@@ -459,6 +490,15 @@ cat > gpdemo-env.sh <<-EOF
 	export PGPORT=${MASTER_DEMO_PORT}
 	export MASTER_DATA_DIRECTORY=$QDDIR/${SEG_PREFIX}-1
 EOF
+if [ -n "$AUTOFAILOVER" ]; then
+cat >> gpdemo-env.sh <<-EOF
+
+export MONITOR_HOST=${MONITOR_HOST}
+export MONITOR_PORT=${MONITOR_PORT}
+export MONITOR_DATADIR=${MONITOR_DATADIR}
+
+EOF
+fi
 
 if [ "${RETURN}" -gt 1 ];
 then

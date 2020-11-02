@@ -1041,7 +1041,19 @@ ensureInterconnectAddress(void)
 		 * from `cdbcomponent*`. We couldn't get it in a way as the QEs.
 		 */
 		CdbComponentDatabaseInfo *qdInfo;
-		qdInfo = cdbcomponent_getComponentInfo(MASTER_CONTENT_ID);
+		CdbComponentDatabases *cdbs;
+		cdbs = cdbcomponent_getCdbComponents();
+		qdInfo = NULL;
+		for (int i = 0; i < cdbs->total_entry_dbs; i++)
+		{
+			if (cdbs->entry_db_info[i].config->dbid == GpIdentity.dbid)
+			{
+				qdInfo = &cdbs->entry_db_info[i];
+				break;
+			}
+		}
+		Assert(qdInfo != NULL);
+
 		interconnect_address = MemoryContextStrdup(TopMemoryContext, qdInfo->config->hostip);
 	}
 	else if (qdHostname && qdHostname[0] != '\0')
@@ -1056,6 +1068,7 @@ ensureInterconnectAddress(void)
 	else
 		Assert(false);
 }
+extern bool isHotStandby(void);
 /*
  * performs all necessary setup required for Greenplum Database mode.
  *
@@ -1082,7 +1095,7 @@ cdb_setup(void)
 	 */
 	if (!IsBackgroundWorker &&
 		Gp_role == GP_ROLE_DISPATCH &&
-		!*shmDtmStarted)
+		(!*shmDtmStarted && !isHotStandby()))
 	{
 		ereport(FATAL,
 				(errcode(ERRCODE_CANNOT_CONNECT_NOW),

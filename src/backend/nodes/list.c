@@ -1267,6 +1267,16 @@ list_copy_tail(const List *oldlist, int nskip)
 	return newlist;
 }
 
+static int list_qsort_compat(const void *a, const void *b, void *arg)
+{
+	list_qsort_comparator cmp = arg;
+	return cmp(a, b);
+}
+List *
+list_qsort(const List *list, list_qsort_comparator cmp)
+{
+	return ulist_qsort(list, list_qsort_compat, cmp);
+}
 /*
  * Sort a list as though by qsort.
  *
@@ -1276,7 +1286,7 @@ list_copy_tail(const List *oldlist, int nskip)
  * The comparator function receives arguments of type ListCell **.
  */
 List *
-list_qsort(const List *list, list_qsort_comparator cmp, void *arg)
+ulist_qsort(const List *list, ulist_qsort_comparator cmp, void *arg)
 {
 	int			len = list_length(list);
 	ListCell  **list_arr;

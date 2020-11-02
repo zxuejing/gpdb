@@ -3306,6 +3306,7 @@ uint64_t
 uint8
 uint8_t
 uintptr_t
+ulist_qsort_comparator
 unicodeStyleBorderFormat
 unicodeStyleColumnFormat
 unicodeStyleFormat

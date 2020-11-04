@@ -172,12 +172,6 @@ static void read_post_opts(void);
 static WaitPMResult wait_for_postmaster(pgpid_t pm_pid, bool do_checkpoint);
 static bool postmaster_is_alive(pid_t pid);
 
-static char postopts_file[MAXPGPATH];
-static char backup_file[MAXPGPATH];
-static char promote_file[MAXPGPATH];
-static char pid_file[MAXPGPATH];
-static char backup_file[MAXPGPATH];
-
 #if defined(HAVE_GETRLIMIT) && defined(RLIMIT_CORE)
 static void unlimit_core_size(void);
 #endif
@@ -584,12 +578,23 @@ wait_for_postmaster(pgpid_t pm_pid, bool do_checkpoint)
 {
 	int			i;
 	bool		gpdb_master_distributed_mode;
+	bool		is_secondary;
 
 	/* check if starting GPDB master in distributed mode */
 	if (strstr(post_opts, "gp_role=dispatch"))
 		gpdb_master_distributed_mode = true;
 	else
 		gpdb_master_distributed_mode = false;
+
+	{
+		char		standby_file[MAXPGPATH];
+		int			fd;
+		snprintf(standby_file, sizeof(standby_file), "%s/standby.signal", pg_data);
+		fd = open(standby_file, O_RDONLY);
+		is_secondary = fd >= 0;
+		if (fd >= 0)
+			close(fd);
+	}
 
 	for (i = 0; i < wait_seconds * WAITS_PER_SEC; i++)
 	{
@@ -631,8 +636,10 @@ wait_for_postmaster(pgpid_t pm_pid, bool do_checkpoint)
 				 */
 				char	   *pmstatus = optlines[LOCK_FILE_LINE_PM_STATUS - 1];
 
-				if (strcmp(pmstatus, gpdb_master_distributed_mode?PM_STATUS_DTM_RECOVERED:PM_STATUS_READY) == 0 ||
-					strcmp(pmstatus, PM_STATUS_STANDBY) == 0)
+				if (strcmp(pmstatus, PM_STATUS_DTM_RECOVERED) == 0 ||
+					strcmp(pmstatus, PM_STATUS_STANDBY) == 0 ||
+					(strcmp(pmstatus, PM_STATUS_READY) == 0 &&
+					 (!gpdb_master_distributed_mode || is_secondary)))
 				{
 					/* postmaster is done starting up */
 					free_readfile(optlines);

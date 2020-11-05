@@ -1007,7 +1007,7 @@ PostmasterMain(int argc, char *argv[])
 			GpIdentity.dbid = -1;
 			GpIdentity.segindex = -1;
 		}
-		SetConfigOption("gp_role", role, PGC_POSTMASTER, PGC_S_OVERRIDE);
+		SetConfigOption("gp_role", role, PGC_POSTMASTER, PGC_S_ARGV);
 	}
 
 

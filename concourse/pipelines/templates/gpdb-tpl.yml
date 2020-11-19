@@ -777,14 +777,6 @@ resources:
     secret_access_key: {{bucket-secret-access-key}}
     versioned_file: {{deb_package_open_source_ubuntu16_versioned_file}}
 
-- name: nightly-trigger-aix
-  type: time
-  source:
-    location: America/Los_Angeles
-    days: [Sunday, Monday, Tuesday, Wednesday, Thursday, Friday]
-    start: 8:00 AM
-    stop: 9:00 AM
-
 {% if "AA" in test_sections %}
 - name: madlib_ci
   type: git
@@ -1481,10 +1473,9 @@ jobs:
   # We need to serialize this job to avoid overwhelming workload
   # on remote machine.
   - in_parallel:
-    - get: nightly-trigger-aix
-      trigger: true
     - get: gpdb_src
       passed: [gate_compile_start]
+      trigger: ((gpdb_src-trigger-flag))
     - get: gpaddon_src
       passed: [gate_compile_start]
     - get: centos-gpdb-dev-6

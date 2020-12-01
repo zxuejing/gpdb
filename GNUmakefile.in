@@ -17,6 +17,8 @@ all:
 	$(MAKE) -C contrib/formatter all
 	$(MAKE) -C contrib/formatter_fixedwidth all
 	$(MAKE) -C contrib/fuzzystrmatch all
+	$(MAKE) -C contrib/btree_gist all
+	$(MAKE) -C contrib/pg_stat_statements all
 	$(MAKE) -C contrib/extprotocol all
 	$(MAKE) -C contrib/dblink all
 	$(MAKE) -C contrib/indexscan all
@@ -46,6 +48,8 @@ html man:
 
 install:
 	$(MAKE) -C contrib/auto_explain $@
+	$(MAKE) -C contrib/btree_gist $@
+	$(MAKE) -C contrib/pg_stat_statements $@
 	$(MAKE) -C contrib/citext $@
 	$(MAKE) -C contrib/file_fdw $@
 	$(MAKE) -C contrib/formatter $@

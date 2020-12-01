@@ -987,6 +987,10 @@ PostmasterMain(int argc, char *argv[])
 		ExitPostmaster(1);
 	}
 
+	/* If gp_role is not set, use utility role instead.*/
+	if (Gp_role == GP_ROLE_UNDEFINED)
+		SetConfigOption("gp_role", "utility", PGC_POSTMASTER, PGC_S_OVERRIDE);
+
 	/*
 	 * Locate the proper configuration files and data directory, and read
 	 * postgresql.conf for the first time.
@@ -994,22 +998,14 @@ PostmasterMain(int argc, char *argv[])
 	if (!SelectConfigFiles(userDoption, progname))
 		ExitPostmaster(2);
 
-	/* If gp_role is not set, use utility role instead.*/
-	if (Gp_role == GP_ROLE_UNDEFINED)
+    elog(LOG, "role=%d, dbid=%d, segindex=%d\n", (int)Gp_role, GpIdentity.dbid, GpIdentity.segindex);
+	if (Gp_role == GP_ROLE_UTILITY)
 	{
-		const char *role;
-		if (GpIdentity.segindex == -1)
-			role = "dispatch";
-		else if (GpIdentity.segindex >= 0)
-			role = "execute";
-		else {
-			role = "utility";
+		if (GpIdentity.dbid < 0)
 			GpIdentity.dbid = -1;
+		if (GpIdentity.segindex < -1)
 			GpIdentity.segindex = -1;
-		}
-		SetConfigOption("gp_role", role, PGC_POSTMASTER, PGC_S_ARGV);
 	}
-
 
 	/*
 	 * CDB/MPP/GPDB: Set the processor affinity (may be a no-op on

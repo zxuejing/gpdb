@@ -1056,6 +1056,7 @@ ensureInterconnectAddress(void)
 	else
 		Assert(false);
 }
+extern bool isHotStandby(void);
 /*
  * performs all necessary setup required for Greenplum Database mode.
  *
@@ -1082,7 +1083,7 @@ cdb_setup(void)
 	 */
 	if (!IsBackgroundWorker &&
 		Gp_role == GP_ROLE_DISPATCH &&
-		!*shmDtmStarted)
+		(!*shmDtmStarted && !isHotStandby()))
 	{
 		ereport(FATAL,
 				(errcode(ERRCODE_CANNOT_CONNECT_NOW),

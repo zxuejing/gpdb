@@ -531,6 +531,7 @@ static void setProcAffinity(int id);
 	  (pmState == PM_RECOVERY || pmState == PM_HOT_STANDBY)))
 
 bool isAuxiliaryBgWorker(BackgroundWorker *worker);
+bool isHotStandby(void);
 
 #ifdef EXEC_BACKEND
 
@@ -661,6 +662,11 @@ HANDLE		PostmasterHandle;
  * Use this hook to collect real-time query information and status data.
  */
 query_info_collect_hook_type query_info_collect_hook = NULL;
+
+bool isHotStandby(void)
+{
+    return pmState == PM_HOT_STANDBY;
+}
 
 /*
  * Postmaster main entry point

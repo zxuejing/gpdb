@@ -91,21 +91,6 @@ public:
 	// bucket difference tests
 	static GPOS_RESULT EresUnittest_CBucketDifference();
 
-	static GPOS_RESULT EresUnittest_CBucketMergeCommutativityUnion();
-
-	static GPOS_RESULT EresUnittest_CBucketMergeCommutativitySameLowerBounds();
-
-	static GPOS_RESULT EresUnittest_CBucketMergeCommutativitySameUpperBounds();
-
-	static GPOS_RESULT EresUnittest_CBucketMergeCommutativityUnionAll();
-
-	static GPOS_RESULT EresUnittest_CBucketMergeCommutativityDoubleDatum();
-
-	static GPOS_RESULT
-	EresUnittest_CBucketMergeCommutativityDoubleDatumSameLowerBounds();
-
-	static GPOS_RESULT
-	EresUnittest_CBucketMergeCommutativityDoubleDatumSameUpperBounds();
 };	// class CBucketTest
 }  // namespace gpnaucrates
 

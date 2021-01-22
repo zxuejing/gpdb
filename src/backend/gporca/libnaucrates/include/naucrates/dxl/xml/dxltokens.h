@@ -65,7 +65,6 @@ enum Edxltoken
 	EdxltokenBroadcastThreshold,
 	EdxltokenEnforceConstraintsOnDML,
 	EdxltokenPushGroupByBelowSetopThreshold,
-	EdxltokenMaxStatsBuckets,
 	EdxltokenWindowOids,
 	EdxltokenOidRowNumber,
 	EdxltokenOidRank,

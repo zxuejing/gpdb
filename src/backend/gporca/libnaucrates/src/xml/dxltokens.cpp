@@ -66,7 +66,6 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenDampingFactorFilter, GPOS_WSZ_LIT("DampingFactorFilter")},
 		{EdxltokenDampingFactorJoin, GPOS_WSZ_LIT("DampingFactorJoin")},
 		{EdxltokenDampingFactorGroupBy, GPOS_WSZ_LIT("DampingFactorGroupBy")},
-		{EdxltokenMaxStatsBuckets, GPOS_WSZ_LIT("MaxStatsBuckets")},
 		{EdxltokenCTEConfig, GPOS_WSZ_LIT("CTEConfig")},
 		{EdxltokenCTEInliningCutoff, GPOS_WSZ_LIT("CTEInliningCutoff")},
 		{EdxltokenCostModelConfig, GPOS_WSZ_LIT("CostModelConfig")},

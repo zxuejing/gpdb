@@ -19,8 +19,6 @@
 #include "naucrates/md/IMDId.h"
 #include "naucrates/md/CMDIdColStats.h"
 
-#define MAX_STATS_BUCKETS ULONG(100)
-
 namespace gpopt
 {
 using namespace gpos;
@@ -49,10 +47,6 @@ private:
 	// damping factor for group by
 	CDouble m_damping_factor_groupby;
 
-	// max stats buckets for combining histograms
-	// See CHistogram::MakeUnionAllHistogramNormalize/MakeUnionHistogramNormalize
-	ULONG m_max_stats_buckets;
-
 	// hash set of md ids for columns with missing statistics
 	MdidHashSet *m_phsmdidcolinfo;
 
@@ -60,7 +54,7 @@ public:
 	// ctor
 	CStatisticsConfig(CMemoryPool *mp, CDouble damping_factor_filter,
 					  CDouble damping_factor_join,
-					  CDouble damping_factor_groupby, ULONG max_stats_buckets);
+					  CDouble damping_factor_groupby);
 
 	// dtor
 	~CStatisticsConfig();
@@ -86,13 +80,6 @@ public:
 		return m_damping_factor_groupby;
 	}
 
-	// max stats buckets for combining histograms
-	ULONG
-	UlMaxStatsBuckets() const
-	{
-		return m_max_stats_buckets;
-	}
-
 	// add the information about the column with the missing statistics
 	void AddMissingStatsColumn(CMDIdColStats *pmdidCol);
 
@@ -105,8 +92,7 @@ public:
 	{
 		return GPOS_NEW(mp) CStatisticsConfig(
 			mp, 0.75 /* damping_factor_filter */,
-			0.01 /* damping_factor_join */, 0.75 /* damping_factor_groupby */,
-			MAX_STATS_BUCKETS);
+			0.01 /* damping_factor_join */, 0.75 /* damping_factor_groupby */);
 	}
 
 

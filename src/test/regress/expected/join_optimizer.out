@@ -4213,24 +4213,27 @@ select * from
   on (xx.id = coalesce(yy.id));
                       QUERY PLAN                      
 ------------------------------------------------------------------
- Hash Left Join
-   Hash Cond: (id = COALESCE(id))
-   ->  Result
+ Gather Motion 3:1  (slice2; segments: 3)
+   ->  Hash Left Join
+         Hash Cond: (id = COALESCE(id))
          ->  Result
-   ->  Hash
-         ->  Gather Motion 3:1  (slice1; segments: 3)
-               ->  Merge Full Join
-                     Merge Cond: (unique1 = id)
-                     ->  Sort
-                           Sort Key: unique1
-                           ->  Seq Scan on tenk1
-                     ->  Sort
-                           Sort Key: id
-                           ->  Result
+               ->  Result
+                     ->  Result
+         ->  Hash
+               ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                     Hash Key: COALESCE(id)
+                     ->  Merge Full Join
+                           Merge Cond: (unique1 = id)
+                           ->  Sort
+                                 Sort Key: unique1
+                                 ->  Seq Scan on tenk1
+                           ->  Sort
+                                 Sort Key: id
                                  ->  Result
                                        ->  Result
+                                             ->  Result
  Optimizer: Pivotal Optimizer (GPORCA)
-(17 rows)
+(20 rows)
 
 select * from
   (select 1 as id) as xx

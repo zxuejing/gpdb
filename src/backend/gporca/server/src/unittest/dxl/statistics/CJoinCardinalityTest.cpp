@@ -211,6 +211,9 @@ CJoinCardinalityTest::EresUnittest_Join()
 		{"../data/dxl/statistics/Join-Statistics-DDistinct-Input.xml",
 		 "../data/dxl/statistics/Join-Statistics-DDistinct-Output.xml", false,
 		 PdrgpstatspredjoinSingleJoinPredicate},
+		{"../data/dxl/statistics/Join-Statistics-Text-Input.xml",
+		 "../data/dxl/statistics/Join-Statistics-Text-Output.xml", false,
+		 PdrgpstatspredjoinSingleJoinPredicate},
 	};
 
 	CColumnFactory *col_factory = COptCtxt::PoctxtFromTLS()->Pcf();

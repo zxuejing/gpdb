@@ -572,12 +572,7 @@ CHistogram::IsValid() const
 		return false;
 	}
 
-	if (IsHistogramForTextRelatedTypes())
-	{
-		return m_histogram_buckets->Size() == 0 ||
-			   this->ContainsOnlySingletonBuckets();
-	}
-	else
+	if (!IsHistogramForTextRelatedTypes())
 	{
 		for (ULONG bucket_index = 1; bucket_index < m_histogram_buckets->Size();
 			 bucket_index++)
@@ -1062,21 +1057,6 @@ CHistogram::IsOpSupportedForFilter(CStatsPred::EStatsCmpType stats_cmp_type)
 	}
 }
 
-BOOL
-CHistogram::ContainsOnlySingletonBuckets() const
-{
-	for (ULONG ul = 0; ul < m_histogram_buckets->Size(); ++ul)
-	{
-		CBucket *bucket = (*m_histogram_buckets)[ul];
-
-		if (!bucket->IsSingleton())
-		{
-			return false;
-		}
-	}
-	return true;
-}
-
 // is comparison type supported for join?
 BOOL
 CHistogram::JoinPredCmpTypeIsSupported(CStatsPred::EStatsCmpType stats_cmp_type)
@@ -1100,8 +1080,10 @@ CHistogram::MakeJoinHistogramEqualityFilter(const CHistogram *histogram) const
 	CDouble distinct_remaining(0.0);
 	CDouble freq_remaining(0.0);
 
-	if (NeedsNDVBasedCardEstimationForEq(this) ||
-		NeedsNDVBasedCardEstimationForEq(histogram))
+	BOOL NDVBasedJoinCardEstimation1 = DoNDVBasedCardEstimation(this);
+	BOOL NDVBasedJoinCardEstimation2 = DoNDVBasedCardEstimation(histogram);
+
+	if (NDVBasedJoinCardEstimation1 || NDVBasedJoinCardEstimation2)
 	{
 		return MakeNDVBasedJoinHistogramEqualityFilter(histogram);
 	}
@@ -1939,7 +1921,7 @@ CHistogram::MakeDefaultBoolHistogram(CMemoryPool *mp)
 
 // check if the join cardinality estimation can be done based on NDV alone
 BOOL
-CHistogram::NeedsNDVBasedCardEstimationForEq(const CHistogram *histogram)
+CHistogram::DoNDVBasedCardEstimation(const CHistogram *histogram)
 {
 	GPOS_ASSERT(NULL != histogram);
 
@@ -1961,25 +1943,13 @@ CHistogram::NeedsNDVBasedCardEstimationForEq(const CHistogram *histogram)
 		return false;
 	}
 
-	if (datum->StatsMappable())
+	BOOL result = true;
+	if (datum->StatsMappable() && datum->IsDatumMappableToDouble())
 	{
-		if (datum->IsDatumMappableToDouble())
-		{
-			// int like type such as numeric
-			return false;
-		}
-		else if (histogram->ContainsOnlySingletonBuckets())
-		{
-			GPOS_ASSERT(datum->IsDatumMappableToLINT());
-			// Types such as text should only produce histograms that contain only singleton buckets.
-			// The histograms cannot be used for range predicates but it is ok for equality predicates.
-			return false;
-		}
+		result = false;
 	}
 
-	// For other cases, (e.g. certain non int types with non-singleton buckets),
-	// we are forced to use NDV based cardinality estimation.
-	return true;
+	return result;
 }
 
 // append given histograms to current object

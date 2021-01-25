@@ -1202,7 +1202,6 @@ CPhysicalJoin::PppsRequiredJoinChild(CMemoryPool *mp,
 								   fNLJoin);
 	}
 
-	// try to find a previously generated CPartitionPropagationSpec in the cache, m_phmpp
 	CPartitionPropagationSpec *ppps = m_phmpp->Find(pppr);
 	if (NULL == ppps)
 	{

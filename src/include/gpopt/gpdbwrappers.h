@@ -612,6 +612,9 @@ void AppendStringInfo(StringInfo str, const char *str1, const char *str2);
 // the first one found, or -1 if there are none
 int FindNodes(Node *node, List *nodeTags);
 
+// look for a given node tag nested within the same tag (don't descend into subqueries)
+bool FindNestedNodes(Node *node, NodeTag nodeTag);
+
 Node *CoerceToCommonType(ParseState *pstate, Node *node, Oid target_type,
 						 const char *context);
 

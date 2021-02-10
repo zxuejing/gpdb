@@ -2131,6 +2131,17 @@ gpdb::FindNodes(Node *node, List *nodeTags)
 	return -1;
 }
 
+bool
+gpdb::FindNestedNodes(Node *node, NodeTag nodeTag)
+{
+	GP_WRAP_START;
+	{
+		return find_nested_nodes(node, nodeTag);
+	}
+	GP_WRAP_END;
+	return false;
+}
+
 Node *
 gpdb::CoerceToCommonType(ParseState *pstate, Node *node, Oid target_type,
 						 const char *context)

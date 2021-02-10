@@ -449,6 +449,22 @@ CQueryMutators::NeedsLevelsUpCorrection(SContextIncLevelsupMutator *context,
 	return cte_levels_up >= context->m_current_query_level;
 }
 
+BOOL
+CQueryMutators::HasNestedWindowFunctions(const Query *query)
+{
+	ListCell *lc = NULL;
+	ForEach(lc, query->targetList)
+	{
+		TargetEntry *target_entry = (TargetEntry *) lfirst(lc);
+
+		if (gpdb::FindNestedNodes((Node *) target_entry->expr, T_WindowRef) > 0)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CQueryMutators::RunGroupingColMutator
@@ -1471,6 +1487,16 @@ CQueryMutators::NeedsProjListWindowNormalization(const Query *query)
 	if (!query->hasWindFuncs)
 	{
 		return false;
+	}
+
+	// The GPDB side does not check for (unsupported) nested window
+	// functions and in 5X the executor will abort with an internal
+	// error if it finds those.
+	// Example: sum(rank(a) over(order by a)) over(order by a)
+	if (HasNestedWindowFunctions(query))
+	{
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
+				   GPOS_WSZ_LIT("Nested window functions"));
 	}
 
 	ListCell *lc = NULL;

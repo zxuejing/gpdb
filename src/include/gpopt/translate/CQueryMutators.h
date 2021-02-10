@@ -155,6 +155,9 @@ private:
 	static BOOL NeedsLevelsUpCorrection(SContextIncLevelsupMutator *context,
 										Index cte_levels_up);
 
+	// check one query scope for nested window functions
+	static BOOL HasNestedWindowFunctions(const Query *query);
+
 public:
 	// fall back during since the target list refers to a attribute which algebrizer at this point cannot resolve
 	static BOOL ShouldFallback(Node *node, SContextTLWalker *context);

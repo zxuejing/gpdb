@@ -40,6 +40,7 @@ OBJS = cdbappendonlystorageformat.o \
 	   cdbtm.o cdbtmutils.o \
 	   cdbutil.o \
 	   cdbvars.o cdbvarblock.o \
+	   cdbwithingroupagg.o \
 	   cdbdtxrecovery.o
 
 ifeq ($(PORTNAME),cygwin)

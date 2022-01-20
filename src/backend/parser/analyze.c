@@ -52,10 +52,11 @@
 #include "utils/guc.h"
 #include "utils/rel.h"
 
+#include "cdb/cdbendpoint.h"
 #include "cdb/cdbhash.h"
 #include "cdb/cdbvars.h"
 #include "cdb/cdbutil.h"
-#include "cdb/cdbendpoint.h"
+#include "cdb/cdbwithingroupagg.h"
 #include "catalog/gp_distribution_policy.h"
 #include "commands/defrem.h"
 #include "access/htup_details.h"
@@ -1328,6 +1329,12 @@ transformSelectStmt(ParseState *pstate, SelectStmt *stmt)
 	Query	   *qry = makeNode(Query);
 	Node	   *qual;
 	ListCell   *l;
+
+	if (choose_mpp_within_group_agg(stmt))
+	{
+		int a = 0;
+		a++;
+	}
 
 	qry->commandType = CMD_SELECT;
 

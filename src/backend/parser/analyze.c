@@ -1332,8 +1332,7 @@ transformSelectStmt(ParseState *pstate, SelectStmt *stmt)
 
 	if (choose_mpp_within_group_agg(stmt))
 	{
-		int a = 0;
-		a++;
+		cdb_rewrite_within_group_agg(stmt);
 	}
 
 	qry->commandType = CMD_SELECT;

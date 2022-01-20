@@ -12,4 +12,5 @@
  *-------------------------------------------------------------------------
  */
 
-extern bool choose_mpp_within_group_agg(SelectStmt *stmt);
+extern bool        choose_mpp_within_group_agg(SelectStmt *stmt);
+extern SelectStmt *cdb_rewrite_within_group_agg(SelectStmt *stmt);

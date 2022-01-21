@@ -17,6 +17,7 @@
 #include "nodes/nodeFuncs.h"
 #include "nodes/pg_list.h"
 #include "nodes/parsenodes.h"
+#include "parser/parser.h"
 
 #include "cdb/cdbwithingroupagg.h"
 
@@ -57,6 +58,9 @@ static void   analyze_func_call(AbsWithGrpAggContext *abs_context,
 								FuncCall *func_call);
 static List  *create_names(List *exprs, FuncCallAnalysisContext *context);
 static Value *create_name(FuncCallAnalysisContext *context);
+static CommonTableExpr *create_base_cte(List *fc_infos, SelectStmt *stmt);
+static List * generate_base_cte_col_names(List *fc_infos);
+static List * generate_tlist_for_base_cte(List *fc_infos);
 
 
 /*
@@ -94,7 +98,17 @@ SelectStmt *
 cdb_rewrite_within_group_agg(SelectStmt *stmt)
 {
 	List *fc_infos = build_func_call_info(stmt->targetList);
-	return stmt;
+	CommonTableExpr *base_cte = create_base_cte(fc_infos, stmt);
+
+	/* toy test */
+	char *sql = "select * from base_cte";
+	RawStmt *r = linitial(raw_parser(sql));
+	WithClause *withClause = makeNode(WithClause);
+	withClause->ctes = list_make1(base_cte);
+	SelectStmt *s = r->stmt;
+	s->withClause = withClause;
+
+	return s;
 }
 
 /*
@@ -160,6 +174,7 @@ analyze_func_call(AbsWithGrpAggContext *abs_context, FuncCall *func_call)
 	FuncCallInfo *fc_info = (FuncCallInfo *) palloc0(sizeof(FuncCallInfo));
 	FuncCallAnalysisContext *context = abs_context->context;
 
+	fc_info->func_call = func_call;
 	if (func_call->args)
 		fc_info->args_names = create_names(func_call->args, context);
 	if (func_call->agg_order)
@@ -167,7 +182,7 @@ analyze_func_call(AbsWithGrpAggContext *abs_context, FuncCall *func_call)
 	if (func_call->agg_filter)
 		fc_info->filter_name = create_name(context);
 
-	context->fc_infos = lappend(context->fc_infos, (void *) fc_info);
+	context->fc_infos = lappend(context->fc_infos, fc_info);
 }
 
 static List *
@@ -191,4 +206,78 @@ create_name(FuncCallAnalysisContext *context)
 	snprintf(name, MAX_NAME_LENGTH, "base_col_%d", context->var_idx);
 	context->var_idx++;
 	return makeString(name);
+}
+
+static CommonTableExpr *
+create_base_cte(List *fc_infos, SelectStmt *stmt)
+{
+	CommonTableExpr *cte = makeNode(CommonTableExpr);
+	SelectStmt      *new_stmt = copyObject(stmt);
+
+	cte->ctename = "base_cte";
+	cte->aliascolnames = generate_base_cte_col_names(fc_infos);
+	new_stmt->targetList = generate_tlist_for_base_cte(fc_infos);
+	cte->ctequery = (Node *) new_stmt;
+
+	return cte;
+}
+
+static List *
+generate_base_cte_col_names(List *fc_infos)
+{
+	List     *col_names = NIL;
+	ListCell *lc = NULL;
+
+	foreach(lc, fc_infos)
+	{
+		FuncCallInfo *fc_info = (FuncCallInfo *) lfirst(lc);
+		col_names = list_concat(col_names, fc_info->args_names);
+		col_names = list_concat(col_names, fc_info->order_names);
+		if (fc_info->filter_name)
+			col_names = lappend(col_names, fc_info->filter_name);
+	}
+
+	return col_names;
+}
+
+static List *
+generate_tlist_for_base_cte(List *fc_infos)
+{
+	List     *tlist = NIL;
+	ListCell *lc = NULL;
+
+	foreach(lc, fc_infos)
+	{
+		FuncCallInfo *fc_info = (FuncCallInfo *) lfirst(lc);
+		FuncCall     *func_call = fc_info->func_call;
+		ListCell     *lc1 = NULL;
+
+		/* func_call arguments */
+		foreach(lc1, func_call->args)
+		{
+			Node *node = (Node *) lfirst(lc1);
+			ResTarget *rt = makeNode(ResTarget);
+			rt->val = node;
+			tlist = lappend(tlist, rt);
+		}
+
+		/* order by expressions */
+		foreach(lc1, func_call->agg_order)
+		{
+			SortBy *sortby = (SortBy *) lfirst(lc1);
+			ResTarget *rt = makeNode(ResTarget);
+			rt->val = sortby->node;
+			tlist = lappend(tlist, rt);
+		}
+
+		/* filter expression */
+		if (func_call->agg_filter)
+		{
+			ResTarget *rt = makeNode(ResTarget);
+			rt->val = func_call->agg_filter;
+			tlist = lappend(tlist, rt);
+		}
+	}
+
+	return tlist;
 }

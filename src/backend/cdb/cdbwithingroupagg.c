@@ -15,6 +15,7 @@
 #include "postgres.h"
 
 #include "nodes/nodeFuncs.h"
+#include "nodes/makefuncs.h"
 #include "nodes/pg_list.h"
 #include "nodes/parsenodes.h"
 #include "parser/parser.h"
@@ -32,7 +33,7 @@ typedef struct FuncCallInfo
 {
 	FuncCall    *func_call;
 	List        *args_names;
-	List        *order_names;
+	Value       *order_name;
 	Value       *filter_name;
 } FuncCallInfo;
 
@@ -61,6 +62,9 @@ static Value *create_name(FuncCallAnalysisContext *context);
 static CommonTableExpr *create_base_cte(List *fc_infos, SelectStmt *stmt);
 static List * generate_base_cte_col_names(List *fc_infos);
 static List * generate_tlist_for_base_cte(List *fc_infos);
+static CommonTableExpr *create_row_number_cte(List *fc_infos);
+static ResTarget *make_count_row_func_call(Value *exp_name, Value *filter_name);
+static Value *create_count_row_col_name(Value *exp_name);
 
 
 /*
@@ -98,14 +102,19 @@ SelectStmt *
 cdb_rewrite_within_group_agg(SelectStmt *stmt)
 {
 	List *fc_infos = build_func_call_info(stmt->targetList);
+	/* build the base CTE to wrap the main plan */
 	CommonTableExpr *base_cte = create_base_cte(fc_infos, stmt);
 
+	/* build total row numnber CTE */
+	CommonTableExpr *tot_row_number_cte = create_row_number_cte(fc_infos);
+
 	/* toy test */
-	char *sql = "select * from base_cte";
+	char *sql = "select * from base_cte, row_number_cte";
 	RawStmt *r = linitial(raw_parser(sql));
 	WithClause *withClause = makeNode(WithClause);
 	withClause->ctes = list_make1(base_cte);
-	SelectStmt *s = r->stmt;
+	withClause->ctes = lappend(withClause->ctes, tot_row_number_cte);
+	SelectStmt *s = (SelectStmt *) r->stmt;
 	s->withClause = withClause;
 
 	return s;
@@ -178,7 +187,7 @@ analyze_func_call(AbsWithGrpAggContext *abs_context, FuncCall *func_call)
 	if (func_call->args)
 		fc_info->args_names = create_names(func_call->args, context);
 	if (func_call->agg_order)
-		fc_info->order_names = create_names(func_call->agg_order, context);
+		fc_info->order_name = create_name(context);
 	if (func_call->agg_filter)
 		fc_info->filter_name = create_name(context);
 
@@ -232,7 +241,8 @@ generate_base_cte_col_names(List *fc_infos)
 	{
 		FuncCallInfo *fc_info = (FuncCallInfo *) lfirst(lc);
 		col_names = list_concat(col_names, fc_info->args_names);
-		col_names = list_concat(col_names, fc_info->order_names);
+		if (fc_info->order_name)
+			col_names = lappend(col_names, fc_info->order_name);
 		if (fc_info->filter_name)
 			col_names = lappend(col_names, fc_info->filter_name);
 	}
@@ -262,9 +272,10 @@ generate_tlist_for_base_cte(List *fc_infos)
 		}
 
 		/* order by expressions */
-		foreach(lc1, func_call->agg_order)
+		if (func_call->agg_order)
 		{
-			SortBy *sortby = (SortBy *) lfirst(lc1);
+			/* XXX: only first */
+			SortBy *sortby = (SortBy *) linitial(func_call->agg_order);
 			ResTarget *rt = makeNode(ResTarget);
 			rt->val = sortby->node;
 			tlist = lappend(tlist, rt);
@@ -280,4 +291,73 @@ generate_tlist_for_base_cte(List *fc_infos)
 	}
 
 	return tlist;
+}
+
+static CommonTableExpr *
+create_row_number_cte(List *fc_infos)
+{
+	CommonTableExpr *cte = makeNode(CommonTableExpr);
+	SelectStmt      *ctequery = makeNode(SelectStmt);
+	List            *from = NIL;
+	ListCell        *lc = NULL;
+	List            *tlist = NIL;
+	List            *col_names = NIL;
+
+	cte->ctename = "row_number_cte";
+
+	foreach(lc, fc_infos)
+	{
+		FuncCallInfo *fc_info = (FuncCallInfo *) lfirst(lc);
+		FuncCall     *func_call = fc_info->func_call;
+		if (func_call->agg_within_group)
+		{
+			ResTarget *count_row;
+			count_row = make_count_row_func_call(fc_info->order_name,
+												 fc_info->filter_name);
+			tlist = lappend(tlist, count_row);
+			col_names = lappend(col_names,
+								create_count_row_col_name(fc_info->order_name));
+		}
+	}
+
+	cte->aliascolnames = col_names;
+	from = list_make1(makeRangeVar(NULL, "base_cte", -1));
+	ctequery->fromClause = from;
+	ctequery->targetList = tlist;
+	cte->ctequery = (Node *) ctequery;
+
+	return cte;
+}
+
+static ResTarget *
+make_count_row_func_call(Value *exp_name, Value *filter_name)
+{
+	ResTarget *rt = makeNode(ResTarget);
+	FuncCall  *func_call = makeNode(FuncCall);
+	ColumnRef *col_to_count = makeNode(ColumnRef);
+	ColumnRef *agg_filter;
+
+	col_to_count->fields = list_make1(exp_name);
+
+	func_call->funcname = list_make1(makeString("count"));
+	func_call->args = list_make1(col_to_count);
+
+	if (filter_name)
+	{
+		agg_filter = makeNode(ColumnRef);
+		agg_filter->fields = list_make1(filter_name);
+		func_call->agg_filter = (Node *) agg_filter;
+	}
+
+	rt->val = (Node *) func_call;
+
+	return rt;
+}
+
+static Value *
+create_count_row_col_name(Value *exp_name)
+{
+	char *name = (char *) palloc0(MAX_NAME_LENGTH);
+	snprintf(name, MAX_NAME_LENGTH, "rcnt_%s", strVal(exp_name));
+	return makeString(name);
 }

@@ -1166,7 +1166,7 @@ convert_subquery_pathkeys(PlannerInfo *root, RelOptInfo *rel,
 											 sub_eclass->ec_collation,
 											 0,
 											 rel->relids,
-											 false);
+											 true);
 
 				/*
 				 * If we don't find a matching EC, sub-pathkey isn't

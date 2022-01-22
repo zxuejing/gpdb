@@ -24,6 +24,10 @@
 
 
 #define MAX_NAME_LENGTH 32
+#define WITHIN_GROUP_AGG_SQL_PATTERN \
+	"select 1 from " \
+	"(select %s as a, %s as rnum " \
+	"from %s, %s order by 1)tmp"
 
 static char *base_cte_name = "base_cte";
 static char *row_number_cte_name = "row_number_cte";
@@ -70,11 +74,14 @@ static List  *create_var_names(int len_names, FuncCallAnalysisContext *context);
 static Value *create_name(char *prefix, char *content);
 static Value *create_cte_name_for_func_call(FuncCallInfo *fc_info);
 static Value *create_row_cnt_name(Value *expr_name);
+static ColumnRef *make_column_ref(Value *name);
 static CommonTableExpr *create_base_cte(List *fc_infos, SelectStmt *stmt);
 static List * generate_base_cte_col_names(List *fc_infos);
 static List * generate_tlist_for_base_cte(List *fc_infos);
 static CommonTableExpr *create_row_number_cte(List *fc_infos);
 static ResTarget *make_count_row_func_call(Value *exp_name, Value *filter_name);
+static CommonTableExpr *create_within_group_cte(FuncCallInfo *fc_info);
+static List *create_within_group_ctes(List *fc_infos);
 
 
 /*
@@ -87,6 +94,7 @@ static ResTarget *make_count_row_func_call(Value *exp_name, Value *filter_name);
 bool
 choose_mpp_within_group_agg(SelectStmt *stmt)
 {
+	// TODO: add a GUC to control
 	if (stmt->groupClause == NULL &&
 		stmt->scatterClause == NULL &&
 		stmt->sortClause == NULL &&
@@ -115,7 +123,7 @@ cdb_rewrite_within_group_agg(SelectStmt *stmt)
 	List            *all_ctes = NIL;
 	CommonTableExpr *base_cte;
 	CommonTableExpr *tot_row_number_cte;
-	List            *within_group_agg_ctes;
+	List            *within_group_ctes;
 
 	fc_infos = build_func_call_info(stmt->targetList);
 
@@ -127,8 +135,15 @@ cdb_rewrite_within_group_agg(SelectStmt *stmt)
 	tot_row_number_cte = create_row_number_cte(fc_infos);
 	all_ctes = lappend(all_ctes, tot_row_number_cte);
 
+	/* build the within group ctes */
+	within_group_ctes = create_within_group_ctes(fc_infos);
+	all_ctes = list_concat(all_ctes, within_group_ctes);
+
 	/* toy test */
-	char *sql = "select * from base_cte, row_number_cte";
+	//char *sql = "select * from base_cte, row_number_cte";
+	char sql[256] = {0};
+	snprintf(sql, 256, "select * from %s",
+			 ((CommonTableExpr*) linitial(within_group_ctes))->ctename);
 	RawStmt *r = linitial(raw_parser(sql));
 	WithClause *withClause = makeNode(WithClause);
 	withClause->ctes = all_ctes;
@@ -219,7 +234,8 @@ analyze_func_call(AbsWithGrpAggContext *abs_context, FuncCall *func_call)
 	fc_info->name_index = context->var_idx;
 	context->var_idx++;
 
-	if (func_call->args)
+	/* within group agg's func expect const no need to create var */
+	if (!func_call->agg_within_group && func_call->args)
 	{
 		fc_info->args_names = create_var_names(list_length(func_call->args),
 											   context);
@@ -335,13 +351,16 @@ generate_tlist_for_base_cte(List *fc_infos)
 		FuncCall     *func_call = fc_info->func_call;
 		ListCell     *lc1 = NULL;
 
-		/* func_call arguments */
-		foreach(lc1, func_call->args)
+		/* func_call arguments, withingroup agg expect const */
+		if (!func_call->agg_within_group)
 		{
-			Node *node = (Node *) lfirst(lc1);
-			ResTarget *rt = makeNode(ResTarget);
-			rt->val = node;
-			tlist = lappend(tlist, rt);
+			foreach(lc1, func_call->args)
+			{
+				Node *node = (Node *) lfirst(lc1);
+				ResTarget *rt = makeNode(ResTarget);
+				rt->val = node;
+				tlist = lappend(tlist, rt);
+			}
 		}
 
 		/* order by expressions */
@@ -406,22 +425,71 @@ make_count_row_func_call(Value *exp_name, Value *filter_name)
 {
 	ResTarget *rt = makeNode(ResTarget);
 	FuncCall  *func_call = makeNode(FuncCall);
-	ColumnRef *col_to_count = makeNode(ColumnRef);
-	ColumnRef *agg_filter;
-
-	col_to_count->fields = list_make1(exp_name);
 
 	func_call->funcname = list_make1(makeString("count"));
-	func_call->args = list_make1(col_to_count);
+	func_call->args = list_make1(make_column_ref(exp_name));
 
 	if (filter_name)
-	{
-		agg_filter = makeNode(ColumnRef);
-		agg_filter->fields = list_make1(filter_name);
-		func_call->agg_filter = (Node *) agg_filter;
-	}
+		func_call->agg_filter = (Node *) make_column_ref(filter_name);
 
 	rt->val = (Node *) func_call;
 
 	return rt;
+}
+
+static List *
+create_within_group_ctes(List *fc_infos)
+{
+	ListCell *lc = NULL;
+	List     *ctes = NIL;
+
+	foreach(lc, fc_infos)
+	{
+		FuncCallInfo *fc_info = (FuncCallInfo *) lfirst(lc);
+		ctes = lappend(ctes, create_within_group_cte(fc_info));
+	}
+
+	return ctes;
+}
+
+static CommonTableExpr *
+create_within_group_cte(FuncCallInfo *fc_info)
+{
+	FuncCall        *func_call = fc_info->func_call;
+	CommonTableExpr *cte = makeNode(CommonTableExpr);
+	ResTarget       *rt = makeNode(ResTarget);
+	char            *sql_template = WITHIN_GROUP_AGG_SQL_PATTERN;
+	char             sql[256] = {0};
+	FuncCall        *special_agg = makeNode(FuncCall);
+	SelectStmt      *stmt;
+
+	cte->ctename = strVal(fc_info->cte_name);
+	cte->aliascolnames = list_make1(fc_info->cte_name);
+	snprintf(sql, 256, sql_template,
+			 strVal(fc_info->order_name),
+			 strVal(fc_info->row_cnt_name),
+			 base_cte_name, row_number_cte_name);
+	stmt = (SelectStmt *) (((RawStmt *) linitial(raw_parser(sql)))->stmt);
+	special_agg->funcname = list_make1(makeString("special_agg"));
+	special_agg->args = list_make3(linitial(func_call->args),
+								   make_column_ref(makeString("a")),
+								   make_column_ref(makeString("rnum")));
+
+	if (fc_info->filter_name)
+		special_agg->agg_filter = (Node *) make_column_ref(fc_info->filter_name);
+
+	rt->val = (Node *) special_agg;
+	stmt->targetList = list_make1(rt);
+	cte->ctequery = (Node *) stmt;
+
+	return cte;
+}
+
+static ColumnRef *
+make_column_ref(Value *name)
+{
+	ColumnRef *cr = makeNode(ColumnRef);
+
+	cr->fields = list_make1(name);
+	return cr;
 }

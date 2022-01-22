@@ -23,7 +23,13 @@
 #include "cdb/cdbwithingroupagg.h"
 
 
-#define MAX_NAME_LENGTH 16
+#define MAX_NAME_LENGTH 32
+
+static char *base_cte_name = "base_cte";
+static char *row_number_cte_name = "row_number_cte";
+static char *col_ref_name_prefix = "col_ref";
+static char *row_count_name_prefix = "row_count";
+static char *cte_func_call_prefix = "cte_func_call";
 
 
 typedef struct AbsWithGrpAggContext AbsWithGrpAggContext;
@@ -32,9 +38,12 @@ typedef void (*FuncCallHandler) (AbsWithGrpAggContext *, FuncCall *);
 typedef struct FuncCallInfo
 {
 	FuncCall    *func_call;
-	List        *args_names;
+	List        *args_names; /* TODO: count(*) ???? */
 	Value       *order_name;
 	Value       *filter_name;
+	Value       *row_cnt_name;
+	Value       *cte_name;
+	int          name_index;
 } FuncCallInfo;
 
 struct AbsWithGrpAggContext
@@ -57,14 +66,15 @@ static void quick_check_within_group_agg(AbsWithGrpAggContext *abs_context,
 static List  *build_func_call_info(List *tlist);
 static void   analyze_func_call(AbsWithGrpAggContext *abs_context,
 								FuncCall *func_call);
-static List  *create_names(List *exprs, FuncCallAnalysisContext *context);
-static Value *create_name(FuncCallAnalysisContext *context);
+static List  *create_var_names(int len_names, FuncCallAnalysisContext *context);
+static Value *create_name(char *prefix, char *content);
+static Value *create_cte_name_for_func_call(FuncCallInfo *fc_info);
+static Value *create_row_cnt_name(Value *expr_name);
 static CommonTableExpr *create_base_cte(List *fc_infos, SelectStmt *stmt);
 static List * generate_base_cte_col_names(List *fc_infos);
 static List * generate_tlist_for_base_cte(List *fc_infos);
 static CommonTableExpr *create_row_number_cte(List *fc_infos);
 static ResTarget *make_count_row_func_call(Value *exp_name, Value *filter_name);
-static Value *create_count_row_col_name(Value *exp_name);
 
 
 /*
@@ -101,19 +111,27 @@ choose_mpp_within_group_agg(SelectStmt *stmt)
 SelectStmt *
 cdb_rewrite_within_group_agg(SelectStmt *stmt)
 {
-	List *fc_infos = build_func_call_info(stmt->targetList);
+	List            *fc_infos = NIL;
+	List            *all_ctes = NIL;
+	CommonTableExpr *base_cte;
+	CommonTableExpr *tot_row_number_cte;
+	List            *within_group_agg_ctes;
+
+	fc_infos = build_func_call_info(stmt->targetList);
+
 	/* build the base CTE to wrap the main plan */
-	CommonTableExpr *base_cte = create_base_cte(fc_infos, stmt);
+	base_cte = create_base_cte(fc_infos, stmt);
+	all_ctes = lappend(all_ctes, base_cte);
 
 	/* build total row numnber CTE */
-	CommonTableExpr *tot_row_number_cte = create_row_number_cte(fc_infos);
+	tot_row_number_cte = create_row_number_cte(fc_infos);
+	all_ctes = lappend(all_ctes, tot_row_number_cte);
 
 	/* toy test */
 	char *sql = "select * from base_cte, row_number_cte";
 	RawStmt *r = linitial(raw_parser(sql));
 	WithClause *withClause = makeNode(WithClause);
-	withClause->ctes = list_make1(base_cte);
-	withClause->ctes = lappend(withClause->ctes, tot_row_number_cte);
+	withClause->ctes = all_ctes;
 	SelectStmt *s = (SelectStmt *) r->stmt;
 	s->withClause = withClause;
 
@@ -177,6 +195,20 @@ build_func_call_info(List *tlist)
 	return context.fc_infos;
 }
 
+/*
+ * analyze_func_call
+ *   This function does two things:
+ *     - store the subpart of a FuncCall for later rewrtiting,
+ *     - set names for subparts and CTEs to build
+ *
+ *   For within group agg, it's the core the rewrite logic, and
+ *   the value will be wrapped into a CTE: CTE_name(CTE_col_name),
+ *   the name is created here and CTE_name is the same as CTE_col_name,
+ *   and stored in the single field cte_name.
+ *
+ *   For normal func call, the filed cte_name is the column ref variable
+ *   to the whole expr.
+ */
 static void
 analyze_func_call(AbsWithGrpAggContext *abs_context, FuncCall *func_call)
 {
@@ -184,37 +216,78 @@ analyze_func_call(AbsWithGrpAggContext *abs_context, FuncCall *func_call)
 	FuncCallAnalysisContext *context = abs_context->context;
 
 	fc_info->func_call = func_call;
+	fc_info->name_index = context->var_idx;
+	context->var_idx++;
+
 	if (func_call->args)
-		fc_info->args_names = create_names(func_call->args, context);
+	{
+		fc_info->args_names = create_var_names(list_length(func_call->args),
+											   context);
+	}
+
 	if (func_call->agg_order)
-		fc_info->order_name = create_name(context);
+		fc_info->order_name = (Value *) linitial(create_var_names(1, context));
+
 	if (func_call->agg_filter)
-		fc_info->filter_name = create_name(context);
+		fc_info->filter_name = (Value *) linitial(create_var_names(1, context));
+
+	fc_info->cte_name = create_cte_name_for_func_call(fc_info);
+
+	if (func_call->agg_within_group)
+		fc_info->row_cnt_name = create_row_cnt_name(fc_info->order_name);
 
 	context->fc_infos = lappend(context->fc_infos, fc_info);
 }
 
 static List *
-create_names(List *exprs, FuncCallAnalysisContext *context)
+create_var_names(int len_names, FuncCallAnalysisContext *context)
 {
-	List *names = NIL;
-	int   i;
+	int    i;
+	List  *names = NIL;
 
-	for (i = 0; i < list_length(exprs); i++)
+	for (i = 0; i < len_names; i++)
 	{
-		names = lappend(names, create_name(context));
+		char   num[MAX_NAME_LENGTH] = {0};
+		Value *name;
+		snprintf(num, MAX_NAME_LENGTH, "%d", context->var_idx);
+		name = create_name(col_ref_name_prefix, num);
+		names = lappend(names, name);
+		context->var_idx++;
 	}
 
 	return names;
 }
 
 static Value *
-create_name(FuncCallAnalysisContext *context)
+create_name(char *prefix, char *content)
 {
-	char                    *name = (char *) palloc0(MAX_NAME_LENGTH);
-	snprintf(name, MAX_NAME_LENGTH, "base_col_%d", context->var_idx);
-	context->var_idx++;
+	char       *name = (char *) palloc0(MAX_NAME_LENGTH);
+	snprintf(name, MAX_NAME_LENGTH, "%s_%s", prefix, content);
 	return makeString(name);
+}
+
+static Value *
+create_cte_name_for_func_call(FuncCallInfo *fc_info)
+{
+	FuncCall *func_call = fc_info->func_call;
+
+	if (func_call->agg_within_group)
+	{
+		Value *order_name = fc_info->order_name;
+		return create_name(cte_func_call_prefix, strVal(order_name));
+	}
+	else
+	{
+		char name[MAX_NAME_LENGTH] = {0};
+		snprintf(name, MAX_NAME_LENGTH, "%d", fc_info->name_index);
+		return create_name(cte_func_call_prefix, name);
+	}
+}
+
+static Value *
+create_row_cnt_name(Value *expr_name)
+{
+	return create_name(row_count_name_prefix, strVal(expr_name));
 }
 
 static CommonTableExpr *
@@ -223,7 +296,7 @@ create_base_cte(List *fc_infos, SelectStmt *stmt)
 	CommonTableExpr *cte = makeNode(CommonTableExpr);
 	SelectStmt      *new_stmt = copyObject(stmt);
 
-	cte->ctename = "base_cte";
+	cte->ctename = base_cte_name;
 	cte->aliascolnames = generate_base_cte_col_names(fc_infos);
 	new_stmt->targetList = generate_tlist_for_base_cte(fc_infos);
 	cte->ctequery = (Node *) new_stmt;
@@ -303,7 +376,7 @@ create_row_number_cte(List *fc_infos)
 	List            *tlist = NIL;
 	List            *col_names = NIL;
 
-	cte->ctename = "row_number_cte";
+	cte->ctename = row_number_cte_name;
 
 	foreach(lc, fc_infos)
 	{
@@ -315,8 +388,7 @@ create_row_number_cte(List *fc_infos)
 			count_row = make_count_row_func_call(fc_info->order_name,
 												 fc_info->filter_name);
 			tlist = lappend(tlist, count_row);
-			col_names = lappend(col_names,
-								create_count_row_col_name(fc_info->order_name));
+			col_names = lappend(col_names, fc_info->row_cnt_name);
 		}
 	}
 
@@ -352,12 +424,4 @@ make_count_row_func_call(Value *exp_name, Value *filter_name)
 	rt->val = (Node *) func_call;
 
 	return rt;
-}
-
-static Value *
-create_count_row_col_name(Value *exp_name)
-{
-	char *name = (char *) palloc0(MAX_NAME_LENGTH);
-	snprintf(name, MAX_NAME_LENGTH, "rcnt_%s", strVal(exp_name));
-	return makeString(name);
 }

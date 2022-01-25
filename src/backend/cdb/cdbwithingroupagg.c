@@ -63,6 +63,13 @@ typedef struct FuncCallAnalysisContext
 	int   var_idx;
 } FuncCallAnalysisContext;
 
+
+typedef struct FuncCallReplaceContext
+{
+	List *fc_infos;
+	int   func_idx;
+} FuncCallReplaceContext;
+
 static bool abstract_within_group_agg_walker(Node *node,
 											 AbsWithGrpAggContext *abs_context);
 static void quick_check_within_group_agg(AbsWithGrpAggContext *abs_context,
@@ -80,6 +87,7 @@ static List * generate_base_cte_col_names(List *fc_infos);
 static List * generate_tlist_for_base_cte(List *fc_infos);
 static CommonTableExpr *create_row_number_cte(List *fc_infos);
 static ResTarget *make_count_row_func_call(Value *exp_name, Value *filter_name);
+static Node *replace_param_name(Node *node, List* fc_infos);
 static CommonTableExpr *create_within_group_cte(FuncCallInfo *fc_info);
 static List *create_within_group_ctes(List *fc_infos);
 
@@ -139,6 +147,10 @@ cdb_rewrite_within_group_agg(SelectStmt *stmt)
 	within_group_ctes = create_within_group_ctes(fc_infos);
 	all_ctes = list_concat(all_ctes, within_group_ctes);
 
+	SelectStmt *stmtnew = copyObject(stmt);
+ 
+	stmtnew->targetList = (List *)replace_param_name((Node *)stmt->targetList, fc_infos);
+
 	/* toy test */
 	//char *sql = "select * from base_cte, row_number_cte";
 	char sql[256] = {0};
@@ -182,6 +194,34 @@ abstract_within_group_agg_walker(Node *node, AbsWithGrpAggContext *abs_context)
 									  abs_context);
 }
 
+
+
+static Node *
+replace_within_group_agg_mutator(Node *node, FuncCallReplaceContext *funcCallReplaceContext)
+{
+	if (node == NULL)
+		return NULL;
+
+	if (IsA(node, SubLink))
+		return node;
+
+	if (IsA(node, FuncCall))
+	{
+		FuncCallInfo *fc_info = (FuncCallInfo *) list_nth(funcCallReplaceContext->fc_infos, funcCallReplaceContext->func_idx);
+
+		FuncCall* funcCall = (FuncCall *)node;
+		Assert (fc_info->func_call == funcCall);
+		ColumnRef *column_of_func = makeNode(ColumnRef);
+		column_of_func->fields = list_make1(strVal(fc_info->cte_name));
+
+		funcCallReplaceContext->func_idx++;
+		return (Node *)column_of_func;
+	}
+
+	return raw_expression_tree_mutator(node,
+									  replace_within_group_agg_mutator,
+									  funcCallReplaceContext);
+}
 /*
  * quick_check_within_group_agg
  *   The handler for the walk to test if do the rewrite at the very
@@ -208,6 +248,16 @@ build_func_call_info(List *tlist)
 							   &abs_context);
 
 	return context.fc_infos;
+}
+
+static Node *
+replace_param_name(Node *node, List* fc_infos)
+{
+	FuncCallReplaceContext funcCallReplaceContext;
+	funcCallReplaceContext.func_idx = 0;
+	funcCallReplaceContext.fc_infos = fc_infos;
+	return raw_expression_tree_mutator(node, replace_within_group_agg_mutator,
+											&funcCallReplaceContext);
 }
 
 /*

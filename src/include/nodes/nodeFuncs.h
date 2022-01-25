@@ -132,6 +132,8 @@ extern bool expression_tree_walker(Node *node, bool (*walker) (),
 								   void *context);
 extern Node *expression_tree_mutator(Node *node, Node *(*mutator) (),
 									 void *context);
+extern Node *raw_expression_tree_mutator(Node *node, Node *(*mutator)(),
+									void *context);
 
 extern bool query_tree_walker(Query *query, bool (*walker) (),
 							  void *context, int flags);

@@ -17,3 +17,4 @@ params:
   WITH_MIRRORS:
 run:
   path: gpdb_src/concourse/scripts/ic_gpdb.bash
+privileged: true

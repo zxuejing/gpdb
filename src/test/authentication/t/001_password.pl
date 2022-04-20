@@ -41,7 +41,7 @@ sub test_role
 
 SKIP:
 {
-	skip "authentication tests cannot run on Windows", 16 if ($windows_os);
+	skip "authentication tests cannot run on Windows", 9 if ($windows_os);
 
 	# Initialize master node
 	my $node = get_new_node('master');

@@ -6995,9 +6995,25 @@ create_preliminary_limit_path(PlannerInfo *root, RelOptInfo *rel,
 	 */	
 	if (precount && limitOffset)
 	{
-	    /* GPDB_12_MERGE_FIXME: pstate can not be NULL anymore supposedly. */
-		precount = (Node *) make_op(NULL,
-									list_make1(makeString(pstrdup("+"))),
+		/*
+		 * make_op is a function of parse stage. we need paserstate as a param.
+		 * however, in the planner stage, we do not have param parasestate,
+		 * in create_preliminary_limit_path we do not return a set, so will
+		 * not hit the null pointer exception.
+		 *
+		 * we can reference executor path:
+		 * DefineRelation-->check_new_partition_bound-->parser_errposition
+		 *
+		 * define a ParseState as the param of make_op instead of NULL.
+		 */
+
+		ParseState *pstate = make_parsestate(NULL);
+		/*
+		 * we should explicitly specify the schema of operator "+",
+		 * to avoid misuse user defined operator "+".
+		 */
+		precount = (Node *) make_op(pstate,
+									list_make2(makeString("pg_catalog"), makeString(pstrdup("+"))),
 									copyObject(limitOffset),
 									precount,
 									NULL,

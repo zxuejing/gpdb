@@ -2855,35 +2855,28 @@ grouping_planner(PlannerInfo *root, bool inheritance_update,
 			{
 
 				/*
-				 * There is a corner case we can not generate gpdb private
-				 * two phase limit path.
-				 * if a subpath is sorted under a subqueryscan path, but the
-				 * subqueryscan is not.
-				 *
+				 * if a subpath is sorted under a subqueryscan path, but the subqueryscan
+				 * is not. the order of subqueryscan is implementation-dependent.
+				 * which is specified by SQL standard.
 				 * e.g.
 				 * create table foo (a int, b int, c int);
-				 *
 				 * select *
 				 * from (select b, c from foo order by 1,2) as x
 				 * limit 3;
 				 *
-				 * If a gather motion is directly upon a subquery scan,
-				 * the motion node will push down under the subqueryscan to promise
-				 * data ordered.
+				 * when we generate one phase limit path for it.
+				 * the results are sorted but may have a poor performance.
 				 *
-				 * GPDB_12_MERGE_FIXME:
-				 * A better approach is that our motion have LIMIT node ability.
-				 * All two phases limit is translated to `limit->gather motion->subpath...`
-				 * In executor, upper slice's gather motion sort tuples, under
-				 * slice's gather motion directly limit the number of tuples send out.
+				 * when we generate two phase limit path for it.
+				 * the results are not sorted but that also is up to SQL standard.
+				 *
+				 * we just generate gpdb private two phase limit path to
+				 * be consistent with gpdb6.
 				 */
-				if (!(IsA(path, SubqueryScanPath)
-					&& !path->pathkeys
-					&& ((SubqueryScanPath *)path)->subpath->pathkeys))
-					path = (Path *) create_preliminary_limit_path(root, final_rel, path,
-					                                              parse->limitOffset,
-					                                              parse->limitCount,
-					                                              offset_est, count_est);
+				path = (Path *) create_preliminary_limit_path(root, final_rel, path,
+															  parse->limitOffset,
+															  parse->limitCount,
+															  offset_est, count_est);
 			}
 
 			/*

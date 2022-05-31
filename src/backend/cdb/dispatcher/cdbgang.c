@@ -901,12 +901,50 @@ RecycleGang(Gang *gp, bool forceDestroy)
 
 	if (!gp)
 		return;
-
+	/*
+	 *
+	 * cdbdisp_destroyDispatcherState should not throw errors by design.
+	 * but, actually there may be some errors caused by an interrupt in RecycleGang,
+	 * details See github issue: https://github.com/greenplum-db/gpdb/issues/13393
+	 *
+	 * before some error is thrown, some segdbDesc of a gang may be freed already,
+	 * and the gang was destroyed. however, the freed gang is still in ds->allocatedGangs.
+	 * When an error occurs, we call AbortTransaction to rollback this transaction,
+	 * and enter cdbdisp_destroyDispatcherState the second time,
+	 * some segdbDesc will be freed twice, or we may use some freed struct somewhere
+	 * else. all the two above situations may be due to panic.
+	 *
+	 * here we use HOLD_INTERRUPTS to prevent an interrupt, so cdbdisp_destroyDispatcherState
+	 * can execute without interruption.
+	 */
+	HOLD_INTERRUPTS();
 	/*
 	 * Loop through the segment_database_descriptors array and, for each
 	 * SegmentDatabaseDescriptor: 1) discard the query results (if any), 2)
 	 * disconnect the session, and 3) discard any connection error message.
 	 */
+#ifdef FAULT_INJECTOR
+	/*
+	 * select * from gp_segment_configuration a, t13393,
+	 * gp_segment_configuration b where a.dbid = t13393.tc1 limit 0;
+	 *
+	 * above sql has 3 gangs, the first and second gangtype is ENTRYDB_READER
+	 * and the third gang is PRIMARY_READER, the second gang will be destroyed.
+	 * generate an interrupt during RecycleGang PRIMARY_READER gang
+	 */
+	if (gp->size >= 3)
+	{
+		if (FaultInjector_InjectFaultIfSet(
+				"cdbcomponent_recycle_idle_qe_error",
+				DDLNotSpecified,
+				"" /* databaseName */,
+				"" /* tableName */) == FaultInjectorTypeSkip)
+		{
+			kill(MyProcPid, SIGINT);
+			CHECK_FOR_INTERRUPTS();
+		}
+	}
+#endif
 	for (i = 0; i < gp->size; i++)
 	{
 		SegmentDatabaseDescriptor *segdbDesc = gp->db_descriptors[i];
@@ -915,6 +953,7 @@ RecycleGang(Gang *gp, bool forceDestroy)
 
 		cdbcomponent_recycleIdleQE(segdbDesc, forceDestroy);
 	}
+	RESUME_INTERRUPTS();
 }
 
 void

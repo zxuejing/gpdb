@@ -903,19 +903,16 @@ RecycleGang(Gang *gp, bool forceDestroy)
 		return;
 	/*
 	 *
-	 * cdbdisp_destroyDispatcherState should not throw errors by design.
-	 * but, actually there may be some errors caused by an interrupt in RecycleGang,
+	 * Callers of RecycleGang should not throw ERRORs by design. This is
+	 * because RecycleGang is not re-entrant: For example, an ERROR could be
+	 * thrown whilst the gang's segdbDesc is already freed. This would cause
+	 * RecycleGang to be called again during abort processing, giving rise to
+	 * potential double freeing of the gang's segdbDesc.
+	 *
+	 * Thus, we hold off interrupts until the gang is fully cleaned here to prevent
+	 * throwing an ERROR here.
+	 *
 	 * details See github issue: https://github.com/greenplum-db/gpdb/issues/13393
-	 *
-	 * before some error is thrown, some segdbDesc of a gang may be freed already,
-	 * and the gang was destroyed. however, the freed gang is still in ds->allocatedGangs.
-	 * When an error occurs, we call AbortTransaction to rollback this transaction,
-	 * and enter cdbdisp_destroyDispatcherState the second time,
-	 * some segdbDesc will be freed twice, or we may use some freed struct somewhere
-	 * else. all the two above situations may be due to panic.
-	 *
-	 * here we use HOLD_INTERRUPTS to prevent an interrupt, so cdbdisp_destroyDispatcherState
-	 * can execute without interruption.
 	 */
 	HOLD_INTERRUPTS();
 	/*
@@ -930,19 +927,12 @@ RecycleGang(Gang *gp, bool forceDestroy)
 	 *
 	 * above sql has 3 gangs, the first and second gangtype is ENTRYDB_READER
 	 * and the third gang is PRIMARY_READER, the second gang will be destroyed.
-	 * generate an interrupt during RecycleGang PRIMARY_READER gang
+	 * inject an interrupt fault during RecycleGang PRIMARY_READER gang.
 	 */
 	if (gp->size >= 3)
 	{
-		if (FaultInjector_InjectFaultIfSet(
-				"cdbcomponent_recycle_idle_qe_error",
-				DDLNotSpecified,
-				"" /* databaseName */,
-				"" /* tableName */) == FaultInjectorTypeSkip)
-		{
-			kill(MyProcPid, SIGINT);
-			CHECK_FOR_INTERRUPTS();
-		}
+		SIMPLE_FAULT_INJECTOR("cdbcomponent_recycle_idle_qe_error");
+		CHECK_FOR_INTERRUPTS();
 	}
 #endif
 	for (i = 0; i < gp->size; i++)

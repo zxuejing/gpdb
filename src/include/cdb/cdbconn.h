@@ -53,6 +53,7 @@ typedef struct SegmentDatabaseDescriptor
     char                   *whoami;         /* QE identifier for msgs */
 	bool					isWriter;
 	int						identifier;		/* unique identifier in the cdbcomponent segment pool */
+	double					createGangTime;
 } SegmentDatabaseDescriptor;
 
 SegmentDatabaseDescriptor *

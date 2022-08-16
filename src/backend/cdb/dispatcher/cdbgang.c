@@ -964,3 +964,54 @@ RecycleGang(Gang *gp, bool forceDestroy)
 	}
 	RESUME_INTERRUPTS();
 }
+
+void printCreateGangTime(int sliceId, Gang *gang)
+{
+	double smallestTime = -1, largestTime =-1;
+	int    smallestSegIndex, largestSegIndex;
+	int size= gang->size;
+	SegmentDatabaseDescriptor *segdbDesc;
+	for (int i = 0; i < size; i++)
+	{
+		segdbDesc = gang->db_descriptors[i];
+		if (segdbDesc->createGangTime != -1)
+		{
+			if (largestTime == -1 || segdbDesc->createGangTime > largestTime)
+			{
+				largestTime = segdbDesc->createGangTime;
+				largestSegIndex = segdbDesc->segindex;
+			}
+			if (smallestTime == -1 || segdbDesc->createGangTime < smallestTime)
+			{
+				smallestTime = segdbDesc->createGangTime;
+				smallestSegIndex = segdbDesc->segindex;
+			}
+		}
+	}
+
+	if (largestTime == -1)
+	{
+		if (sliceId == -1)
+		{
+			elog(INFO, "(gang) is reused");
+		}
+		else
+		{
+			elog(INFO, "(slice%d) is reused", sliceId);
+		}
+
+	}
+	else
+	{
+		if (sliceId == -1)
+		{
+			elog(INFO, " gang create smallest time %.2f ms, segindex: %d,  largest time %.2f ms, segindex: %d", 
+			smallestTime,smallestSegIndex,largestTime,largestSegIndex);
+		}
+		else
+		{
+			elog(INFO, " (slice%d) create smallest time %.2f ms, segindex: %d,  largest time %.2f ms, segindex: %d", 
+		 sliceId,smallestTime,smallestSegIndex,largestTime,largestSegIndex);
+		}
+	}
+}

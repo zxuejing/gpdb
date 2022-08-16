@@ -96,6 +96,7 @@ typedef struct DispatchCommandQueryParms
 	int			serializedDtxContextInfolen;
 } DispatchCommandQueryParms;
 
+extern void printCreateGangTime(int sliceId, Gang *gang);
 static int fillSliceVector(SliceTable *sliceTable,
 				int sliceIndex,
 				SliceVec *sliceVector,
@@ -453,6 +454,7 @@ cdbdisp_dispatchCommandInternal(DispatchCommandQueryParms *pQueryParms,
 	 * Allocate a primary QE for every available segDB in the system.
 	 */
 	primaryGang = AllocateGang(ds, GANGTYPE_PRIMARY_WRITER, segments);
+	printCreateGangTime(-1, primaryGang);
 	Assert(primaryGang);
 
 	cdbdisp_makeDispatchResults(ds, 1, flags & DF_CANCEL_ON_ERROR);
@@ -1172,6 +1174,7 @@ cdbdisp_dispatchX(QueryDesc* queryDesc,
 		}
 
 		primaryGang = slice->primaryGang;
+		printCreateGangTime(si, primaryGang);
 		Assert(primaryGang != NULL);
 		AssertImply(queryDesc->extended_query,
 					primaryGang->type == GANGTYPE_PRIMARY_READER ||

@@ -14,6 +14,7 @@
  */
 
 #include "postgres.h"
+#include "utils/elog.h"
 
 #ifdef HAVE_POLL_H
 #include <poll.h>
@@ -34,6 +35,7 @@
 #include "cdb/cdbvars.h"
 #include "miscadmin.h"
 
+extern bool Test_print_direct_dispatch_info;
 static int	getPollTimeout(const struct timeval *startTS);
 
 /*
@@ -138,6 +140,7 @@ create_gang_retry:
 			{
 				connStatusDone[i] = true;
 				successful_connections++;
+				segdbDesc->createGangTime = -1;//这里在segdbDesc上增加是从池子里拿出来的
 				continue;
 			}
 
@@ -182,7 +185,10 @@ create_gang_retry:
 		 * timeout clock (= get the start timestamp), and poll until they're
 		 * all completed or we reach timeout.
 		 */
-		gettimeofday(&startTS, NULL);
+		instr_time		starttime, endtime;
+		INSTR_TIME_SET_CURRENT(starttime);
+
+		gettimeofday(&startTS, NULL);// 增加开始时间
 		fds = (struct pollfd *) palloc0(sizeof(struct pollfd) * size);
 
 		for (;;)
@@ -213,7 +219,9 @@ create_gang_retry:
 											errdetail("Internal error: No motion listener port (%s)", segdbDesc->whoami)));
 						successful_connections++;
 						connStatusDone[i] = true;
-
+						INSTR_TIME_SET_CURRENT(endtime);
+						INSTR_TIME_SUBTRACT(endtime, starttime);
+						segdbDesc->createGangTime = INSTR_TIME_GET_MILLISEC(endtime);
 						continue;
 
 					case PGRES_POLLING_READING:

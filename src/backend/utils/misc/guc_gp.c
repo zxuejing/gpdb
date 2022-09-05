@@ -133,6 +133,7 @@ bool		Debug_appendonly_print_visimap = false;
 bool		Debug_appendonly_print_compaction = false;
 bool		Debug_bitmap_print_insert = false;
 bool		Test_print_direct_dispatch_info = false;
+bool		Debug_print_create_gang_time = false;
 bool        Test_print_prefetch_joinqual = false;
 bool		Test_copy_qd_qe_split = false;
 bool		gp_permit_relation_node_change = false;
@@ -1407,6 +1408,17 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&Test_print_direct_dispatch_info,
+		false,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"debug_print_create_gang_time", PGC_SUSET, DEVELOPER_OPTIONS,
+			gettext_noop("For testing purposes, print information about create gang time."),
+			NULL,
+			GUC_SUPERUSER_ONLY | GUC_NOT_IN_SAMPLE
+		},
+		&Debug_print_create_gang_time,
 		false,
 		NULL, NULL, NULL
 	},

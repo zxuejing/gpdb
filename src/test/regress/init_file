@@ -143,4 +143,9 @@ s/\(dbsize\.c:\d+\)/\(dbsize\.c:XXX\)/
 m/ \(cdbdisp_async\.c.*\)/
 s/ \(cdbdisp_async\.c.*\)//
 
+m/ The shortest establish conn time:.*/
+s/ The shortest establish conn time:.*//
+m/ The longest  establish conn time:.*/
+s/ The longest  establish conn time:.*//
+
 -- end_matchsubs

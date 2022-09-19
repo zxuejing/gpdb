@@ -65,6 +65,7 @@ make_parsestate(ParseState *parentParseState)
 		/* query environment stays in context for the whole parse analysis */
 		pstate->p_queryEnv = parentParseState->p_queryEnv;
 	}
+	pstate->is_not_clause = false;
 
 	return pstate;
 }

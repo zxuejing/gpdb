@@ -37,6 +37,7 @@
 #include "utils/lsyscache.h"
 #include "utils/timestamp.h"
 #include "utils/xml.h"
+#include "optimizer/walkers.h"
 
 
 /* GUC parameters */
@@ -1516,6 +1517,7 @@ transformBoolExpr(ParseState *pstate, BoolExpr *a)
 			break;
 		case NOT_EXPR:
 			opname = "NOT";
+			pstate->is_not_clause = true;
 			break;
 		default:
 			elog(ERROR, "unrecognized boolop: %d", (int) a->boolop);
@@ -1531,7 +1533,7 @@ transformBoolExpr(ParseState *pstate, BoolExpr *a)
 		arg = coerce_to_boolean(pstate, arg, opname);
 		args = lappend(args, arg);
 	}
-
+	pstate->is_not_clause = false;
 	return (Node *) makeBoolExpr(a->boolop, args, a->location);
 }
 
@@ -2078,6 +2080,7 @@ transformSubLink(ParseState *pstate, SubLink *sublink)
 		List	   *left_list;
 		List	   *right_list;
 		ListCell   *l;
+		bool       convertInToExists = false;
 
 		if (operator_precedence_warning)
 		{
@@ -2096,7 +2099,15 @@ transformSubLink(ParseState *pstate, SubLink *sublink)
 		 * If the source was "x IN (select)", convert to "x = ANY (select)".
 		 */
 		if (sublink->operName == NIL)
+		{
 			sublink->operName = list_make1(makeString("="));
+			/* In clause is equivalent to exists clause, 
+			 * however, not in clause is not equivalent to not exitst clause. 
+			 * Convert in to exists to use orca to reduce slices of plan.
+			 */
+			if (!pstate->is_not_clause)
+				convertInToExists = true;
+		}
 
 		/*
 		 * Transform lefthand expression, and convert to a list
@@ -2112,50 +2123,102 @@ transformSubLink(ParseState *pstate, SubLink *sublink)
 		 * of the subquery.
 		 */
 		right_list = NIL;
-		foreach(l, qtree->targetList)
+
+		if (convertInToExists)
 		{
-			TargetEntry *tent = (TargetEntry *) lfirst(l);
-			Param	   *param;
+			foreach(l, qtree->targetList)
+			{
+				TargetEntry *tent = (TargetEntry *) lfirst(l);
+				if (tent->resjunk)
+					continue;
+				Expr  *expr = tent->expr;
+				right_list = lappend(right_list, expr);
+			}
 
-			if (tent->resjunk)
-				continue;
+			/*
+			 * We could rely on make_row_comparison_op to complain if the list
+			 * lengths differ, but we prefer to generate a more specific error
+			 * message.
+			 */
+			if (list_length(left_list) < list_length(right_list))
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("subquery has too many columns"),
+						 parser_errposition(pstate, sublink->location)));
+			if (list_length(left_list) > list_length(right_list))
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("subquery has too few columns"),
+						 parser_errposition(pstate, sublink->location)));
 
-			param = makeNode(Param);
-			param->paramkind = PARAM_SUBLINK;
-			param->paramid = tent->resno;
-			param->paramtype = exprType((Node *) tent->expr);
-			param->paramtypmod = exprTypmod((Node *) tent->expr);
-			param->paramcollid = exprCollation((Node *) tent->expr);
-			param->location = -1;
+			/*
+			 * Identify the combining operator(s) and generate a suitable
+			 * row-comparison expression.
+			 */
+			List *allVars = extract_nodes(NULL, (Node *) left_list, T_Var);
+			ListCell   *l;
+			foreach(l, allVars)
+			{
+				Var		   *var = (Var *) lfirst(l);
+				var->varlevelsup += 1;
+			}
 
-			right_list = lappend(right_list, param);
-		}
-
-		/*
-		 * We could rely on make_row_comparison_op to complain if the list
-		 * lengths differ, but we prefer to generate a more specific error
-		 * message.
-		 */
-		if (list_length(left_list) < list_length(right_list))
-			ereport(ERROR,
-					(errcode(ERRCODE_SYNTAX_ERROR),
-					 errmsg("subquery has too many columns"),
-					 parser_errposition(pstate, sublink->location)));
-		if (list_length(left_list) > list_length(right_list))
-			ereport(ERROR,
-					(errcode(ERRCODE_SYNTAX_ERROR),
-					 errmsg("subquery has too few columns"),
-					 parser_errposition(pstate, sublink->location)));
-
-		/*
-		 * Identify the combining operator(s) and generate a suitable
-		 * row-comparison expression.
-		 */
-		sublink->testexpr = make_row_comparison_op(pstate,
+			Node * expr  = make_row_comparison_op(pstate,
 												   sublink->operName,
 												   left_list,
 												   right_list,
 												   sublink->location);
+			sublink->testexpr = NULL;
+			sublink->operName = NIL;
+			((Query *)sublink->subselect)->jointree->quals = make_and_qual (((Query *)sublink->subselect)->jointree->quals, expr);
+			sublink->subLinkType = EXISTS_SUBLINK;
+
+		}
+		else
+		{
+			foreach(l, qtree->targetList)
+			{
+				TargetEntry *tent = (TargetEntry *) lfirst(l);
+				if (tent->resjunk)
+					continue;
+
+				Param	   *param;
+				param = makeNode(Param);
+				param->paramkind = PARAM_SUBLINK;
+				param->paramid = tent->resno;
+				param->paramtype = exprType((Node *) tent->expr);
+				param->paramtypmod = exprTypmod((Node *) tent->expr);
+				param->paramcollid = exprCollation((Node *) tent->expr);
+				param->location = -1;
+				right_list = lappend(right_list, param);
+			}
+
+			/*
+			 * We could rely on make_row_comparison_op to complain if the list
+			 * lengths differ, but we prefer to generate a more specific error
+			 * message.
+			 */
+			if (list_length(left_list) < list_length(right_list))
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("subquery has too many columns"),
+						 parser_errposition(pstate, sublink->location)));
+			if (list_length(left_list) > list_length(right_list))
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("subquery has too few columns"),
+						 parser_errposition(pstate, sublink->location)));
+
+			/*
+			 * Identify the combining operator(s) and generate a suitable
+			 * row-comparison expression.
+			 */
+			sublink->testexpr = make_row_comparison_op(pstate,
+												   sublink->operName,
+												   left_list,
+												   right_list,
+												   sublink->location);
+		}
 	}
 
 	return result;

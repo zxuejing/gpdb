@@ -62,6 +62,7 @@ make_parsestate(ParseState *parentParseState)
 		pstate->p_coerce_param_hook = parentParseState->p_coerce_param_hook;
 		pstate->p_ref_hook_state = parentParseState->p_ref_hook_state;
 	}
+	pstate->is_not_clause = false;
 
 	return pstate;
 }

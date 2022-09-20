@@ -306,3 +306,43 @@ from get_explain_analyze_xml_output($$
 
 reset optimizer_enable_dynamictablescan;
 reset enable_seqscan;
+
+-- convert in to exists
+-- planner generate one plan for each partition table which lead to too many slices.
+-- orca use dynamic scan to avoid generate too many slices. but it can not process Non-Scalar Subquery.
+-- convert in to exists to use orca.
+drop table if exists part_t1;
+drop table if exists t;
+create table part_t1(a int, b varchar(40), c timestamp) distributed randomly partition by range (a) (start (1) end (10001) every (2000)) ;
+insert into part_t1 ( a, b, c ) select aa, bb, cc from generate_series(1,10000) aa, md5(aa::varchar) bb, now() cc;
+
+create table t(a int, b varchar(40), c timestamp) distributed randomly;
+insert into t ( a, b, c ) select aa, bb, cc from generate_series(1,10000) aa, md5(aa::varchar) bb, now() cc;
+
+explain delete from part_t1 where (a,b) in(select a,b from t); 
+explain delete from part_t1 where (a,b) in(select a,b from t where a>10); 
+explain delete from part_t1 where (a,b) in(select a,b from t where part_t1.c = t.c or part_t1.c < t.c);
+
+explain delete from part_t1 where exists (select a,b from t where part_t1.a =t.a and part_t1.b=t.b ); 
+
+--test a sublink has another sublink
+drop table if exists t1;
+drop table if exists t2;
+drop table if exists t3;
+
+create table t1(tc1 int);
+create table t2(tc2 int);
+create table t3(tc3 int);
+
+insert into t1 values(1);
+insert into t2 values(2);
+insert into t3 values(1);
+
+select * from t1 where tc1 in (select tc2-1 from t2 where tc1 in (select tc3 from t3));
+explain select * from t1 where tc1 in (select tc2-1 from t2 where tc1 in (select tc3 from t3));
+
+drop table part_t1;
+drop table t;
+drop table t1;
+drop table t2;
+drop table t3;

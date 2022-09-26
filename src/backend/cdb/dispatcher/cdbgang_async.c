@@ -14,7 +14,6 @@
  */
 
 #include "postgres.h"
-#include "utils/elog.h"
 
 #ifdef HAVE_POLL_H
 #include <poll.h>

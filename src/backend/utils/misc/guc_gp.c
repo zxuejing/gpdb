@@ -133,7 +133,6 @@ bool		Debug_appendonly_print_visimap = false;
 bool		Debug_appendonly_print_compaction = false;
 bool		Debug_bitmap_print_insert = false;
 bool		Test_print_direct_dispatch_info = false;
-bool		Debug_print_create_gang_time = false;
 bool        Test_print_prefetch_joinqual = false;
 bool		Test_copy_qd_qe_split = false;
 bool		gp_permit_relation_node_change = false;
@@ -155,6 +154,7 @@ bool		Debug_datumstream_read_print_varlena_info = false;
 bool		Debug_datumstream_write_use_small_initial_buffers = false;
 bool		gp_create_table_random_default_distribution = true;
 bool		gp_allow_non_uniform_partitioning_ddl = true;
+bool		gp_print_create_gang_time = false;
 int			dtx_phase2_retry_second = 0;
 
 bool gp_log_suboverflow_statement = false;
@@ -1402,17 +1402,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"debug_print_create_gang_time", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("For testing purposes, print information about create gang time."),
-			NULL,
-			GUC_SUPERUSER_ONLY | GUC_NOT_IN_SAMPLE
-		},
-		&Debug_print_create_gang_time,
-		false,
-		NULL, NULL, NULL
-	},
-
-	{
 		{"test_print_prefetch_joinqual", PGC_SUSET, DEVELOPER_OPTIONS,
 			gettext_noop("For testing purposes, print information about if we prefetch join qual."),
 			NULL,
@@ -1760,6 +1749,17 @@ struct config_bool ConfigureNamesBool_gp[] =
 		},
 		&gp_allow_non_uniform_partitioning_ddl,
 		true,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"gp_print_create_gang_time", PGC_USERSET, CUSTOM_OPTIONS,
+			gettext_noop("Allow print information about create gang time."),
+			NULL,
+			GUC_NOT_IN_SAMPLE
+		},
+		&gp_print_create_gang_time,
+		false,
 		NULL, NULL, NULL
 	},
 

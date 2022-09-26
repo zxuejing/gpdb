@@ -911,16 +911,16 @@ select cleanupAllGangs();
  t
 (1 row)
 
-show debug_print_create_gang_time;
- debug_print_create_gang_time 
-------------------------------
+show gp_print_create_gang_time;
+ gp_print_create_gang_time 
+---------------------------
  off
 (1 row)
 
 -- create a new n-gang
-set debug_print_create_gang_time=on;
-INFO:  The shortest establish conn time: 4.48 ms, segindex: 2,
-       The longest  establish conn time: 8.13 ms, segindex: 1
+set gp_print_create_gang_time=on;
+INFO:  The shortest establish conn time: 8.46 ms, segindex: 0,
+       The longest  establish conn time: 9.87 ms, segindex: 2
 set optimizer=off;
 INFO:  (Gang) is reused
 --gang reused
@@ -980,7 +980,7 @@ INFO:  (Slice2) is reused
  Execution Time: 1.948 ms
 (14 rows)
 
-reset debug_print_create_gang_time;
+reset gp_print_create_gang_time;
 reset optimizer;
 drop function cleanupAllGangs();
 drop table t_create_gang_time;

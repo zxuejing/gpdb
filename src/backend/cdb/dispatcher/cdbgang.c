@@ -1142,7 +1142,8 @@ gp_backend_info(PG_FUNCTION_ARGS)
  * if all segDescs of the gang are cached, we regard the gang as reused.
  * else we print the shortest time and the longest time of estabishing connection to the segDesc.
  */
-void printCreateGangTime(int sliceId, Gang *gang)
+void
+printCreateGangTime(int sliceId, Gang *gang)
 {
 	double	shortestTime = -1, longestTime = -1;
 	int		shortestSegIndex = -1, longestSegIndex = -1;

@@ -557,10 +557,10 @@ AS '@abs_builddir@/regress@DLSUFFIX@', 'cleanupAllGangs' LANGUAGE C;
 -- cleanupAllGangs();
 select cleanupAllGangs();
 
-show debug_print_create_gang_time;
+show gp_print_create_gang_time;
 
 -- create a new n-gang
-set debug_print_create_gang_time=on;
+set gp_print_create_gang_time=on;
 
 set optimizer=off;
 
@@ -576,7 +576,7 @@ select * from t_create_gang_time t1, t_create_gang_time t2 where t1.tc1=2;
 
 explain analyze select * from t_create_gang_time t1, t_create_gang_time t2 where t1.tc1=2;
 
-reset debug_print_create_gang_time;
+reset gp_print_create_gang_time;
 reset optimizer;
 drop function cleanupAllGangs();
 drop table t_create_gang_time;

@@ -910,8 +910,7 @@ cdbcomponent_recycleIdleQE(SegmentDatabaseDescriptor *segdbDesc, bool forceDestr
 	if (!isWriter && list_length(cdbinfo->freelist) >= maxLen)
 		goto destroy_segdb;
 
-	/* Recycle the QE, put it to freelist, and set establishConnTime to -1.*/
-	segdbDesc->establishConnTime = -1;
+	/* Recycle the QE, put it to freelist */
 	if (isWriter)
 	{
 		/* writer is always the header of freelist */

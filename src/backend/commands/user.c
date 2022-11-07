@@ -45,7 +45,6 @@
 #include "catalog/oid_dispatch.h"
 #include "catalog/pg_auth_time_constraint.h"
 #include "catalog/pg_resgroup.h"
-#include "catalog/pg_resqueue.h"
 #include "commands/resgroupcmds.h"
 #include "executor/execdesc.h"
 #include "libpq/auth.h"
@@ -131,11 +130,9 @@ CreateRole(ParseState *pstate, CreateRoleStmt *stmt)
 	char	   *validUntil = NULL;	/* time the login is valid until */
 	Datum		validUntil_datum;	/* same, as timestamptz Datum */
 	bool		validUntil_null;
-	char	   *resqueue = NULL;		/* resource queue for this role */
 	char	   *resgroup = NULL;		/* resource group for this role */
 	List	   *addintervals = NIL;	/* list of time intervals for which login should be denied */
 	DefElem    *dpassword = NULL;
-	DefElem    *dresqueue = NULL;
 	DefElem    *dresgroup = NULL;
 	DefElem    *dissuper = NULL;
 	DefElem    *dinherit = NULL;
@@ -282,14 +279,6 @@ CreateRole(ParseState *pstate, CreateRoleStmt *stmt)
 						 parser_errposition(pstate, defel->location)));
 			dvalidUntil = defel;
 		}
-		else if (strcmp(defel->defname, "resourceQueue") == 0)
-		{
-			if (dresqueue)
-				ereport(ERROR,
-						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("conflicting or redundant options")));
-			dresqueue = defel;
-		}
 		else if (strcmp(defel->defname, "resourceGroup") == 0)
 		{
 			if (dresgroup)
@@ -368,8 +357,6 @@ CreateRole(ParseState *pstate, CreateRoleStmt *stmt)
 		adminmembers = (List *) dadminmembers->arg;
 	if (dvalidUntil)
 		validUntil = strVal(dvalidUntil->arg);
-	if (dresqueue)
-		resqueue = strVal(linitial((List *) dresqueue->arg));
 	if (dresgroup)
 		resgroup = strVal(linitial((List *) dresgroup->arg));
 	if (dbypassRLS)
@@ -527,50 +514,6 @@ CreateRole(ParseState *pstate, CreateRoleStmt *stmt)
 
 	new_record[Anum_pg_authid_rolvaliduntil - 1] = validUntil_datum;
 	new_record_nulls[Anum_pg_authid_rolvaliduntil - 1] = validUntil_null;
-
-	if (resqueue)
-	{
-		Oid		queueid;
-
-		if (strcmp(resqueue, "none") == 0)
-			ereport(ERROR,
-					(errcode(ERRCODE_RESERVED_NAME),
-					 errmsg("resource queue name \"%s\" is reserved",
-							resqueue)));
-
-		queueid = GetResQueueIdForName(resqueue);
-		if (queueid == InvalidOid)
-			ereport(ERROR,
-					(errcode(ERRCODE_UNDEFINED_OBJECT),
-					 errmsg("resource queue \"%s\" does not exist",
-							resqueue)));
-
-		new_record[Anum_pg_authid_rolresqueue - 1] =
-		ObjectIdGetDatum(queueid);
-
-		/*
-		 * Don't complain if you CREATE a superuser,
-		 * who doesn't use the queue
-		 */
-		if (!IsResQueueEnabled() && !issuper)
-			ereport(WARNING,
-					(errmsg("resource queue is disabled"),
-					 errhint("To enable set gp_resource_manager=queue")));
-	}
-	else
-	{
-		/*
-		 * Resource queue required -- use default queue
-		 * Don't complain if you CREATE a superuser, who doesn't use the queue
-		 */
-		new_record[Anum_pg_authid_rolresqueue - 1] = ObjectIdGetDatum(DEFAULTRESQUEUE_OID);
-
-		if (IsResQueueEnabled() && Gp_role == GP_ROLE_DISPATCH && !issuper)
-			ereport(NOTICE,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("resource queue required -- using default resource queue \"%s\"",
-							GP_DEFAULT_RESOURCE_QUEUE_NAME)));
-	}
 
 	if (resgroup)
 	{
@@ -746,7 +689,6 @@ AlterRole(AlterRoleStmt *stmt)
 	int			canlogin = -1;	/* Can this user login? */
 	int			isreplication = -1; /* Is this a replication role? */
 	int			connlimit = -1; /* maximum connections allowed */
-	char	   *resqueue = NULL;	/* resource queue for this role */
 	char	   *resgroup = NULL;	/* resource group for this role */
 	List	   *exttabcreate = NIL;	/* external table create privileges being added  */
 	List	   *exttabnocreate = NIL;	/* external table create privileges being removed */
@@ -756,7 +698,6 @@ AlterRole(AlterRoleStmt *stmt)
 	bool		validUntil_null;
 	int			bypassrls = -1;
 	DefElem    *dpassword = NULL;
-	DefElem    *dresqueue = NULL;
 	DefElem    *dresgroup = NULL;
 	DefElem    *dissuper = NULL;
 	DefElem    *dinherit = NULL;
@@ -778,7 +719,6 @@ AlterRole(AlterRoleStmt *stmt)
 	bool		createwextgpfd;
 	List	   *addintervals = NIL;		/* list of time intervals for which login should be denied */
 	List	   *dropintervals = NIL;	/* list of time intervals for which matching rules should be dropped */
-	Oid			queueid;
 
 	numopts = list_length(stmt->options);
 
@@ -892,15 +832,6 @@ AlterRole(AlterRoleStmt *stmt)
 			dvalidUntil = defel;
 			if (1 == numopts) alter_subtype = "VALID UNTIL";
 		}
-		else if (strcmp(defel->defname, "resourceQueue") == 0)
-		{
-			if (dresqueue)
-				ereport(ERROR,
-						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("conflicting or redundant options")));
-			dresqueue = defel;
-			if (1 == numopts) alter_subtype = "RESOURCE QUEUE";
-		}
 		else if (strcmp(defel->defname, "resourceGroup") == 0)
 		{
 			if (dresgroup)
@@ -988,8 +919,6 @@ AlterRole(AlterRoleStmt *stmt)
 		rolemembers = (List *) drolemembers->arg;
 	if (dvalidUntil)
 		validUntil = strVal(dvalidUntil->arg);
-	if (dresqueue)
-		resqueue = strVal(linitial((List *) dresqueue->arg));
 	if (dresgroup)
 		resgroup = strVal(linitial((List *) dresgroup->arg));
 	if (dbypassRLS)
@@ -1223,48 +1152,6 @@ AlterRole(AlterRoleStmt *stmt)
 		new_record_repl[Anum_pg_authid_rolcreaterexthttp - 1] = true;
 		new_record[Anum_pg_authid_rolcreatewextgpfd - 1] = BoolGetDatum(createwextgpfd);
 		new_record_repl[Anum_pg_authid_rolcreatewextgpfd - 1] = true;
-	}
-
-	/* resource queue */
-	if (resqueue)
-	{
-		/* NONE not supported -- use default queue  */
-		if (strcmp(resqueue, "none") == 0)
-		{
-			/*
-			 * Don't complain if you ALTER a superuser, who doesn't use the
-			 * queue
-			 */
-			if (!bWas_super && IsResQueueEnabled() && Gp_role == GP_ROLE_DISPATCH)
-			{
-				ereport(NOTICE,
-						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						 errmsg("resource queue required -- using default resource queue \"%s\"",
-								GP_DEFAULT_RESOURCE_QUEUE_NAME)));
-			}
-
-			resqueue = pstrdup(GP_DEFAULT_RESOURCE_QUEUE_NAME);
-		}
-
-		queueid = GetResQueueIdForName(resqueue);
-		if (queueid == InvalidOid)
-			ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				 errmsg("resource queue \"%s\" does not exist", resqueue)));
-
-		new_record[Anum_pg_authid_rolresqueue - 1] = ObjectIdGetDatum(queueid);
-		new_record_repl[Anum_pg_authid_rolresqueue - 1] = true;
-
-		if (!IsResQueueEnabled() && !bWas_super)
-		{
-			/*
-			 * Don't complain if you ALTER a superuser, who doesn't use the
-			 * queue
-			 */
-			ereport(WARNING,
-					(errmsg("resource queue is disabled"),
-					 errhint("To enable set gp_resource_manager=queue.")));
-		}
 	}
 
 	/* resource group */

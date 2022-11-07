@@ -165,7 +165,6 @@ InitPlanCache(void)
  * raw_parse_tree: output of raw_parser(), or NULL if empty query
  * query_string: original query text
  * commandTag: compile-time-constant tag for query, or NULL if empty query
- * sourceTag: GPDB specific.
  */
 CachedPlanSource *
 CreateCachedPlan(RawStmt *raw_parse_tree,
@@ -199,7 +198,6 @@ CreateCachedPlan(RawStmt *raw_parse_tree,
 	plansource->magic = CACHEDPLANSOURCE_MAGIC;
 	plansource->raw_parse_tree = copyObject(raw_parse_tree);
 	plansource->query_string = pstrdup(query_string);
-	/* sourceTag is filled in CompleteCachedPlan(). */
 	MemoryContextSetIdentifier(source_context, plansource->query_string);
 	plansource->commandTag = commandTag;
 	plansource->param_types = NULL;
@@ -344,7 +342,6 @@ void
 CompleteCachedPlan(CachedPlanSource *plansource,
 				   List *querytree_list,
 				   MemoryContext querytree_context,
-				   NodeTag sourceTag,
 				   Oid *param_types,
 				   int num_params,
 				   ParserSetupHook parserSetup,
@@ -429,7 +426,6 @@ CompleteCachedPlan(CachedPlanSource *plansource,
 	}
 	else
 		plansource->param_types = NULL;
-	plansource->sourceTag = sourceTag;
 	plansource->num_params = num_params;
 	plansource->parserSetup = parserSetup;
 	plansource->parserSetupArg = parserSetupArg;
@@ -1477,7 +1473,6 @@ CopyCachedPlan(CachedPlanSource *plansource)
 	newsource->magic = CACHEDPLANSOURCE_MAGIC;
 	newsource->raw_parse_tree = copyObject(plansource->raw_parse_tree);
 	newsource->query_string = pstrdup(plansource->query_string);
-	newsource->sourceTag = plansource->sourceTag;
 	MemoryContextSetIdentifier(source_context, newsource->query_string);
 	newsource->commandTag = plansource->commandTag;
 	if (plansource->num_params > 0)

@@ -49,6 +49,7 @@
  */
 #define RESGROUP_FALLBACK_MEMORY_SPILL_RATIO		(0)
 
+extern int	gp_resgroup_memory_policy;
 /*
  * Resource group capability.
  */

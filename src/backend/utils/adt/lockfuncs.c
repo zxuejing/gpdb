@@ -36,7 +36,6 @@ const char *const LockTagTypeNames[] = {
 	"virtualxid",
 	"speculative token",
 	"object",
-	"resource queue",
 	"distributed xid",
 	"userlock",
 	"advisory"
@@ -431,20 +430,6 @@ pg_lock_status(PG_FUNCTION_ARGS)
 				nulls[6] = true;
 				nulls[7] = true;
 				nulls[8] = true;
-				nulls[9] = true;
-				break;
-			case LOCKTAG_RESOURCE_QUEUE:
-#if 0
-				values[1] = ObjectIdGetDatum(proc->databaseId);
-#endif
-				nulls[1] = true;
-				values[8] = ObjectIdGetDatum(instance->locktag.locktag_field1);
-				nulls[2] = true;
-				nulls[3] = true;
-				nulls[4] = true;
-				nulls[5] = true;
-				nulls[6] = true;
-				nulls[7] = true;
 				nulls[9] = true;
 				break;
 			case LOCKTAG_OBJECT:

@@ -71,17 +71,8 @@ analyze fooheap;
 
 select * from gp_toolkit.gp_bloat_diag;
 
-
-select * from gp_toolkit.gp_resq_activity_by_queue;
-select * from gp_toolkit.gp_resq_priority_statement;
-select * from gp_toolkit.gp_resq_priority_backend;
-
-
 select * from gp_toolkit.gp_pgdatabase_invalid;
 
-select * from gp_toolkit.gp_resq_role;
-
-select * from gp_toolkit.gp_locks_on_resqueue;
 select * from gp_toolkit.gp_locks_on_relation;
 
 select * from gp_toolkit.gp_roles_assigned;

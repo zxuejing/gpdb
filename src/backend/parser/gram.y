@@ -300,11 +300,10 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 		RetrieveStmt
 
 /* GPDB-specific commands */
-%type <node>	AlterTypeStmt AlterQueueStmt AlterResourceGroupStmt
-		CreateExternalStmt
-		CreateQueueStmt CreateResourceGroupStmt
-		DropQueueStmt DropResourceGroupStmt
-		ExtTypedesc OptSingleRowErrorHandling ExtSingleRowErrorHandling
+%type <node>	AlterTypeStmt AlterResourceGroupStmt
+		CreateExternalStmt CreateResourceGroupStmt
+		DropResourceGroupStmt ExtTypedesc
+		OptSingleRowErrorHandling ExtSingleRowErrorHandling
 
 %type <node>    deny_login_role deny_interval deny_point deny_day_specifier
 
@@ -360,9 +359,6 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 %type <str>		foreign_server_version opt_foreign_server_version
 %type <str>		opt_in_database
 %type <str>		opt_coordinatoronly
-
-%type <list>	OptQueueList
-%type <defelt>	OptQueueElem
 
 %type <list>	OptResourceGroupList
 %type <defelt>	OptResourceGroupElem
@@ -589,7 +585,6 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 %type <ival>	Iconst SignedIconst
 %type <str>		Sconst comment_text notify_payload
 %type <str>		RoleId opt_boolean_or_string
-%type <str>		QueueId
 %type <list>	var_list
 %type <str>		ColId ColLabel ColLabelNoAs var_name type_function_name param_name
 %type <keyword> PartitionIdentKeyword	
@@ -832,8 +827,6 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 
 	PARTITIONS PERCENT PERSISTENTLY PROTOCOL
 
-	QUEUE
-
 	RANDOMLY READABLE READS REJECT_P REPLICATED RESOURCE
 	ROOTPARTITION
 
@@ -1074,7 +1067,6 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc PROCEDURAL
 			%nonassoc PROCEDURE
 			%nonassoc PROTOCOL
-			%nonassoc QUEUE
 			%nonassoc QUOTE
 			%nonassoc RANDOMLY
 			%nonassoc READ
@@ -1292,7 +1284,6 @@ stmt :
 			| AlterOwnerStmt
 			| AlterOperatorStmt
 			| AlterPolicyStmt
-			| AlterQueueStmt
 			| AlterResourceGroupStmt
 			| AlterSeqStmt
 			| AlterSystemStmt
@@ -1335,7 +1326,6 @@ stmt :
 			| AlterOpFamilyStmt
 			| CreatePolicyStmt
 			| CreatePLangStmt
-			| CreateQueueStmt
 			| CreateResourceGroupStmt
 			| CreateSchemaStmt
 			| CreateSeqStmt
@@ -1361,7 +1351,6 @@ stmt :
 			| DropOpFamilyStmt
 			| DropOwnedStmt
 			| DropPLangStmt
-			| DropQueueStmt
 			| DropResourceGroupStmt
 			| DropStmt
 			| DropSubscriptionStmt
@@ -1409,144 +1398,6 @@ stmt :
 				{ $$ = NULL; }
 		;
 
-/*****************************************************************************
- *
- * Create a new Postgres Resource Queue
- *
- *****************************************************************************/
-
-CreateQueueStmt:
-			CREATE RESOURCE QUEUE QueueId OptQueueList
-				{
-					CreateQueueStmt *n = makeNode(CreateQueueStmt);
-					DefElem         *def1 = /* mark start of WITH items */
-						makeDefElem("withliststart", 
-									(Node *)makeInteger(true), @5);
-					n->queue = $4;
-					n->options = list_concat(lappend($5, def1), NULL); 
-					$$ = (Node *)n;
-				}
-			| CREATE RESOURCE QUEUE QueueId OptQueueList WITH definition
-				{
-					CreateQueueStmt *n    = makeNode(CreateQueueStmt);
-					DefElem         *def1 = /* mark start of WITH items */
-						makeDefElem("withliststart", 
-									(Node *)makeInteger(true), @5);
-					n->queue = $4;
-					n->options = list_concat(lappend($5, def1), $7); 
-					$$ = (Node *)n;
-				}
-		;
-
-/*
- * Options for CREATE and ALTER RESOURCE QUEUE 
- */
-OptQueueList:
-			OptQueueList OptQueueElem				{ $$ = lappend($1, $2); }
-			| /*EMPTY*/								{ $$ = NIL; }
-		;
-
-OptQueueElem:
-			ACTIVE THRESHOLD NumericOnly
-				{
-					/* was "activelimit" */
-					$$ = makeDefElem("active_statements", (Node *) $3, @1);
-				}
-			| COST THRESHOLD NumericOnly /* enforce float type in queue.c */
-				{
-					/* was "costlimit" */
-					$$ = makeDefElem("max_cost", (Node *) $3, @1);
-				}
-			| IGNORE_P THRESHOLD NumericOnly /* enforce float type in queue.c */
-				{
-					/* was "ignorecostlimit" */
-					$$ = makeDefElem("min_cost", (Node *) $3, @1);
-				}
-			| OVERCOMMIT
-				{
-					/* was "overcommit" */
-					$$ = makeDefElem("cost_overcommit", (Node *) makeInteger(true), @1);
-				}
-			| NOOVERCOMMIT
-				{
-					/* was "overcommit" */
-					$$ = makeDefElem("cost_overcommit", (Node *) makeInteger(false), @1);
-				}
-		;
-
-/*****************************************************************************
- *
- * Alter a postgres Resource Queue
- *
- *****************************************************************************/
-
-AlterQueueStmt:
-			ALTER RESOURCE QUEUE QueueId OptQueueList
-				 {
-					AlterQueueStmt *n = makeNode(AlterQueueStmt);
-					n->queue = $4;
-					n->options = $5;
-					$$ = (Node *)n;
-				 }
-			| ALTER RESOURCE QUEUE QueueId OptQueueList WITH definition
-				 {
-					AlterQueueStmt *n    = makeNode(AlterQueueStmt);
-					DefElem        *def1 = /* mark start of WITH items */
-						makeDefElem("withliststart", 
-									(Node *) makeInteger(true), @6);
-					DefElem        *def2 = /* mark start of WITHOUT items */
-						makeDefElem("withoutliststart", 
-									(Node *) makeInteger(true), @6);
-					n->queue = $4;
-					n->options = list_concat(lappend($5, def1), $7); 
-					n->options = lappend(n->options, def2); 
-					$$ = (Node *)n;
-				 }
-			| ALTER RESOURCE QUEUE QueueId OptQueueList WITHOUT definition
-				 {
-					AlterQueueStmt *n    = makeNode(AlterQueueStmt);
-					DefElem        *def1 = /* mark start of WITH items */
-						makeDefElem("withliststart", 
-									(Node *) makeInteger(true), @6);
-					DefElem        *def2 = /* mark start of WITHOUT items */
-						makeDefElem("withoutliststart", 
-									(Node *) makeInteger(true), @6);
-					n->queue = $4;
-					n->options = lappend($5, def1); 
-					n->options = list_concat(lappend(n->options, def2), $7); 
-					$$ = (Node *)n;
-				 }
-			| ALTER RESOURCE QUEUE QueueId OptQueueList WITH definition 
-			  WITHOUT definition
-				 {
-					AlterQueueStmt *n    = makeNode(AlterQueueStmt);
-					DefElem        *def1 = /* mark start of WITH items */
-						makeDefElem("withliststart", 
-									(Node *) makeInteger(true), @6);
-					DefElem        *def2 = /* mark start of WITHOUT items */
-						makeDefElem("withoutliststart", 
-									(Node *) makeInteger(true), @6);
-					n->queue = $4;
-					n->options = list_concat(lappend($5, def1), $7); 
-					n->options = list_concat(lappend(n->options, def2), $9);
-					$$ = (Node *)n;
-				 }
-		;
-
-/*****************************************************************************
- *
- * Drop a postgres Resource Queue
- *
- *****************************************************************************/
-
-DropQueueStmt:
-			DROP RESOURCE QUEUE QueueId
-				 {
-					DropQueueStmt *n = makeNode(DropQueueStmt);
-					n->queue = $4;
-					$$ = (Node *)n;
-				 }
-		;
 
 /*****************************************************************************
  *
@@ -1730,10 +1581,6 @@ AlterOptRoleElem:
 			| VALID UNTIL Sconst
 				{
 					$$ = makeDefElem("validUntil", (Node *)makeString($3), @1);
-				}
-			| RESOURCE QUEUE any_name
-				{
-					$$ = makeDefElem("resourceQueue", (Node *) $3, @1);
 				}
 			| RESOURCE GROUP_P any_name
 				{
@@ -9106,7 +8953,6 @@ comment_type_name:
 			| SERVER							{ $$ = OBJECT_FOREIGN_SERVER; }
 			| SUBSCRIPTION						{ $$ = OBJECT_SUBSCRIPTION; }
 			| TABLESPACE						{ $$ = OBJECT_TABLESPACE; }
-			| RESOURCE QUEUE                    { $$ = OBJECT_RESQUEUE; }
 			| RESOURCE GROUP_P					{ $$ = OBJECT_RESGROUP; }
 		;
 
@@ -17836,8 +17682,6 @@ SignedIconst: Iconst								{ $$ = $1; }
 			| '-' Iconst							{ $$ = - $2; }
 		;
 
-QueueId:	NonReservedWord							{ $$ = $1; };
-
 /* Role specifications */
 RoleId:		RoleSpec
 				{
@@ -18197,7 +18041,6 @@ unreserved_keyword:
 			| PROGRAM
 			| PROTOCOL
 			| PUBLICATION
-			| QUEUE
 			| QUOTE
 			| RANDOMLY /* gp */
 			| RANGE
@@ -18507,7 +18350,6 @@ PartitionIdentKeyword: ABORT_P
 			| PROCEDURAL
 			| PROCEDURE
 			| PROTOCOL
-			| QUEUE
 			| QUOTE
 			| RANGE
 			| READ

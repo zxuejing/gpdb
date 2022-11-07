@@ -97,7 +97,6 @@ typedef struct CachedPlanSource
 	struct RawStmt *raw_parse_tree; /* output of raw_parser(), or NULL */
 	const char *query_string;	/* source text of query */
 	const char *commandTag;		/* command tag (a constant!), or NULL */
-	NodeTag		sourceTag;		/* GPDB: Original statement NodeTag */
 	Oid		   *param_types;	/* array of parameter type OIDs, or NULL */
 	int			num_params;		/* length of param_types array */
 	ParserSetupHook parserSetup;	/* alternative parameter spec method */
@@ -195,7 +194,6 @@ extern CachedPlanSource *CreateOneShotCachedPlan(struct RawStmt *raw_parse_tree,
 extern void CompleteCachedPlan(CachedPlanSource *plansource,
 							   List *querytree_list,
 							   MemoryContext querytree_context,
-							   NodeTag sourceTag,
 							   Oid *param_types,
 							   int num_params,
 							   ParserSetupHook parserSetup,

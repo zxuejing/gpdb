@@ -30,7 +30,6 @@ CREATE VIEW pg_roles AS
         rolvaliduntil,
         rolbypassrls,
         setconfig as rolconfig,
-		rolresqueue,
         pg_authid.oid,
         rolcreaterextgpfd,
         rolcreaterexthttp,
@@ -1058,36 +1057,6 @@ CREATE VIEW pg_stat_database AS
         SELECT oid, datname FROM pg_database
     ) D;
 
-CREATE VIEW pg_stat_resqueues AS
-	SELECT
-		Q.oid AS queueid,
-		Q.rsqname AS queuename,
-		pg_stat_get_queue_num_exec(Q.oid) AS n_queries_exec,
-		pg_stat_get_queue_num_wait(Q.oid) AS n_queries_wait,
-		pg_stat_get_queue_elapsed_exec(Q.oid) AS elapsed_exec,
-		pg_stat_get_queue_elapsed_wait(Q.oid) AS elapsed_wait
-	FROM pg_resqueue AS Q;
-
--- Resource queue views
-
-CREATE VIEW pg_resqueue_status AS
-	SELECT 
-			q.rsqname, 
-			q.rsqcountlimit, 
-			s.queuecountvalue AS rsqcountvalue,
-			q.rsqcostlimit, 
-			s.queuecostvalue AS rsqcostvalue,
-			s.queuewaiters AS rsqwaiters,
-			s.queueholders AS rsqholders
-	FROM pg_resqueue AS q 
-			INNER JOIN pg_resqueue_status() AS s 
-			(	queueid oid, 
-	 			queuecountvalue float4, 
-				queuecostvalue float4,
-				queuewaiters int4,
-				queueholders int4)
-			ON (s.queueid = q.oid);
-			
 -- External table views
 
 CREATE VIEW pg_max_external_files AS
@@ -1220,56 +1189,8 @@ FROM pg_tablespace a, (pg_authid b FULL JOIN pg_stat_last_shoperation c ON
 'pg_tablespace'::name) AND (pg_class.relnamespace = (SELECT
 pg_namespace.oid FROM pg_namespace WHERE (pg_namespace.nspname =
 'pg_catalog'::name)))))))
-UNION
-SELECT 'pg_resqueue' AS classname,
-a.rsqname as objname,
-c.objid, NULL AS schemaname,
-CASE WHEN 
-((b.oid = c.stasysid) AND (b.rolname = c.stausename) )
-THEN 'CURRENT'
- WHEN 
-(b.rolname != c.stausename)
-THEN 'CHANGED'
-ELSE 'DROPPED' END AS usestatus, 
-CASE WHEN b.rolname IS NULL THEN c.stausename
-ELSE b.rolname END AS usename, 
-c.staactionname AS actionname, 
-c.stasubtype AS subtype,
---
-c.statime 
-FROM pg_resqueue a, (pg_authid
-b FULL JOIN pg_stat_last_shoperation c ON ((b.oid = c.stasysid)))
-WHERE ((a.oid = c.objid) AND (c.classid = (SELECT pg_class.oid FROM
-pg_class WHERE ((pg_class.relname = 'pg_resqueue'::name) AND
-(pg_class.relnamespace = (SELECT pg_namespace.oid FROM pg_namespace
-WHERE (pg_namespace.nspname = 'pg_catalog'::name))))))) ORDER BY 9;
+ ORDER BY 9;
 
--- MPP-7807: show all resqueue attributes
-CREATE VIEW pg_resqueue_attributes AS
-SELECT rsqname, 'active_statements' AS resname,
-rsqcountlimit::text AS ressetting,
-1 AS restypid FROM pg_resqueue
-UNION
-SELECT rsqname, 'max_cost' AS resname,
-rsqcostlimit::text AS ressetting,
-2 AS restypid FROM pg_resqueue
-UNION
-SELECT rsqname, 'cost_overcommit' AS resname,
-case when rsqovercommit then '1'
-else '0' end AS ressetting,
-4 AS restypid FROM pg_resqueue
-UNION
-SELECT rsqname, 'min_cost' AS resname,
-rsqignorecostlimit::text AS ressetting,
-3 AS restypid FROM pg_resqueue
-UNION
-SELECT rq.rsqname , rt.resname, rc.ressetting,
-rt.restypid AS restypid FROM
-pg_resqueue rq, pg_resourcetype rt,
-pg_resqueuecapability rc WHERE
-rq.oid=rc.resqueueid AND rc.restypid = rt.restypid
-ORDER BY rsqname, restypid
-;
 
 CREATE VIEW pg_stat_database_conflicts AS
     SELECT

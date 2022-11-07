@@ -125,7 +125,6 @@
 #include "postmaster/postmaster.h"
 #include "postmaster/fts.h"
 #include "postmaster/syslogger.h"
-#include "postmaster/backoff.h"
 #include "postmaster/bgworker.h"
 #include "replication/logicallauncher.h"
 #include "replication/walsender.h"
@@ -408,12 +407,6 @@ static BackgroundWorker PMAuxProcList[MaxPMAuxProc] =
 	 "postgres", "DtxRecoveryMain", 0, {0}, 0,
 	 DtxRecoveryStartRule},
 
-	{"sweeper process", "sweeper process",
-	 BGWORKER_SHMEM_ACCESS,
-	 BgWorkerStart_RecoveryFinished,
-	 0, /* restart immediately if sweeper process exits with non-zero code */
-	 "postgres", "BackoffSweeperMain", 0, {0}, 0,
-	 BackoffSweeperStartRule},
 
 #ifdef ENABLE_IC_PROXY
 	{"ic proxy process", "ic proxy process",

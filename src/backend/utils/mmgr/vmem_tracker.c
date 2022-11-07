@@ -557,7 +557,7 @@ VmemTracker_ReserveVmem(int64 newlyRequestedBytes)
 		 * query cancellation or other pending interrupts. This ensures more responsive
 		 * interrupt processing, including query cancellation requests without depending
 		 * on CHECK_FOR_INTERRUPTS(). In a sense, this is a lightweight CHECK_FOR_INTERRUPTS
-		 * as we don't execute BackoffBackendTick() and some runaway detection code.
+		 * as we don't execute some runaway detection code.
 		 */
 		if (vmem_process_interrupt && InterruptPending)
 		{

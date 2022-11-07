@@ -100,7 +100,6 @@
 #include "cdb/ml_ipc.h"
 #include "utils/guc.h"
 #include "access/twophase.h"
-#include "postmaster/backoff.h"
 #include "utils/resource_manager.h"
 
 #include "utils/session_state.h"
@@ -1399,11 +1398,6 @@ exec_mpp_query(const char *query_string,
 		PortalDefineQuery(portal,
 						  NULL,
 						  query_string,
-						  /*
-						   * sourceTag is stored in parsetree, but the original parsetree isn't
-						   * dispatched to QE, so set a generic T_Query here.
-						   */
-						  T_Query,
 						  commandTag,
 						  list_make1(plan),
 						  NULL);
@@ -1505,11 +1499,6 @@ exec_mpp_query(const char *query_string,
 	if (save_log_statement_stats)
 		ShowUsage("QUERY STATISTICS");
 
-
-	if (gp_enable_resqueue_priority)
-	{
-		BackoffBackendEntryExit();
-	}
 
 	debug_query_string = NULL;
 }
@@ -1871,7 +1860,6 @@ exec_simple_query(const char *query_string)
 		PortalDefineQuery(portal,
 						  NULL,
 						  query_string,
-						  nodeTag(parsetree->stmt),
 						  commandTag,
 						  plantree_list,
 						  NULL);
@@ -2041,7 +2029,6 @@ exec_parse_message(const char *query_string,	/* string to execute */
 	bool		is_named;
 	bool		save_log_statement_stats = log_statement_stats;
 	char		msec_str[32];
-	NodeTag		sourceTag = T_Query;
 
 	/*
 	 * Report query to various monitoring facilities.
@@ -2205,12 +2192,6 @@ exec_parse_message(const char *query_string,	/* string to execute */
 
 		querytree_list = pg_rewrite_query(query);
 
-		if (parsetree_list)
-		{
-			Node	   *parsetree = (Node *) linitial(parsetree_list);
-			sourceTag = nodeTag(parsetree);
-		}
-
 		/* Done with the snapshot used for parsing */
 		if (snapshot_set)
 			PopActiveSnapshot();
@@ -2237,7 +2218,6 @@ exec_parse_message(const char *query_string,	/* string to execute */
 	CompleteCachedPlan(psrc,
 					   querytree_list,
 					   unnamed_stmt_context,
-					   sourceTag,
 					   paramTypes,
 					   numParams,
 					   NULL,
@@ -2626,7 +2606,6 @@ exec_bind_message(StringInfo input_message)
 	PortalDefineQuery(portal,
 					  saved_stmt_name,
 					  query_string,
-					  psrc->sourceTag,
 					  psrc->commandTag,
 					  cplan->stmt_list,
 					  cplan);
@@ -5218,7 +5197,6 @@ PostgresMain(int argc, char *argv[],
 			{
 				ProcessCompletedNotifies();
 				pgstat_report_stat(false);
-				pgstat_report_queuestat();
 
 				strncat(activity, "idle", remain);
 				set_ps_display(activity, false);

@@ -2786,10 +2786,6 @@ CommitTransaction(void)
 
 	AtEOXact_SharedSnapshot();
 
-	/* Perform any Resource Scheduler commit procesing. */
-	if (Gp_role == GP_ROLE_DISPATCH && IsResQueueEnabled())
-		AtCommit_ResScheduler();
-
 	/*
 	 * Let ON COMMIT management do its thing (must happen after closing
 	 * cursors, to avoid dangling-reference problems)
@@ -3484,10 +3480,6 @@ AbortTransaction(void)
 	AtAbort_Portals();
 	AtAbort_DispatcherState();
 	AtEOXact_SharedSnapshot();
-
-	/* Perform any Resource Scheduler abort procesing. */
-	if (Gp_role == GP_ROLE_DISPATCH && IsResQueueEnabled())
-		AtAbort_ResScheduler();
 
 	AtEOXact_DispatchOids(false);
 

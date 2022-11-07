@@ -64,7 +64,6 @@ PrepareQuery(PrepareStmt *stmt, const char *queryString,
 	Query	   *query;
 	List	   *query_list;
 	int			i;
-	NodeTag		srctag;  /* GPDB */
 
 	/*
 	 * Disallow empty-string statement name (conflicts with protocol-level
@@ -143,31 +142,6 @@ PrepareQuery(PrepareStmt *stmt, const char *queryString,
 							i + 1)));
 	}
 
-	/*
-	 * grammar only allows OptimizableStmt, so this check should be redundant
-	 */
-	switch (query->commandType)
-	{
-		case CMD_SELECT:
-			srctag = T_SelectStmt;
-			break;
-		case CMD_INSERT:
-			srctag = T_InsertStmt;
-			break;
-		case CMD_UPDATE:
-			srctag = T_UpdateStmt;
-			break;
-		case CMD_DELETE:
-			srctag = T_DeleteStmt;
-			break;
-		default:
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_PSTATEMENT_DEFINITION),
-					 errmsg("utility statements cannot be prepared")));
-			srctag = T_Query;	/* keep compiler quiet */
-			break;
-	}
-
 	/* Rewrite the query. The result could be 0, 1, or many queries. */
 	query_list = QueryRewrite(query);
 
@@ -175,7 +149,6 @@ PrepareQuery(PrepareStmt *stmt, const char *queryString,
 	CompleteCachedPlan(plansource,
 					   query_list,
 					   NULL,
-					   srctag,
 					   argtypes,
 					   nargs,
 					   NULL,
@@ -311,7 +284,6 @@ ExecuteQuery(ExecuteStmt *stmt, IntoClause *intoClause,
 	PortalDefineQuery(portal,
 					  NULL,
 					  query_string,
-					  entry->plansource->sourceTag,
 					  entry->plansource->commandTag,
 					  plan_list,
 					  cplan);

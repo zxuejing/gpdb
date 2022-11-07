@@ -16,13 +16,11 @@ key" references in a table with a FOREIGN_KEY line. Those declarations
 are only used by gpcheckcat, they are not used for anything by the
 server itself.
 
-For example, the Greenplum resource queue capability table is a shared
+For example, the Greenplum resource group capability table is a shared
 table with a unique index and two subsidiary indexes.  It also has a
-foreign key relationship with pg_resqueue and pg_resourcetype.  The
-FOREIGN_KEY definition is:
+foreign key relationship with pg_resgroup. The FOREIGN_KEY definition is:
 
-FOREIGN_KEY(resqueueid REFERENCES pg_resqueue(oid));
-FOREIGN_KEY(restypid REFERENCES pg_resourcetype(restypid));
+FOREIGN_KEY(resgroupid REFERENCES pg_resgroup(oid));
 
 If you modify any foreign key declarations, you must re-generate
 gpMgmt/bin/gppylib/data/<version>.json file. The src/backend/catalog

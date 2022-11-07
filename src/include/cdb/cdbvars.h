@@ -134,10 +134,6 @@ extern int			pgstat_track_activity_query_size;
  */
 extern bool           gp_enable_slow_writer_testmode;
 
-/*
- * MPP-6926: Resource Queues on by default
- */
-#define GP_DEFAULT_RESOURCE_QUEUE_NAME "pg_default"
 
 /* Parameter gp_debug_pgproc
  *

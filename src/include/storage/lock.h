@@ -127,12 +127,10 @@ typedef uint16 LOCKMETHODID;
 /* These identify the known lock methods */
 #define DEFAULT_LOCKMETHOD	1
 #define USER_LOCKMETHOD		2
-#define RESOURCE_LOCKMETHOD	3
 
 /*
  * Map from lock methods to lock table data structures.
  */
-extern const	LockMethodData resource_lockmethod;
 extern const	LockMethod LockMethods[];
 
 
@@ -161,7 +159,6 @@ typedef enum LockTagType
 	LOCKTAG_VIRTUALTRANSACTION, /* virtual transaction (ditto) */
 	LOCKTAG_SPECULATIVE_TOKEN,	/* speculative insertion Xid and token */
 	LOCKTAG_OBJECT,				/* non-relation database object */
-	LOCKTAG_RESOURCE_QUEUE,		/* ID info for resource queue is QUEUE ID */
 	LOCKTAG_DISTRIB_TRANSACTION,/* CDB: distributed transaction (for waiting for distributed xact done) */
 	LOCKTAG_USERLOCK,			/* reserved for old contrib/userlock code */
 	LOCKTAG_ADVISORY			/* advisory user locks */
@@ -293,14 +290,6 @@ typedef struct LOCKTAG
 	 (locktag).locktag_type = LOCKTAG_ADVISORY, \
 	 (locktag).locktag_lockmethodid = USER_LOCKMETHOD)
 
-#define SET_LOCKTAG_RESOURCE_QUEUE(locktag, queueid) \
-	((locktag).locktag_field1 = (queueid), \
-	 (locktag).locktag_field2 = 0, \
-	 (locktag).locktag_field3 = 0, \
-	 (locktag).locktag_field4 = 0, \
-	 (locktag).locktag_type = LOCKTAG_RESOURCE_QUEUE,		\
-	 (locktag).locktag_lockmethodid = RESOURCE_LOCKMETHOD)
-
 /*
  * Per-locked-object lock information:
  *
@@ -394,8 +383,6 @@ typedef struct PROCLOCK
 	SHM_QUEUE	procLink;		/* list link in PGPROC's list of proclocks */
 	int			nLocks;			/* total number of times lock is held by 
 								   this process, used by resource scheduler */
-	SHM_QUEUE	portalLinks;	/* list of ResPortalIncrements for this 
-								   proclock, used by resource scheduler */
 } PROCLOCK;
 
 #define PROCLOCK_LOCKMETHOD(proclock) \

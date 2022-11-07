@@ -5241,39 +5241,6 @@ _copyCursorPosInfo(const CursorPosInfo *from)
 	return newnode;
 }
 
-
-static CreateQueueStmt *
-_copyCreateQueueStmt(const CreateQueueStmt *from)
-{
-	CreateQueueStmt *newnode = makeNode(CreateQueueStmt);
-
-	COPY_STRING_FIELD(queue);
-	COPY_NODE_FIELD(options);
-
-	return newnode;
-}
-
-static AlterQueueStmt *
-_copyAlterQueueStmt(const AlterQueueStmt *from)
-{
-	AlterQueueStmt *newnode = makeNode(AlterQueueStmt);
-
-	COPY_STRING_FIELD(queue);
-	COPY_NODE_FIELD(options);
-
-	return newnode;
-}
-
-static DropQueueStmt *
-_copyDropQueueStmt(const DropQueueStmt *from)
-{
-	DropQueueStmt *newnode = makeNode(DropQueueStmt);
-
-	COPY_STRING_FIELD(queue);
-
-	return newnode;
-}
-
 static CreateResourceGroupStmt *
 _copyCreateResourceGroupStmt(const CreateResourceGroupStmt *from)
 {
@@ -6581,16 +6548,6 @@ copyObjectImpl(const void *from)
 			break;
 		case T_AlterTSConfigurationStmt:
 			retval = _copyAlterTSConfigurationStmt(from);
-			break;
-
-		case T_CreateQueueStmt:
-			retval = _copyCreateQueueStmt(from);
-			break;
-		case T_AlterQueueStmt:
-			retval = _copyAlterQueueStmt(from);
-			break;
-		case T_DropQueueStmt:
-			retval = _copyDropQueueStmt(from);
 			break;
 
 		case T_CreateResourceGroupStmt:

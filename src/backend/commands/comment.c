@@ -119,7 +119,7 @@ CommentObject(CommentStmt *stmt)
 	}
 
 	/*
-	 * Databases, tablespaces, roles, resource queues/groups are cluster-wide
+	 * Databases, tablespaces, roles, resource groups are cluster-wide
 	 * objects, so any comments on those objects are recorded in the shared
 	 * pg_shdescription catalog.  Comments on all other objects are recorded in
 	 * pg_description.
@@ -129,7 +129,6 @@ CommentObject(CommentStmt *stmt)
 		case OBJECT_DATABASE:
 		case OBJECT_TABLESPACE:
 		case OBJECT_ROLE:
-		case OBJECT_RESQUEUE:
 		case OBJECT_RESGROUP:
 			CreateSharedComments(address.objectId, address.classId, stmt->comment);
 			break;

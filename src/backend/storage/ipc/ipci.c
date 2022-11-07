@@ -62,7 +62,6 @@
 #include "libpq-int.h"
 #include "cdb/cdbfts.h"
 #include "cdb/cdbtm.h"
-#include "postmaster/backoff.h"
 #include "cdb/memquota.h"
 #include "executor/instrument.h"
 #include "executor/spi.h"
@@ -149,12 +148,7 @@ CreateSharedMemoryAndSemaphores(int port)
 		size = add_size(size, LockShmemSize());
 		size = add_size(size, PredicateLockShmemSize());
 
-		if (IsResQueueEnabled() && Gp_role == GP_ROLE_DISPATCH)
-		{
-			size = add_size(size, ResSchedulerShmemSize());
-			size = add_size(size, ResPortalIncrementShmemSize());
-		}
-		else if (IsResGroupEnabled())
+		if (IsResGroupEnabled())
 			size = add_size(size, ResGroupShmemSize());
 		size = add_size(size, SharedSnapshotShmemSize());
 		if (Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_UTILITY)
@@ -382,9 +376,6 @@ CreateSharedMemoryAndSemaphores(int port)
 	if (!IsUnderPostmaster)
 		ShmemBackendArrayAllocation();
 #endif
-
-	if (gp_enable_resqueue_priority)
-		BackoffStateInit();
 
 	/* Initialize dynamic shared memory facilities. */
 	if (!IsUnderPostmaster)

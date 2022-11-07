@@ -1766,8 +1766,7 @@ uint64 PlanStateOperatorMemKB(const PlanState *ps)
 	if (ps->plan->operatorMemKB == 0)
 	{
 		/**
-		 * There are some statements that do not go through the resource queue and these
-		 * plans dont get decorated with the operatorMemKB. Someday, we should fix resource queues.
+		 * we should never go here.
 		 */
 		result = work_mem;
 	}

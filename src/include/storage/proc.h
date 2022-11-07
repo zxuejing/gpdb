@@ -183,12 +183,6 @@ struct PGPROC
 	struct XidCache subxids;	/* cache for subtransaction XIDs */
 
 	/*
-	 * Info for Resource Scheduling, what portal (i.e statement) we might
-	 * be waiting on.
-	 */
-	uint32		waitPortalId;	/* portal id we are waiting on */
-
-	/*
 	 * Handle for our shared comboCids array (populated in writer/dispatcher
 	 * backends only)
 	 */
@@ -397,9 +391,6 @@ extern PGPROC *AuxiliaryPidGetProc(int pid);
 extern void BecomeLockGroupLeader(void);
 extern bool BecomeLockGroupMember(PGPROC *leader, int pid);
 
-extern int ResProcSleep(LOCKMODE lockmode, LOCALLOCK *locallock, void *incrementSet);
-
-extern void ResLockWaitCancel(void);
 extern bool ProcCanSetMppSessionId(void);
 extern void ProcNewMppSessionId(int *newSessionId);
 

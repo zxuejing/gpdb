@@ -654,24 +654,6 @@ _outAConst(StringInfo str, A_Const *node)
 }
 
 static void
-_outCreateQueueStmt(StringInfo str, CreateQueueStmt *node)
-{
-	WRITE_NODE_TYPE("CREATEQUEUESTMT");
-
-	WRITE_STRING_FIELD(queue);
-	WRITE_NODE_FIELD(options); /* List of DefElem nodes */
-}
-
-static void
-_outAlterQueueStmt(StringInfo str, AlterQueueStmt *node)
-{
-	WRITE_NODE_TYPE("ALTERQUEUESTMT");
-
-	WRITE_STRING_FIELD(queue);
-	WRITE_NODE_FIELD(options); /* List of DefElem nodes */
-}
-
-static void
 _outCreateResourceGroupStmt(StringInfo str, CreateResourceGroupStmt *node)
 {
 	WRITE_NODE_TYPE("CREATERESOURCEGROUPSTMT");
@@ -1697,16 +1679,6 @@ _outNode(StringInfo str, void *obj)
 
 			case T_DropTableSpaceStmt:
 				_outDropTableSpaceStmt(str, obj);
-				break;
-
-			case T_CreateQueueStmt:
-				_outCreateQueueStmt(str, obj);
-				break;
-			case T_AlterQueueStmt:
-				_outAlterQueueStmt(str, obj);
-				break;
-			case T_DropQueueStmt:
-				_outDropQueueStmt(str, obj);
 				break;
 
 			case T_CreateResourceGroupStmt:

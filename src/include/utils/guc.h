@@ -799,8 +799,6 @@ extern void assign_gp_write_shared_snapshot(bool newval, void *extra);
 extern bool gpvars_check_gp_resource_manager_policy(char **newval, void **extra, GucSource source);
 extern void gpvars_assign_gp_resource_manager_policy(const char *newval, void *extra);
 extern const char *gpvars_show_gp_resource_manager_policy(void);
-extern const char *gpvars_assign_gp_resqueue_memory_policy(const char *newval, bool doit, GucSource source);
-extern const char *gpvars_show_gp_resqueue_memory_policy(void);
 extern bool gpvars_check_statement_mem(int *newval, void **extra, GucSource source);
 extern int guc_name_compare(const char *namea, const char *nameb);
 extern void DispatchSyncPGVariable(struct config_generic * gconfig);

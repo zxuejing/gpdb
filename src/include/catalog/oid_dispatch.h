@@ -77,8 +77,6 @@ extern Oid GetNewOidForProcedure(Relation relation, Oid indexId, AttrNumber oidc
 								 char *proname, oidvector *proargtypes, Oid pronamespace);
 extern Oid GetNewOidForRelation(Relation relation, Oid indexId, AttrNumber oidcolumn,
 								char *relname, Oid relnamespace);
-extern Oid GetNewOidForResQueue(Relation relation, Oid indexId, AttrNumber oidcolumn,
-								char *rsqname);
 extern Oid GetNewOidForRewrite(Relation relation, Oid indexId, AttrNumber oidcolumn,
 							   Oid ev_class, char *rulename);
 extern Oid GetNewOidForSubscription(Relation relation, Oid indexId, AttrNumber oidcolumn,

@@ -47,7 +47,6 @@
 #include "utils/gdd.h"
 #include "utils/guc_tables.h"
 #include "utils/inval.h"
-#include "utils/resscheduler.h"
 #include "utils/resgroup.h"
 #include "utils/resource_manager.h"
 #include "utils/varlena.h"
@@ -82,9 +81,6 @@ static bool check_gp_hashagg_default_nbatches(int *newval, void **extra, GucSour
 static bool check_gp_workfile_compression(bool *newval, void **extra, GucSource source);
 
 /* Helper function for guc setter */
-bool gpvars_check_gp_resqueue_priority_default_value(char **newval,
-													void **extra,
-													GucSource source);
 
 static bool check_gp_default_storage_options(char **newval, void **extra, GucSource source);
 static void assign_gp_default_storage_options(const char *newval, void *extra);
@@ -207,16 +203,6 @@ bool create_restartpoint_on_ckpt_record_replay = false;
  * and is kept in sync by assign_hooks.
  */
 static char *gp_resource_manager_str;
-
-/* Backoff-related GUCs */
-bool		gp_enable_resqueue_priority;
-int			gp_resqueue_priority_local_interval;
-int			gp_resqueue_priority_sweeper_interval;
-int			gp_resqueue_priority_inactivity_timeout;
-int			gp_resqueue_priority_grouping_timeout;
-double		gp_resqueue_priority_cpucores_per_segment;
-char	   *gp_resqueue_priority_default_value;
-bool		gp_debug_resqueue_priority = false;
 
 /* Resource group GUCs */
 int			gp_resource_group_cpu_priority;
@@ -533,7 +519,7 @@ static const struct config_enum_entry gp_log_verbosity[] = {
 	{NULL, 0}
 };
 
-static const struct config_enum_entry gp_resqueue_memory_policies[] = {
+static const struct config_enum_entry gp_resgroup_memory_policies[] = {
 	{"none", RESMANAGER_MEMORY_POLICY_NONE},
 	{"auto", RESMANAGER_MEMORY_POLICY_AUTO},
 	{"eager_free", RESMANAGER_MEMORY_POLICY_EAGER_FREE},
@@ -1042,35 +1028,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 		true,
 		NULL, NULL, NULL
 	},
-	{
-		{"resource_select_only", PGC_POSTMASTER, RESOURCES_MGM,
-			gettext_noop("Enable resource locking of SELECT only."),
-			NULL
-		},
-		&ResourceSelectOnly,
-		false,
-		NULL, NULL, NULL
-	},
-	{
-		{"resource_cleanup_gangs_on_wait", PGC_USERSET, RESOURCES_MGM,
-			gettext_noop("Enable idle gang cleanup before resource lockwait."),
-			NULL
-		},
-		&ResourceCleanupIdleGangs,
-		true,
-		NULL, NULL, NULL
-	},
-
-	{
-		{"gp_debug_resqueue_priority", PGC_USERSET, RESOURCES_MGM,
-			gettext_noop("Print out debugging information about backoff calls."),
-			NULL,
-			GUC_NO_SHOW_ALL
-		},
-		&gp_debug_resqueue_priority,
-		false,
-		NULL, NULL, NULL
-	},
 
 	{
 		{"debug_print_full_dtm", PGC_SUSET, LOGGING_WHAT,
@@ -1520,15 +1477,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 		false,
 		NULL, NULL, NULL
 	},
-	{
-		{"gp_resqueue_priority", PGC_POSTMASTER, RESOURCES_MGM,
-			gettext_noop("Enables priority scheduling."),
-			NULL
-		},
-		&gp_enable_resqueue_priority,
-		true,
-		NULL, NULL, NULL
-	},
 
 	{
 		{"debug_resource_group", PGC_USERSET, DEVELOPER_OPTIONS,
@@ -1631,36 +1579,12 @@ struct config_bool ConfigureNamesBool_gp[] =
 
 	{
 
-		{"gp_log_resqueue_memory", PGC_USERSET, LOGGING_WHAT,
-			gettext_noop("Prints out messages related to resource queue's memory management."),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_log_resqueue_memory,
-		false,
-		NULL, NULL, NULL
-	},
-
-	{
-
 		{"gp_log_resgroup_memory", PGC_USERSET, LOGGING_WHAT,
 			gettext_noop("Prints out messages related to resource group's memory management."),
 			NULL,
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&gp_log_resgroup_memory,
-		false,
-		NULL, NULL, NULL
-	},
-
-	{
-		{"gp_resqueue_print_operator_memory_limits", PGC_USERSET, LOGGING_WHAT,
-			gettext_noop("Prints out the memory limit for operators (in explain) assigned by resource queue's "
-						 "memory management."),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_resqueue_print_operator_memory_limits,
 		false,
 		NULL, NULL, NULL
 	},
@@ -2784,15 +2708,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"stats_queue_level", PGC_SUSET, STATS_COLLECTOR,
-			gettext_noop("Collects resource queue-level statistics on database activity."),
-			NULL
-		},
-		&pgstat_collect_queuelevel,
-		false, NULL, NULL
-	},
-
-	{
 		{"create_restartpoint_on_ckpt_record_replay", PGC_SIGHUP, DEVELOPER_OPTIONS,
 			gettext_noop("Creates a restartpoint only on mirror immediately after replaying a checkpoint record."),
 			NULL
@@ -3224,26 +3139,6 @@ struct config_int ConfigureNamesInt_gp[] =
 		},
 		&gp_connection_send_timeout,
 		3600, 0, INT_MAX,
-		NULL, NULL, NULL
-	},
-
-	{
-		{"max_resource_queues", PGC_POSTMASTER, RESOURCES_MGM,
-			gettext_noop("Maximum number of resource queues."),
-			NULL
-		},
-		&MaxResourceQueues,
-		9, 0, INT_MAX,
-		NULL, NULL, NULL
-	},
-
-	{
-		{"max_resource_portals_per_transaction", PGC_POSTMASTER, RESOURCES_MGM,
-			gettext_noop("Maximum number of resource queues."),
-			NULL
-		},
-		&MaxResourcePortalsPerXact,
-		64, 0, INT_MAX,
 		NULL, NULL, NULL
 	},
 
@@ -3775,45 +3670,6 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
-		{"gp_resqueue_priority_local_interval", PGC_POSTMASTER, RESOURCES_MGM,
-			gettext_noop("A measure of how often a backend process must consider backing off."),
-			NULL,
-			GUC_NO_SHOW_ALL
-		},
-		&gp_resqueue_priority_local_interval,
-		100000, 500, INT_MAX,
-		NULL, NULL, NULL
-	},
-	{
-		{"gp_resqueue_priority_sweeper_interval", PGC_POSTMASTER, RESOURCES_MGM,
-			gettext_noop("Frequency (in ms) at which sweeper process re-evaluates CPU shares."),
-			NULL
-		},
-		&gp_resqueue_priority_sweeper_interval,
-		1000, 500, 15000,
-		NULL, NULL, NULL
-	},
-	{
-		{"gp_resqueue_priority_inactivity_timeout", PGC_POSTMASTER, RESOURCES_MGM,
-			gettext_noop("If a backend does not report progress in this time (in ms), it is deemed inactive."),
-			NULL,
-			GUC_NO_SHOW_ALL
-		},
-		&gp_resqueue_priority_inactivity_timeout,
-		2000, 500, INT_MAX,
-		NULL, NULL, NULL
-	},
-	{
-		{"gp_resqueue_priority_grouping_timeout", PGC_POSTMASTER, RESOURCES_MGM,
-			gettext_noop("A backend gives up on finding a better group leader after this timeout (in ms)."),
-			NULL,
-			GUC_NO_SHOW_ALL
-		},
-		&gp_resqueue_priority_grouping_timeout,
-		1000, 1000, INT_MAX,
-		NULL, NULL, NULL
-	},
-	{
 		{"gp_resource_group_queuing_timeout", PGC_USERSET, RESOURCES_MGM,
 			gettext_noop("A transaction gives up on queuing on a resource group after this timeout (in ms)."),
 			NULL,
@@ -3866,17 +3722,6 @@ struct config_int ConfigureNamesInt_gp[] =
 		},
 		&pljava_statement_cache_size,
 		0, 0, 512,
-		NULL, NULL, NULL
-	},
-
-	{
-		{"gp_resqueue_memory_policy_auto_fixed_mem", PGC_USERSET, RESOURCES_MEM,
-			gettext_noop("Sets the fixed amount of memory reserved for non-memory intensive operators in the AUTO policy."),
-			NULL,
-			GUC_UNIT_KB | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_resqueue_memory_policy_auto_fixed_mem,
-		100, 50, INT_MAX,
 		NULL, NULL, NULL
 	},
 
@@ -4202,15 +4047,6 @@ struct config_real ConfigureNamesReal_gp[] =
 		NULL, NULL, NULL
 	},
 
-	{
-		{"gp_resqueue_priority_cpucores_per_segment", PGC_POSTMASTER, RESOURCES_MGM,
-			gettext_noop("Number of processing units associated with a segment."),
-			NULL
-		},
-		&gp_resqueue_priority_cpucores_per_segment,
-		4.0, 0.1, 512.0,
-		NULL, NULL, NULL
-	},
 
 	{
 		{"gp_resource_group_cpu_limit", PGC_POSTMASTER, RESOURCES,
@@ -4372,23 +4208,12 @@ struct config_string ConfigureNamesString_gp[] =
 	},
 
 	{
-		{"gp_resqueue_priority_default_value", PGC_POSTMASTER, RESOURCES_MGM,
-			gettext_noop("Default weight when one cannot be associated with a statement."),
-			NULL,
-			GUC_NO_SHOW_ALL
-		},
-		&gp_resqueue_priority_default_value,
-		"MEDIUM",
-		gpvars_check_gp_resqueue_priority_default_value, NULL, NULL
-	},
-
-	{
 		{"gp_resource_manager", PGC_POSTMASTER, RESOURCES,
 			gettext_noop("Sets the type of resource manager."),
-			gettext_noop("Only support \"queue\" and \"group\" for now.")
+			gettext_noop("Only support \"none\" and \"group\" for now.")
 		},
 		&gp_resource_manager_str,
-		"queue",
+		"none",
 		gpvars_check_gp_resource_manager_policy,
 		gpvars_assign_gp_resource_manager_policy,
 		gpvars_show_gp_resource_manager_policy,
@@ -4682,22 +4507,12 @@ struct config_enum ConfigureNamesEnum_gp[] =
 	},
 
 	{
-		{"gp_resqueue_memory_policy", PGC_SUSET, RESOURCES_MGM,
-			gettext_noop("Sets the policy for memory allocation of queries."),
-			gettext_noop("Valid values are NONE, AUTO, EAGER_FREE.")
-		},
-		&gp_resqueue_memory_policy,
-		RESMANAGER_MEMORY_POLICY_NONE, gp_resqueue_memory_policies,
-		NULL, NULL, NULL
-	},
-
-	{
 		{"gp_resgroup_memory_policy", PGC_SUSET, RESOURCES_MGM,
 			gettext_noop("Sets the policy for memory allocation of queries."),
 			gettext_noop("Valid values are AUTO, EAGER_FREE.")
 		},
 		&gp_resgroup_memory_policy,
-		RESMANAGER_MEMORY_POLICY_EAGER_FREE, gp_resqueue_memory_policies, NULL, NULL
+		RESMANAGER_MEMORY_POLICY_EAGER_FREE, gp_resgroup_memory_policies, NULL, NULL
 	},
 
 	{

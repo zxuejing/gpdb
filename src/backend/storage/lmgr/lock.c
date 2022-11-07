@@ -48,7 +48,6 @@
 #include "storage/standby.h"
 #include "utils/memutils.h"
 #include "utils/ps_status.h"
-#include "utils/resscheduler.h"
 #include "utils/resource_manager.h"
 #include "utils/resowner_private.h"
 
@@ -61,12 +60,6 @@ int			max_locks_per_xact; /* set by guc.c */
 #define NLOCKENTS() \
 	mul_size(max_locks_per_xact, add_size(MaxBackends, max_prepared_xacts))
 
-#define NRESLOCKENTS() \
-	MaxResourceQueues
-
-#define NRESPROCLOCKENTS() \
-	mul_size(MaxResourceQueues, MaxBackends)
-	
 /*
  * Data structures defining the semantics of the standard lock methods.
  *
@@ -154,16 +147,6 @@ const LockMethodData user_lockmethod = {
 #endif
 };
 
-const LockMethodData resource_lockmethod = {
-	AccessExclusiveLock,        /* highest valid lock mode number */
-	LockConflicts,
-	lock_mode_names,
-#ifdef LOCK_DEBUG
-	&Trace_locks
-#else
-	&Dummy_trace
-#endif
-};
 
 
 /*
@@ -172,8 +155,7 @@ const LockMethodData resource_lockmethod = {
 const LockMethod LockMethods[] = {
 	NULL,
 	&default_lockmethod,
-	&user_lockmethod,
-	&resource_lockmethod
+	&user_lockmethod
 };
 
 
@@ -419,13 +401,6 @@ InitLocks(void)
 	 * calculations must agree with LockShmemSize!
 	 */
 	max_table_size = NLOCKENTS();
-
-	/* Allow for extra entries if resource locking is enabled. */
-	if (Gp_role == GP_ROLE_DISPATCH && IsResQueueEnabled())
-	{
-		max_table_size = add_size(max_table_size, NRESLOCKENTS() );
-		max_table_size = add_size(max_table_size, NRESPROCLOCKENTS() );
-	}
 
 	init_table_size = max_table_size / 2;
 
@@ -2062,8 +2037,6 @@ RemoveFromWaitQueue(PGPROC *proc, uint32 hashcode)
 	LOCKMODE	lockmode = proc->waitLockMode;
 	LOCKMETHODID lockmethodid = LOCK_LOCKMETHOD(*waitLock);
 
-	/* Make lockmethod is appropriate. */
-	Assert(lockmethodid != RESOURCE_LOCKMETHOD);
 	/* Make sure proc is waiting */
 	Assert(proc->waitStatus == STATUS_WAITING);
 	Assert(proc->links.next != NULL);
@@ -3889,17 +3862,7 @@ LockShmemSize(void)
 	/* lock hash table */
 	max_table_size = NLOCKENTS();
 
-	if (Gp_role == GP_ROLE_DISPATCH && IsResQueueEnabled())
-	{
-		max_table_size = add_size(max_table_size, NRESLOCKENTS() );
-	}
-
 	size = add_size(size, hash_estimate_size(max_table_size, sizeof(LOCK)));
-	
-	if (Gp_role == GP_ROLE_DISPATCH && IsResQueueEnabled())
-	{
-		max_table_size = add_size(max_table_size, NRESPROCLOCKENTS() );
-	}
 
 	/* proclock hash table */
 	max_table_size *= 2;

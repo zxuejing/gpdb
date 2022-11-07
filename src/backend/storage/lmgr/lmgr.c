@@ -1261,11 +1261,6 @@ DescribeLockTag(StringInfo buf, const LOCKTAG *tag)
 							 tag->locktag_field3,
 							 tag->locktag_field4);
 			break;
-		case LOCKTAG_RESOURCE_QUEUE:
-			appendStringInfo(buf,
-							 _("resource queue %u"),
-							 tag->locktag_field1);
-			break;
 		default:
 			appendStringInfo(buf,
 							 _("unrecognized locktag type %d"),

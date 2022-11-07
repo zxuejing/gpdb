@@ -85,7 +85,6 @@
 #include "replication/syncrep.h"
 #include "storage/sinvaladt.h"
 #include "utils/faultinjector.h"
-#include "utils/resscheduler.h"
 #include "utils/snapmgr.h"
 #include "utils/syscache.h"
 

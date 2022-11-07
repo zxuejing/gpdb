@@ -580,9 +580,6 @@ ResourceOwnerReleaseInternal(ResourceOwner owner,
 			{
 				ProcReleaseLocks(isCommit);
 				ReleasePredicateLocks(isCommit, false);
-
-				if (Gp_role == GP_ROLE_DISPATCH && IsResQueueEnabled())
-					ResLockWaitCancel();
 			}
 		}
 		else

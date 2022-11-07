@@ -21,7 +21,6 @@
 #include "commands/createas.h"
 #include "commands/defrem.h"
 #include "commands/prepare.h"
-#include "commands/queue.h"
 #include "executor/execUtils.h"
 #include "executor/hashjoin.h"
 #include "executor/nodeHash.h"

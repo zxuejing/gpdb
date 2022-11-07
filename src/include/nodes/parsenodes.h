@@ -1850,7 +1850,6 @@ typedef enum ObjectType
 	OBJECT_TYPE,
 	OBJECT_USER_MAPPING,
 	OBJECT_VIEW,
-	OBJECT_RESQUEUE,
 	OBJECT_RESGROUP
 } ObjectType;
 
@@ -2884,30 +2883,6 @@ typedef struct CreatePLangStmt
 	List	   *plvalidator;	/* optional validator function (qual. name) */
 	bool		pltrusted;		/* PL is trusted */
 } CreatePLangStmt;
-
-/* ----------------------
- *	Create/Alter/Drop Resource Queue Statements
- * ----------------------
- */
-typedef struct CreateQueueStmt
-{
-	NodeTag		type;
-	char	   *queue;			/* resource queue name */
-	List	   *options;		/* List of DefElem nodes */
-} CreateQueueStmt;
-
-typedef struct AlterQueueStmt
-{
-	NodeTag		type;
-	char	   *queue;			/* resource queue  name */
-	List	   *options;		/* List of DefElem nodes */
-} AlterQueueStmt;
-
-typedef struct DropQueueStmt
-{
-	NodeTag		type;
-	char	   *queue;			/* resource queue to remove */
-} DropQueueStmt;
 
 /* ----------------------
  *	Create/Alter/Drop Resource Group Statements

@@ -5188,36 +5188,6 @@ _outDropTableSpaceStmt(StringInfo str, const DropTableSpaceStmt *node)
 
 #ifndef COMPILING_BINARY_FUNCS
 static void
-_outCreateQueueStmt(StringInfo str, const CreateQueueStmt *node)
-{
-	WRITE_NODE_TYPE("CREATEQUEUESTMT");
-
-	WRITE_STRING_FIELD(queue);
-	WRITE_NODE_FIELD(options); /* List of DefElem nodes */
-}
-#endif /* COMPILING_BINARY_FUNCS */
-
-#ifndef COMPILING_BINARY_FUNCS
-static void
-_outAlterQueueStmt(StringInfo str, const AlterQueueStmt *node)
-{
-	WRITE_NODE_TYPE("ALTERQUEUESTMT");
-
-	WRITE_STRING_FIELD(queue);
-	WRITE_NODE_FIELD(options); /* List of DefElem nodes */
-}
-#endif /* COMPILING_BINARY_FUNCS */
-
-static void
-_outDropQueueStmt(StringInfo str, const DropQueueStmt *node)
-{
-	WRITE_NODE_TYPE("DROPQUEUESTMT");
-
-	WRITE_STRING_FIELD(queue);
-}
-
-#ifndef COMPILING_BINARY_FUNCS
-static void
 _outCreateResourceGroupStmt(StringInfo str, const CreateResourceGroupStmt *node)
 {
 	WRITE_NODE_TYPE("CREATERESOURCEGROUPSTMT");
@@ -6429,16 +6399,6 @@ outNode(StringInfo str, const void *obj)
 
 			case T_DropTableSpaceStmt:
 				_outDropTableSpaceStmt(str, obj);
-				break;
-
-			case T_CreateQueueStmt:
-				_outCreateQueueStmt(str, obj);
-				break;
-			case T_AlterQueueStmt:
-				_outAlterQueueStmt(str, obj);
-				break;
-			case T_DropQueueStmt:
-				_outDropQueueStmt(str, obj);
 				break;
 
 			case T_CreateResourceGroupStmt:

@@ -1234,37 +1234,6 @@ _readDropTableSpaceStmt(void)
 	READ_DONE();
 }
 
-
-static CreateQueueStmt *
-_readCreateQueueStmt(void)
-{
-	READ_LOCALS(CreateQueueStmt);
-
-	READ_STRING_FIELD(queue);
-	READ_NODE_FIELD(options);
-
-	READ_DONE();
-}
-static AlterQueueStmt *
-_readAlterQueueStmt(void)
-{
-	READ_LOCALS(AlterQueueStmt);
-
-	READ_STRING_FIELD(queue);
-	READ_NODE_FIELD(options);
-
-	READ_DONE();
-}
-static DropQueueStmt *
-_readDropQueueStmt(void)
-{
-	READ_LOCALS(DropQueueStmt);
-
-	READ_STRING_FIELD(queue);
-
-	READ_DONE();
-}
-
 static CreateResourceGroupStmt *
 _readCreateResourceGroupStmt(void)
 {
@@ -2440,16 +2409,6 @@ readNodeBinary(void)
 				break;
 			case T_DropTableSpaceStmt:
 				return_value = _readDropTableSpaceStmt();
-				break;
-
-			case T_CreateQueueStmt:
-				return_value = _readCreateQueueStmt();
-				break;
-			case T_AlterQueueStmt:
-				return_value = _readAlterQueueStmt();
-				break;
-			case T_DropQueueStmt:
-				return_value = _readDropQueueStmt();
 				break;
 
 			case T_CreateResourceGroupStmt:

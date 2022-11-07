@@ -62,7 +62,6 @@
 #include "cdb/cdbvars.h"
 #include "utils/resgroup.h"
 #include "utils/resource_manager.h"
-#include "utils/resscheduler.h"
 
 
 #define DIRECTORY_LOCK_FILE		"postmaster.pid"
@@ -685,16 +684,6 @@ InitializeSessionUserId(const char *rolename, Oid roleid)
 							rname)));
 	}
 
-	/*
-	 * If resource scheduling is enabled, then set cached value for the
-	 * queue. Do this even in standalone backend mode, just in case someone
-	 * gives the superuser a resource queue.
-	 */
-	if ((Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_EXECUTE) && IsResQueueEnabled())
-	{
-		SetResQueueId();
-	}
-
 	/* Record username and superuser status as GUC settings too */
 	SetConfigOption("session_authorization", rname,
 					PGC_BACKEND, PGC_S_OVERRIDE);
@@ -758,12 +747,6 @@ SetSessionAuthorization(Oid userid, bool is_superuser)
 
 	SetSessionUserId(userid, is_superuser);
 
-	/* If resource scheduling enabled, set the cached queue for the new role.*/
-	if ((Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_EXECUTE) && IsResQueueEnabled())
-	{
-		SetResQueueId();
-	}
-
 	SetConfigOption("is_superuser",
 					is_superuser ? "on" : "off",
 					PGC_INTERNAL, PGC_S_OVERRIDE);
@@ -820,12 +803,6 @@ SetCurrentRoleId(Oid roleid, bool is_superuser)
 		SetRoleIsActive = true;
 
 	SetOuterUserId(roleid);
-
-	/* If resource scheduling enabled, set the cached queue for the new role.*/
-	if ((Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_EXECUTE) && IsResQueueEnabled())
-	{
-		SetResQueueId();
-	}
 
 	SetConfigOption("is_superuser",
 					is_superuser ? "on" : "off",

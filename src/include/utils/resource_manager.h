@@ -15,12 +15,8 @@
 #ifndef RESOURCEMANAGER_H
 #define RESOURCEMANAGER_H
 
-#include "utils/resscheduler.h"
 #include "utils/resgroup.h"
-
-#define IsResQueueEnabled() \
-	(ResourceScheduler && \
-	 Gp_resource_manager_policy == RESOURCE_MANAGER_POLICY_QUEUE)
+#include "storage/lock.h"
 
 /*
  * Caution: resource group may be enabled but not activated.
@@ -39,7 +35,13 @@
 
 typedef enum
 {
-	RESOURCE_MANAGER_POLICY_QUEUE,
+	/*
+	 * If gp_resource_manager is group, we must config cgroup.
+	 * though resource_scheduler is false.
+	 * Add RESOURCE_MANAGER_POLICY_NONE to indicate do not use
+	 * any resource manager.
+	 */
+	RESOURCE_MANAGER_POLICY_NONE,
 	RESOURCE_MANAGER_POLICY_GROUP,
 } ResourceManagerPolicy;
 

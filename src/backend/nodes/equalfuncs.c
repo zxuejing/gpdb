@@ -2365,30 +2365,6 @@ _equalDropOwnedStmt(const DropOwnedStmt *a, const DropOwnedStmt *b)
 	return true;
 }
 
-
-static bool
-_equalCreateQueueStmt(const CreateQueueStmt *a, const CreateQueueStmt *b)
-{
-	COMPARE_STRING_FIELD(queue);
-	COMPARE_NODE_FIELD(options);
-	return true;
-}
-
-static bool
-_equalAlterQueueStmt(const AlterQueueStmt *a, const AlterQueueStmt *b)
-{
-	COMPARE_STRING_FIELD(queue);
-	COMPARE_NODE_FIELD(options);
-	return true;
-}
-
-static bool
-_equalDropQueueStmt(const DropQueueStmt *a, const DropQueueStmt *b)
-{
-	COMPARE_STRING_FIELD(queue);
-	return true;
-}
-
 static bool
 _equalCreateResourceGroupStmt(const CreateResourceGroupStmt *a, const CreateResourceGroupStmt *b)
 {
@@ -3850,16 +3826,6 @@ equal(const void *a, const void *b)
 			break;
 		case T_AlterTSConfigurationStmt:
 			retval = _equalAlterTSConfigurationStmt(a, b);
-			break;
-
-		case T_CreateQueueStmt:
-			retval = _equalCreateQueueStmt(a, b);
-			break;
-		case T_AlterQueueStmt:
-			retval = _equalAlterQueueStmt(a, b);
-			break;
-		case T_DropQueueStmt:
-			retval = _equalDropQueueStmt(a, b);
 			break;
 
 		case T_CreateResourceGroupStmt:

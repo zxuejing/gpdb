@@ -10824,19 +10824,6 @@
 { oid => 7090, descr => 'boundary of the interval containing the given value',
    proname => 'interval_bound', proisstrict => 'f', prorettype => 'timestamptz', proargtypes => 'timestamptz interval int4 timestamptz', prosrc => 'timestamptz_interval_bound_shift_reg' },
 
-# Aggregate-related functions
-{ oid => 6031, descr => 'Statistics: Number of queries that executed in queue',
-   proname => 'pg_stat_get_queue_num_exec', provolatile => 's', proparallel => 'r', prorettype => 'int8', proargtypes => 'oid', prosrc => 'pg_stat_get_queue_num_exec' },
-
-{ oid => 6032, descr => 'Statistics: Number of queries that waited in queue',
-   proname => 'pg_stat_get_queue_num_wait', provolatile => 's', proparallel => 'r', prorettype => 'int8', proargtypes => 'oid', prosrc => 'pg_stat_get_queue_num_wait' },
-
-{ oid => 6033, descr => 'Statistics: Elapsed seconds for queries that executed in queue',
-   proname => 'pg_stat_get_queue_elapsed_exec', provolatile => 's', proparallel => 'r', prorettype => 'int8', proargtypes => 'oid', prosrc => 'pg_stat_get_queue_elapsed_exec' },
-
-{ oid => 6034, descr => 'Statistics: Elapsed seconds for queries that waited in queue',
-   proname => 'pg_stat_get_queue_elapsed_wait', provolatile => 's', proparallel => 'r', prorettype => 'int8', proargtypes => 'oid', prosrc => 'pg_stat_get_queue_elapsed_wait' },
-
 { oid => 6039, descr => 'Statistics: Greenplum session id of backend',
    proname => 'pg_stat_get_backend_session_id', provolatile => 's', proparallel => 'r', prorettype => 'int4', proargtypes => 'int4', prosrc => 'pg_stat_get_backend_session_id' },
 
@@ -10883,13 +10870,6 @@
    prosrc => 'gp_dist_wait_status' },
 { oid => 6464, descr => 'get backends of overflowed subtransaction',
    proname => 'gp_get_suboverflowed_backends', provolatile => 'v', prorettype => '_int4', proargtypes => '', prosrc => 'gp_get_suboverflowed_backends' },
-
-{ oid => 6030, descr => 'Return resource queue information',
-   proname => 'pg_resqueue_status', prorows => '1000', proretset => 't', provolatile => 'v', proparallel => 'r', prorettype => 'record', proargtypes => '', prosrc => 'pg_resqueue_status' },
-
-{ oid => 6069, descr => 'Return resource queue information',
-   proname => 'pg_resqueue_status_kv', prorows => '1000', proretset => 't', provolatile => 'v', proparallel => 'r', prorettype => 'record', proargtypes => '', prosrc => 'pg_resqueue_status_kv' },
-
 
 # contrib/adminpack functions, brought to core in GPDB.
 # the new version functions which using the GRANT system to control access instead of having hard-coded superuser checks
@@ -11090,16 +11070,6 @@
 # Analyze related
 { oid => 6038, descr => 'Collect a random sample of rows from table',
    proname => 'gp_acquire_sample_rows', prorows => '1000', proretset => 't', provolatile => 'v', proparallel => 'u', prorettype => 'record', proargtypes => 'oid int4 bool', prosrc => 'gp_acquire_sample_rows', proexeclocation => 's' },
-
-# Backoff related
-{ oid => 5040, descr => 'change weight of all the backends for a given session id',
-   proname => 'gp_adjust_priority', provolatile => 'v', proparallel => 'u', prorettype => 'int4', proargtypes => 'int4 int4 int4', prosrc => 'gp_adjust_priority_int' },
-
-{ oid => 5041, descr => 'change weight of all the backends for a given session id',
-   proname => 'gp_adjust_priority', provolatile => 'v', proparallel => 'u', prorettype => 'int4', proargtypes => 'int4 int4 text', prosrc => 'gp_adjust_priority_value' },
-
-{ oid => 5042, descr => 'list priorities of backends',
-   proname => 'gp_list_backend_priorities', prorows => '1000', proisstrict => 'f', proretset => 't', provolatile => 'v', proparallel => 'u', prorettype => 'record', proargtypes => '', prosrc => 'gp_list_backend_priorities' },
 
 # Functions to deal with SREH error logs
 { oid => 7076, descr => 'read the error log for the specified external table',

@@ -76,11 +76,9 @@
 #include "cdb/cdbdispatchresult.h"
 #include "cdb/cdbsreh.h"
 #include "cdb/cdbvars.h"
-#include "commands/queue.h"
 #include "nodes/makefuncs.h"
 #include "postmaster/autostats.h"
 #include "utils/metrics_utils.h"
-#include "utils/resscheduler.h"
 #include "utils/string_utils.h"
 
 

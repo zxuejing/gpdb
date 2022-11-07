@@ -30,7 +30,6 @@
 #include "cdb/cdbdisp.h"
 #include "lib/stringinfo.h"
 #include "libpq/libpq-be.h"
-#include "postmaster/backoff.h"
 #include "utils/resource_manager.h"
 #include "utils/resgroup-ops.h"
 #include "storage/proc.h"
@@ -513,7 +512,7 @@ gpvars_check_gp_resource_manager_policy(char **newval, void **extra, GucSource s
 {
 	if (*newval == NULL ||
 		*newval[0] == 0 ||
-		!pg_strcasecmp("queue", *newval) ||
+		!pg_strcasecmp("none", *newval) ||
 		!pg_strcasecmp("group", *newval))
 		return true;
 
@@ -532,14 +531,15 @@ gpvars_assign_gp_resource_manager_policy(const char *newval, void *extra)
 	ResGroupOps_Probe();
 
 	if (newval == NULL || newval[0] == 0)
-		Gp_resource_manager_policy = RESOURCE_MANAGER_POLICY_QUEUE;
-	else if (!pg_strcasecmp("queue", newval))
-		Gp_resource_manager_policy = RESOURCE_MANAGER_POLICY_QUEUE;
+		Gp_resource_manager_policy = RESOURCE_MANAGER_POLICY_NONE;
+	else if (!pg_strcasecmp("none", newval))
+	{
+		Gp_resource_manager_policy = RESOURCE_MANAGER_POLICY_NONE;
+	}
 	else if (!pg_strcasecmp("group", newval))
 	{
 		ResGroupOps_Bless();
 		Gp_resource_manager_policy = RESOURCE_MANAGER_POLICY_GROUP;
-		gp_enable_resqueue_priority = false;
 	}
 	/*
 	 * No else should happen, since newval has been checked in check_hook.
@@ -551,10 +551,10 @@ gpvars_show_gp_resource_manager_policy(void)
 {
 	switch (Gp_resource_manager_policy)
 	{
-		case RESOURCE_MANAGER_POLICY_QUEUE:
-			return "queue";
 		case RESOURCE_MANAGER_POLICY_GROUP:
 			return "group";
+		case RESOURCE_MANAGER_POLICY_NONE:
+			return "none";
 		default:
 			Assert(!"unexpected resource manager policy");
 			return "unknown";

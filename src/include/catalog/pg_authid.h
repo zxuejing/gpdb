@@ -52,9 +52,6 @@ CATALOG(pg_authid,1260,AuthIdRelationId) BKI_SHARED_RELATION BKI_ROWTYPE_OID(284
 	 * GP added fields
 	 */
 
-	/* ID of resource queue for this role */
-	Oid			rolresqueue BKI_DEFAULT(6055);
-
 	/* allowed to create readable gpfdist tbl?  */
 	bool		rolcreaterextgpfd BKI_DEFAULT(f);
 
@@ -70,7 +67,6 @@ CATALOG(pg_authid,1260,AuthIdRelationId) BKI_SHARED_RELATION BKI_ROWTYPE_OID(284
 } FormData_pg_authid;
 
 /* GPDB added foreign key definitions for gpcheckcat. */
-FOREIGN_KEY(rolresqueue REFERENCES pg_resqueue(oid));
 FOREIGN_KEY(rolresgroup REFERENCES pg_resgroup(oid));
 
 /* ----------------

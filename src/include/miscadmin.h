@@ -108,26 +108,6 @@ extern PGDLLIMPORT cancel_pending_hook_type cancel_pending_hook;
  */
 extern void RedZoneHandler_DetectRunawaySession(void);
 
-/*
- * These should be in backoff.h, but we need the in CHECK_FOR_INTERRUPTS(),
- * and we don't want to include the entire backoff.h here.
- */
-extern int backoffTickCounter;
-extern int gp_resqueue_priority_local_interval;
-
-extern void BackoffBackendTickExpired(void);
-
-static inline void
-BackoffBackendTick(void)
-{
-	backoffTickCounter++;
-
-	if (backoffTickCounter >= gp_resqueue_priority_local_interval)
-	{
-		/* Enough time has passed. Perform backoff. */
-		BackoffBackendTickExpired();
-	}
-}
 
 /*
  * Whether request on cancel or termination have arrived?
@@ -144,7 +124,6 @@ CancelRequested()
 do { \
 	if (InterruptPending) \
 		ProcessInterrupts(__FILE__, __LINE__); \
-	BackoffBackendTick(); \
 	ReportOOMConsumption(); \
 	RedZoneHandler_DetectRunawaySession();\
 } while(0)

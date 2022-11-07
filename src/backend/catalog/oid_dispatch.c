@@ -107,8 +107,6 @@
 #include "catalog/pg_proc.h"
 #include "catalog/pg_publication.h"
 #include "catalog/pg_publication_rel.h"
-#include "catalog/pg_resqueue.h"
-#include "catalog/pg_resqueuecapability.h"
 #include "catalog/pg_resgroup.h"
 #include "catalog/pg_resgroupcapability.h"
 #include "catalog/pg_rewrite.h"
@@ -904,22 +902,6 @@ GetNewOidForRelation(Relation relation, Oid indexId, AttrNumber oidcolumn,
 	key.type = T_OidAssignment;
 	key.objname = relname;
 	key.namespaceOid = relnamespace;
-	return GetNewOrPreassignedOid(relation, indexId, oidcolumn, &key);
-}
-
-Oid
-GetNewOidForResQueue(Relation relation, Oid indexId, AttrNumber oidcolumn,
-					 char *rsqname)
-{
-	OidAssignment key;
-
-	Assert(RelationGetRelid(relation) == ResQueueRelationId);
-	Assert(indexId == ResQueueOidIndexId);
-	Assert(oidcolumn == Anum_pg_resqueue_oid);
-
-	memset(&key, 0, sizeof(OidAssignment));
-	key.type = T_OidAssignment;
-	key.objname = rsqname;
 	return GetNewOrPreassignedOid(relation, indexId, oidcolumn, &key);
 }
 

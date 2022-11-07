@@ -238,9 +238,8 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 
 	/**
 	 * Distribute memory to operators.
-	 *
-	 * There are some statements that do not go through the resource queue, so we cannot
-	 * put in a strong assert here. Someday, we should fix resource queues.
+	 * do not use any resource manager or use resource group,
+	 * all plans get decorated with the operatorMemKB.
 	 */
 	if (queryDesc->plannedstmt->query_mem > 0)
 	{
@@ -258,8 +257,7 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 			 * If resource group is enabled, we should re-calculate query_mem on QE, because the memory
 			 * of the coordinator and segment nodes or the number of instance could be different.
 			 *
-			 * On QE, we only try to recalculate query_mem if resource group enabled. Otherwise, we will skip this
-			 * and the next operator memory assignment if resource queue enabled
+			 * On QE, we only try to recalculate query_mem if resource group enabled.
 			 */
 			if (IsResGroupEnabled())
 			{

@@ -47,7 +47,6 @@
 #include "commands/policy.h"
 #include "commands/portalcmds.h"
 #include "commands/prepare.h"
-#include "commands/queue.h"
 #include "commands/proclang.h"
 #include "commands/publicationcmds.h"
 #include "commands/resgroupcmds.h"
@@ -160,7 +159,6 @@ check_xact_readonly(Node *parsetree)
 		case T_AlterDatabaseSetStmt:
 		case T_AlterDomainStmt:
 		case T_AlterFunctionStmt:
-		case T_AlterQueueStmt:
 		case T_AlterResourceGroupStmt:
 		case T_AlterRoleStmt:
 		case T_AlterRoleSetStmt:
@@ -181,7 +179,6 @@ check_xact_readonly(Node *parsetree)
 		case T_CreatedbStmt:
 		case T_CreateDomainStmt:
 		case T_CreateFunctionStmt:
-		case T_CreateQueueStmt:
 		case T_CreateResourceGroupStmt:
 		case T_CreateRoleStmt:
 		case T_IndexStmt:
@@ -207,7 +204,6 @@ check_xact_readonly(Node *parsetree)
 		case T_DropStmt:
 		case T_DropdbStmt:
 		case T_DropTableSpaceStmt:
-		case T_DropQueueStmt:
 		case T_DropResourceGroupStmt:
 		case T_DropRoleStmt:
 		case T_GrantStmt:
@@ -817,31 +813,6 @@ standard_ProcessUtility(PlannedStmt *pstmt,
 		case T_AlterEventTrigStmt:
 			/* no event triggers on event triggers */
 			AlterEventTrigger((AlterEventTrigStmt *) parsetree);
-			break;
-
-			/*
-			 * ********************* RESOURCE QUEUE statements ****
-			 */
-		case T_CreateQueueStmt:
-
-			/*
-			 * MPP-7960: We cannot run CREATE RESOURCE QUEUE inside a user
-			 * transaction block because the shared memory structures are not
-			 * cleaned up on abort, resulting in "leaked", unreachable queues.
-			 */
-
-			if (Gp_role == GP_ROLE_DISPATCH)
-				PreventInTransactionBlock(isTopLevel, "CREATE RESOURCE QUEUE");
-
-			CreateQueue((CreateQueueStmt *) parsetree);
-			break;
-
-		case T_AlterQueueStmt:
-			AlterQueue((AlterQueueStmt *) parsetree);
-			break;
-
-		case T_DropQueueStmt:
-			DropQueue((DropQueueStmt *) parsetree);
 			break;
 
 			/*
@@ -3123,18 +3094,6 @@ CreateCommandTag(Node *parsetree)
 
 		case T_CreatePLangStmt:
 			tag = "CREATE LANGUAGE";
-			break;
-
-		case T_CreateQueueStmt:
-			tag = "CREATE QUEUE";
-			break;
-
-		case T_AlterQueueStmt:
-			tag = "ALTER QUEUE";
-			break;
-
-		case T_DropQueueStmt:
-			tag = "DROP QUEUE";
 			break;
 
 		case T_CreateResourceGroupStmt:

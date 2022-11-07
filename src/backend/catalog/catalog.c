@@ -60,9 +60,6 @@
 #include "catalog/gp_version_at_initdb.h"
 #include "catalog/pg_event_trigger.h"
 #include "catalog/pg_largeobject_metadata.h"
-#include "catalog/pg_resourcetype.h"
-#include "catalog/pg_resqueue.h"
-#include "catalog/pg_resqueuecapability.h"
 #include "catalog/pg_resgroup.h"
 #include "catalog/pg_resgroupcapability.h"
 #include "catalog/pg_rewrite.h"
@@ -388,10 +385,6 @@ IsSharedRelation(Oid relationId)
 
 		/* MPP-6929: metadata tracking */
 		relationId == StatLastShOpRelationId ||
-
-		relationId == ResQueueRelationId ||
-		relationId == ResourceTypeRelationId ||
-		relationId == ResQueueCapabilityRelationId ||
 		relationId == ResGroupRelationId ||
 		relationId == ResGroupCapabilityRelationId ||
 		relationId == GpConfigHistoryRelationId ||
@@ -426,18 +419,10 @@ IsSharedRelation(Oid relationId)
 		relationId == StatLastShOpClassidObjidIndexId ||
 		relationId == StatLastShOpClassidObjidStaactionnameIndexId ||
 
-		relationId == ResQueueOidIndexId ||
-		relationId == ResQueueRsqnameIndexId ||
-		relationId == ResourceTypeOidIndexId ||
-		relationId == ResourceTypeRestypidIndexId ||
-		relationId == ResourceTypeResnameIndexId ||
-		relationId == ResQueueCapabilityResqueueidIndexId ||
-		relationId == ResQueueCapabilityRestypidIndexId ||
 		relationId == ResGroupOidIndexId ||
 		relationId == ResGroupRsgnameIndexId ||
 		relationId == ResGroupCapabilityResgroupidIndexId ||
 		relationId == ResGroupCapabilityResgroupidResLimittypeIndexId ||
-		relationId == AuthIdRolResQueueIndexId ||
 		relationId == AuthIdRolResGroupIndexId ||
 		relationId == GpSegmentConfigContentPreferred_roleIndexId ||
 		relationId == GpSegmentConfigDbidIndexId ||

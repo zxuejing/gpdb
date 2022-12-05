@@ -306,6 +306,7 @@ from get_explain_analyze_xml_output($$
 
 reset optimizer_enable_dynamictablescan;
 reset enable_seqscan;
+reset search_path;
 
 -- If all QEs hit errors when executing sort, we might not receive stat data for sort.
 -- rethrow error before print explain info.

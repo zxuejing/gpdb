@@ -172,7 +172,7 @@ GetContentIdsFromPlanForSingleRelation(PlannerInfo *root, Plan *plan, int rangeT
 							 GpSegmentIdAttributeNumber,
 							 vartypeid, type_mod, type_coll, 0);
 		pvs_segids = DeterminePossibleValueSet((Node *) qualification,
-											   (Node *) seg_id_var);
+											   (Node *) seg_id_var, InvalidOid);
 		if (!pvs_segids.isAnyValuePossible)
 		{
 			seg_ids = GetPossibleValuesAsArray(&pvs_segids, &len);
@@ -218,6 +218,8 @@ GetContentIdsFromPlanForSingleRelation(PlannerInfo *root, Plan *plan, int rangeT
 		{
 			Var		   *var;
 			PossibleValueSet pvs;
+			Oid policy_opclass = policy->opclasses[i];
+			Oid policy_opfamily = get_opclass_family(policy_opclass);
 
 			var = makeVar(rangeTableIndex,
 						  policy->attrs[i],
@@ -225,13 +227,12 @@ GetContentIdsFromPlanForSingleRelation(PlannerInfo *root, Plan *plan, int rangeT
 						  parts[i].attr->atttypmod,
 						  parts[i].attr->attcollation,
 						  0);
-
 			/**
 			 * Note that right now we only examine the given qual.  This is okay because if there are other
 			 *   quals on the plan then those would be ANDed with the qual, which can only narrow our choice
 			 *   of segment and not expand it.
 			 */
-			pvs = DeterminePossibleValueSet((Node *) qualification, (Node *) var);
+			pvs = DeterminePossibleValueSet((Node *) qualification, (Node *) var, policy_opfamily);
 
 			if (pvs.isAnyValuePossible)
 			{

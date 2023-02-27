@@ -598,7 +598,7 @@ set allow_system_table_mods=off;
 -- https://github.com/greenplum-db/gpdb/issues/14887
 -- If opno of clause does not belong to opfamily of distributed key,
 -- do not use direct dispatch to resolve wrong result
--- notice orca still has wrong results
+-- FIXME: orca still has wrong results
 create table t_14887(a varchar);
 insert into t_14887 values('a   ');
 explain select * from t_14887 where a = 'a'::bpchar;

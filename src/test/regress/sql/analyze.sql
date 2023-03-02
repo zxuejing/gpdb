@@ -529,3 +529,14 @@ select relhassubclass from gp_dist_random('pg_class') where relname = 'test_tb_1
 ANALYZE;
 select relhassubclass from pg_class where relname = 'test_tb_14644';
 select relhassubclass from gp_dist_random('pg_class') where relname = 'test_tb_14644';
+
+--
+-- Test analyze for table with maximum float8 value 1.7976931348623157e+308
+-- There should be no "ERROR:  value out of range: overflow"
+--
+set extra_float_digits to 0;
+create table test_max_float8(a double precision);
+insert into test_max_float8 values(1.7976931348623157e+308);
+analyze test_max_float8;
+drop table test_max_float8;
+reset extra_float_digits;

@@ -2171,8 +2171,6 @@ acquire_sample_rows_dispatcher(Relation onerel, bool inh, int elevel,
 	 * permission check on each columns. This is not consistent with GPDB5 and
 	 * may result in different behaviour under different acl configuration.
 	 */
-	//TODO 是否可以在gp_acquire_sample_rows中增加一个参数是否是复制表，如果是节点上只节点0的吐数据
-	// 修改之前没有问题 修改之后的话 采样的数据不准了，因为可能会将节点1 2 的数据拿到后 节点1的sample才拿到 会多了数据
 	initStringInfo(&str);
 	appendStringInfo(&str, "select pg_catalog.gp_acquire_sample_rows(%u, %d, '%s');",
 					 RelationGetRelid(onerel),
@@ -2370,21 +2368,6 @@ acquire_sample_rows_dispatcher(Relation onerel, bool inh, int elevel,
 				this_totaldeadrows = DatumGetFloat8(funcRetValues[1]);
 				(*totalrows) += this_totalrows;
 				(*totaldeadrows) += this_totaldeadrows;
-				if (sampleTuples && GpPolicyIsReplicated(onerel->rd_cdbpolicy))
-				{
-					/*
-					 * A replicated table has the same data in all segments.
-					 * Arbitrarily, use the sample from the first segment, and
-					 * discard the rest. (This is rather inefficient, of
-					 * course. It would be better to dispatch to only one
-					 * segment, but there is no easy API for that in the
-					 * dispatcher.)
-					 */
-					ReleaseTupleDesc(tupdesc);
-
-					/* Stop processing tuples - enough */
-					break;
-				}
 			}
 			else
 			{

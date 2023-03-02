@@ -204,6 +204,14 @@ gp_acquire_sample_rows(PG_FUNCTION_ARGS)
 
 		ctx->index = 0;
 		ctx->summary_sent = false;
+		/*
+		 * we only get sample data from segindex 0 for replicated table
+		 */
+		if (GpPolicyIsReplicated(onerel->rd_cdbpolicy) && GpIdentity.segindex > 0)
+		{
+			ctx->index = ctx->num_sample_rows;
+			ctx->summary_sent = true;
+		}
 
 		MemoryContextSwitchTo(oldcontext);
 	}

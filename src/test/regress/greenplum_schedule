@@ -180,9 +180,6 @@ test: minirepro
 # NOTE: gporca_faults uses gp_fault_injector - so do not add to a parallel group
 test: gporca_faults
 
-# RESOURCE_QUEUE_FIXME: Do we need to modify bb_memory_quota to test resource group?
-#test: bb_memory_quota
-
 # Tests for replicated table
 test: rpt rpt_joins rpt_tpch rpt_returning
 
@@ -200,8 +197,6 @@ test: qp_misc_rio_join_small qp_correlated_query qp_targeted_dispatch qp_gist_in
 
 test: dpe qp_dpe qp_subquery qp_left_anti_semi_join qp_union_intersect qp_functions qp_functions_idf qp_regexp qp_orca_fallback gp_sync_lc_gucs
 
-#RESOURCE_QUEUE_FIXME: Do we nedd to change qp_resource_queue to qp_resource_group to test query process while using resource group?
-#test: qp_resource_queue
 test: olap_setup
 test: qp_olap_group qp_olap_group2
 
@@ -330,6 +325,16 @@ test: uao_dml/ao_unique_index_build_row uao_dml/ao_unique_index_build_column
 
 # test column projection for various operations
 test: aoco_projection
+# test resource queue, can not put other test in resource queue.
+test: resource_manager_switch_to_queue
+test: resource_queue
+test: resource_queue_stat
+test: resource_queue_with_rule
+test: bb_memory_quota
+test: qp_resource_queue
+test: resource_queue_function
+test: gp_toolkit_resqueue
+test: resource_manager_restore_to_none
 
 # test dispatch and result handling of gp_log_memory_backend_contexts
 test: gp_log_mem_dispatch

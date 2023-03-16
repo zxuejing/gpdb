@@ -1532,7 +1532,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 			NULL
 		},
 		&gp_enable_resqueue_priority,
-		true,
+		false,
 		NULL, NULL, NULL
 	},
 

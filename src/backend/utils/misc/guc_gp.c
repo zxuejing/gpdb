@@ -4383,7 +4383,7 @@ struct config_string ConfigureNamesString_gp[] =
 			gettext_noop("Only support \"none\", \"queue\", \"group\" and \"group-v2\" for now.")
 		},
 		&gp_resource_manager_str,
-		"none",
+		"queue",
 		gpvars_check_gp_resource_manager_policy,
 		gpvars_assign_gp_resource_manager_policy,
 		gpvars_show_gp_resource_manager_policy,

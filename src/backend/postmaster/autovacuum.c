@@ -2199,6 +2199,7 @@ do_autovacuum(void)
 		relation_needs_vacanalyze(relid, relopts, classForm, tabentry,
 								  effective_multixact_freeze_max_age,
 								  &dovacuum, &doanalyze, &wraparound);
+		elog(WARNING, "-------skip-----%s:%d",classForm->relname.data,relid);
 
 		/* Relations that need work are added to table_oids */
 		if (dovacuum || doanalyze)
@@ -2282,6 +2283,7 @@ do_autovacuum(void)
 		relation_needs_vacanalyze(relid, relopts, classForm, tabentry,
 								  effective_multixact_freeze_max_age,
 								  &dovacuum, &doanalyze, &wraparound);
+		elog(WARNING, "-------skip-----%s:%d",classForm->relname.data,relid);
 
 		/* ignore analyze for toast tables */
 		if (dovacuum)
@@ -2929,6 +2931,7 @@ table_recheck_autovac(Oid relid, HTAB *table_toast_map,
 	relation_needs_vacanalyze(relid, avopts, classForm, tabentry,
 							  effective_multixact_freeze_max_age,
 							  &dovacuum, &doanalyze, &wraparound);
+	elog(WARNING, "-------skip-----%s:%d",classForm->relname.data,relid);
 
 	/* ignore ANALYZE for toast tables */
 	if (classForm->relkind == RELKIND_TOASTVALUE)
@@ -3262,6 +3265,7 @@ autovacuum_do_vac_analyze(autovac_table *tab, BufferAccessStrategy bstrategy)
 		"auto_vac_worker_after_report_activity", DDLNotSpecified,
 		"", tab->at_relname);
 #endif
+	elog(WARNING, "-------vacuum-----%s",tab->at_relname);
 
 	vacuum(rel_list, &tab->at_params, bstrategy, true);
 }

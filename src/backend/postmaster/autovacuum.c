@@ -2199,11 +2199,13 @@ do_autovacuum(void)
 		relation_needs_vacanalyze(relid, relopts, classForm, tabentry,
 								  effective_multixact_freeze_max_age,
 								  &dovacuum, &doanalyze, &wraparound);
-		elog(WARNING, "-------skip-----%s:%d",classForm->relname.data,relid);
+
 
 		/* Relations that need work are added to table_oids */
 		if (dovacuum || doanalyze)
 			table_oids = lappend_oid(table_oids, relid);
+		else
+			elog(WARNING, "-------skip-----%s:%d",classForm->relname.data,relid);
 
 		/*
 		 * Remember TOAST associations for the second pass.  Note: we must do
@@ -2283,11 +2285,12 @@ do_autovacuum(void)
 		relation_needs_vacanalyze(relid, relopts, classForm, tabentry,
 								  effective_multixact_freeze_max_age,
 								  &dovacuum, &doanalyze, &wraparound);
-		elog(WARNING, "-------skip-----%s:%d",classForm->relname.data,relid);
 
 		/* ignore analyze for toast tables */
 		if (dovacuum)
 			table_oids = lappend_oid(table_oids, relid);
+		else
+			elog(WARNING, "-------skip-----%s:%d",classForm->relname.data,relid);
 	}
 
 	table_endscan(relScan);
@@ -2931,7 +2934,8 @@ table_recheck_autovac(Oid relid, HTAB *table_toast_map,
 	relation_needs_vacanalyze(relid, avopts, classForm, tabentry,
 							  effective_multixact_freeze_max_age,
 							  &dovacuum, &doanalyze, &wraparound);
-	elog(WARNING, "-------skip-----%s:%d",classForm->relname.data,relid);
+	if (!dovacuum && !doanalyze)
+		elog(WARNING, "-------skip-----%s:%d",classForm->relname.data,relid);
 
 	/* ignore ANALYZE for toast tables */
 	if (classForm->relkind == RELKIND_TOASTVALUE)
@@ -3196,6 +3200,7 @@ relation_needs_vacanalyze(Oid relid,
 		/* Determine if this table needs vacuum or analyze. */
 		*dovacuum = force_vacuum || (vactuples > vacthresh);
 		*doanalyze = (anltuples > anlthresh);
+		elog(WARNING, "------line:3203,dovacuum%d,doanalyze%d,vactuples:%f,vacthresh%f-----",*dovacuum,*doanalyze,vactuples, vacthresh);
 	}
 	else
 	{
@@ -3206,15 +3211,18 @@ relation_needs_vacanalyze(Oid relid,
 		 */
 		*dovacuum = force_vacuum;
 		*doanalyze = false;
+		elog(WARNING, "------line:3214,dovacuum%d,doanalyze%d-----",*dovacuum,*doanalyze);
 	}
 
 	/* ANALYZE refuses to work with pg_statistic */
 	if (relid == StatisticRelationId)
-		*doanalyze = false;
+		{*doanalyze = false;
+		elog(WARNING, "------line:3220,dovacuum%d,doanalyze%d-----",*dovacuum,*doanalyze);}
 
 	/* Only wish to trigger auto-analyze from coordinator */
 	if (Gp_role != GP_ROLE_DISPATCH)
-		*doanalyze = false;
+		{*doanalyze = false;
+		elog(WARNING, "------line:3224,dovacuum%d,doanalyze%d-----",*dovacuum,*doanalyze);}
 
 	/*
 	 * There are a lot of things to do to enable auto-ANALYZE for partition tables,
@@ -3231,13 +3239,15 @@ relation_needs_vacanalyze(Oid relid,
 	{
 		/* GPDB: autovacuum on pg_catalog relations */
 		if (!IsCatalogRelationOid(relid))
-			*dovacuum = false;
+			{*dovacuum = false;
+			elog(WARNING, "------line:3242,dovacuum%d,doanalyze%d-----",*dovacuum,*doanalyze);}
 	}
 	else if (!force_vacuum && gp_autovacuum_scope == AV_SCOPE_CATALOG_AO_AUX)
 	{
 		/* GPDB: autovacuum only pg_catalog, pg_toast, and pg_aoseg relations */
 		if (!IsSystemClass(relid, classForm))
-			*dovacuum = false;
+			{*dovacuum = false;
+			elog(WARNING, "------line:3249,dovacuum%d,doanalyze%d-----",*dovacuum,*doanalyze);}
 	}
 }
 

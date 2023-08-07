@@ -1,3 +1,4 @@
+CREATE SCHEMA has$dollar;
 -- test some errors
 CREATE EXTENSION test_ext1;
 ERROR:  required extension "test_ext2" is not installed
@@ -6,35 +7,35 @@ CREATE EXTENSION test_ext1 SCHEMA test_ext1;
 ERROR:  schema "test_ext1" does not exist
 CREATE EXTENSION test_ext1 SCHEMA test_ext;
 ERROR:  schema "test_ext" does not exist
-CREATE SCHEMA test_ext;
-CREATE EXTENSION test_ext1 SCHEMA test_ext;
+CREATE EXTENSION test_ext1 SCHEMA has$dollar;
 ERROR:  extension "test_ext1" must be installed in schema "test_ext1"
 -- finally success
-CREATE EXTENSION test_ext1 SCHEMA test_ext CASCADE;
+CREATE EXTENSION test_ext1 SCHEMA has$dollar CASCADE;
 NOTICE:  installing required extension "test_ext2"
 NOTICE:  installing required extension "test_ext3"
 NOTICE:  installing required extension "test_ext5"
 NOTICE:  installing required extension "test_ext4"
 SELECT extname, nspname, extversion, extrelocatable FROM pg_extension e, pg_namespace n WHERE extname LIKE 'test_ext%' AND e.extnamespace = n.oid ORDER BY 1;
-  extname  |  nspname  | extversion | extrelocatable 
------------+-----------+------------+----------------
- test_ext1 | test_ext1 | 1.0        | f
- test_ext2 | test_ext  | 1.0        | t
- test_ext3 | test_ext  | 1.0        | t
- test_ext4 | test_ext  | 1.0        | t
- test_ext5 | test_ext  | 1.0        | t
+  extname  |  nspname   | extversion | extrelocatable
+-----------+------------+------------+----------------
+ test_ext1 | test_ext1  | 1.0        | f
+ test_ext2 | has$dollar | 1.0        | t
+ test_ext3 | has$dollar | 1.0        | t
+ test_ext4 | has$dollar | 1.0        | t
+ test_ext5 | has$dollar | 1.0        | t
 (5 rows)
 
 CREATE EXTENSION test_ext_cyclic1 CASCADE;
 NOTICE:  installing required extension "test_ext_cyclic2"
 ERROR:  cyclic dependency detected between extensions "test_ext_cyclic1" and "test_ext_cyclic2"
-DROP SCHEMA test_ext CASCADE;
+DROP SCHEMA has$dollar CASCADE;
 NOTICE:  drop cascades to 5 other objects
 DETAIL:  drop cascades to extension test_ext3
 drop cascades to extension test_ext5
 drop cascades to extension test_ext2
 drop cascades to extension test_ext4
 drop cascades to extension test_ext1
+CREATE SCHEMA has$dollar;
 CREATE EXTENSION test_ext6;
 DROP EXTENSION test_ext6;
 CREATE EXTENSION test_ext6;
@@ -318,13 +319,13 @@ NOTICE:  extension "gp_inject_fault" does not exist, skipping
 create schema issue6716;
 create extension gp_inject_fault with schema issue6716;
 select issue6716.gp_inject_fault('issue6716', 'skip', 1);
- gp_inject_fault 
+ gp_inject_fault
 -----------------
  Success:
 (1 row)
 
 select issue6716.gp_inject_fault('issue6716', 'reset', 1);
- gp_inject_fault 
+ gp_inject_fault
 -----------------
  Success:
 (1 row)
@@ -344,7 +345,7 @@ begin;
 set search_path=pg_catalog;
 create extension btree_gin;
 show search_path;
- search_path 
+ search_path
 -------------
  pg_catalog
 (1 row)
@@ -356,14 +357,14 @@ rollback;
 begin;
 set search_path=issue6716;
 show search_path;
- search_path 
+ search_path
 -------------
  issue6716
 (1 row)
 
 create extension btree_gin with schema pg_catalog;
 show search_path;
- search_path 
+ search_path
 -------------
  issue6716
 (1 row)
@@ -371,7 +372,7 @@ show search_path;
 end;
 -- check search_path after transaction commit
 show search_path;
- search_path 
+ search_path
 -------------
  issue6716
 (1 row)
@@ -401,7 +402,7 @@ begin;
 -- change search_path
 set search_path=pg_catalog;
 show search_path;
- search_path 
+ search_path
 -------------
  pg_catalog
 (1 row)
@@ -410,7 +411,7 @@ show search_path;
 create extension test_ext_cau with schema issue6716 version '1.1' from unpackaged;
 -- check that search path doesn't changed after create extension
 show search_path;
- search_path 
+ search_path
 -------------
  pg_catalog
 (1 row)
@@ -419,7 +420,7 @@ show search_path;
 set search_path=issue6716;
 \df
                             List of functions
-  Schema   |    Name    | Result data type | Argument data types  | Type 
+  Schema   |    Name    | Result data type | Argument data types  | Type
 -----------+------------+------------------+----------------------+------
  issue6716 | test_func1 | integer          | a integer, b integer | func
  issue6716 | test_func2 | integer          | a integer, b integer | func
@@ -433,7 +434,7 @@ FROM pg_catalog.pg_extension AS e
     INNER JOIN pg_catalog.pg_namespace AS np ON (np.oid = p.pronamespace)
 WHERE d.deptype = 'e' and e.extname = 'test_ext_cau'
 ORDER BY 1, 3;
-   extname    | extschema |  proname   | proschema 
+   extname    | extschema |  proname   | proschema
 --------------+-----------+------------+-----------
  test_ext_cau | issue6716 | test_func2 | issue6716
 (1 row)
@@ -441,7 +442,7 @@ ORDER BY 1, 3;
 end;
 -- check search_path after transaction commit
 show search_path;
- search_path 
+ search_path
 -------------
  issue6716
 (1 row)
@@ -459,7 +460,7 @@ alter extension test_ext_cau update to '1.1';
 end;
 -- check search_path after transaction commit
 show search_path;
- search_path 
+ search_path
 -------------
  issue6716
 (1 row)
@@ -469,3 +470,10 @@ drop schema issue6716 cascade;
 NOTICE:  drop cascades to 2 other objects
 DETAIL:  drop cascades to function issue6716.test_func1(integer,integer)
 drop cascades to extension test_ext_cau
+--
+-- Test @extschema@ syntax.
+--
+CREATE SCHEMA "has space";
+CREATE EXTENSION test_ext_extschema SCHEMA has$dollar;
+ERROR:  invalid character in extension "test_ext_extschema" schema: must not contain any of ""$'\"
+CREATE EXTENSION test_ext_extschema SCHEMA "has space";

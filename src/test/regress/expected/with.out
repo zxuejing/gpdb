@@ -957,6 +957,24 @@ SELECT * FROM y;
 (10 rows)
 
 DROP TABLE y;
+-- although there is a distinct in recursive part of cte,
+-- but there is no motion above worktablescan, that is ok
+WITH RECURSIVE x(n) AS (SELECT 1 UNION ALL SELECT distinct(n+1) FROM x)
+  SELECT * FROM x limit 10;
+ n  
+----
+  1
+  2
+  3
+  4
+  5
+  6
+  7
+  8
+  9
+ 10
+(10 rows)
+
 --
 -- error cases
 --
@@ -996,9 +1014,7 @@ LINE 1: WITH RECURSIVE x(n) AS (SELECT 1 EXCEPT ALL SELECT n+1 FROM ...
 CREATE TEMPORARY TABLE z(x int primary key);
 WITH RECURSIVE x(n) AS (SELECT 1 UNION ALL SELECT n+1 FROM (SELECT * FROM x UNION SELECT * FROM z)foo)
 	SELECT * FROM x;
-ERROR:  recursive reference to query "x" must not appear within a subquery
-LINE 1: ...SELECT 1 UNION ALL SELECT n+1 FROM (SELECT * FROM x UNION SE...
-                                                             ^
+ERROR:  There is a motion above work table scan, this recursive query is not supported in Greenplum (planner.c:392)
 -- Set operation in recursive term that does not have a self-reference
 -- This is supported
 CREATE TEMPORARY TABLE u(x int primary key);
@@ -1031,10 +1047,6 @@ SELECT * FROM cte LIMIT 10;
 ERROR:  recursive reference to query "cte" must not appear within a subquery
 LINE 4:  SELECT level+1, c FROM (SELECT * FROM cte OFFSET 0) foo, ba...
                                                ^
--- recursive term with a distinct operation is not allowed
-WITH RECURSIVE x(n) AS (SELECT 1 UNION ALL SELECT distinct(n+1) FROM x)
-  SELECT * FROM x;
-ERROR:  DISTINCT in a recursive query is not implemented
 -- recursive term with a group by operation is not allowed
 CREATE TEMPORARY TABLE bar(c int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c' as the Greenplum Database data distribution key for this table.

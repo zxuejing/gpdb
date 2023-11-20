@@ -337,6 +337,90 @@ planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	return result;
 }
 
+/*
+ * GPDB:
+ * The recursive and non-recursive parts of RecursiveUnion must be in the same slice.
+ * Check if the motions above WorkTableScan and RecursiveUnion are the same.
+ */
+typedef struct CTEMotionSearchContext
+{
+	int     motionIdOfRecursiveUnion; /* motion id above RecursiveUnion */
+	int     motionIdOfWorkTableScan;  /* motion id above WorkTableScan */
+	bool    underRecursiveUnion;      /* it is true if we are under a RecursiveUnion */
+} CTEMotionSearchContext;
+
+static bool
+cte_motion_search_walker(Node *node, CTEMotionSearchContext *context)
+{
+	if (node == NULL)
+		return false;
+	if (!is_plan_node(node))
+		return false;
+
+	if (IsA(node, Motion))
+	{
+		Motion *motion = (Motion*)node;
+		int saveMotionIdOfRecursiveUnion = context->motionIdOfRecursiveUnion;
+		int saveMotionIdOfWorkTableScan = context->motionIdOfWorkTableScan;
+		if (!context->underRecursiveUnion)
+		{
+			context->motionIdOfRecursiveUnion = motion->motionID;
+			context->motionIdOfWorkTableScan = motion->motionID;
+		}
+		else if (context->underRecursiveUnion)
+		{
+			/* we are under a recursive union */
+			context->motionIdOfWorkTableScan = motion->motionID;
+		}
+		plan_tree_walker(node, cte_motion_search_walker, context, true);
+		context->motionIdOfRecursiveUnion = saveMotionIdOfRecursiveUnion;
+		context->motionIdOfWorkTableScan = saveMotionIdOfWorkTableScan;
+		return false;
+	}
+	if (IsA(node, RecursiveUnion))
+	{
+		bool savedUnderRecursiveUnion = context->underRecursiveUnion;
+		context->underRecursiveUnion = true;
+		plan_tree_walker(node, cte_motion_search_walker, context, true);
+		context->underRecursiveUnion = savedUnderRecursiveUnion;
+		return false;
+	}
+	if (IsA(node, WorkTableScan))
+	{
+		if (context->motionIdOfRecursiveUnion != context->motionIdOfWorkTableScan)
+		{
+			elog(ERROR, "There is a motion above work table scan, this recursive query is not supported in Greenplum");
+		}
+		return false;
+
+	}
+	if (IsA(node, Append))
+	{
+		ListCell   *cell;
+		Append	   *app = (Append *) node;
+
+		foreach(cell, app->appendplans)
+			plan_tree_walker((Node *) lfirst(cell), cte_motion_search_walker, context, true);
+		return false;
+	}
+	return plan_tree_walker(node, cte_motion_search_walker, context, true);
+}
+
+static void
+checkMotionAboveWorkTableScan(Node* node)
+{
+	int i =10; //TODO
+	if (i >10)
+	   return;
+	CTEMotionSearchContext context;
+
+	context.motionIdOfRecursiveUnion  = -1;
+	context.motionIdOfWorkTableScan = -1;
+	context.underRecursiveUnion = false;
+
+	(void) cte_motion_search_walker(node,(void *) &context);
+}
+
 PlannedStmt *
 standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 {
@@ -731,6 +815,9 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 		top_plan = apply_shareinput_xslice(top_plan, root);
 	}
 
+	/* checkMotionAboveWorkTableScan is called only when we have recursive cte */
+	if (parse->hasRecursive)
+		checkMotionAboveWorkTableScan((Node *)top_plan);
 	/* build the PlannedStmt result */
 	result = makeNode(PlannedStmt);
 

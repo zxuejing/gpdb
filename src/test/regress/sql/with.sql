@@ -414,6 +414,12 @@ SELECT * FROM y;
 
 DROP TABLE y;
 
+
+-- although there is a distinct in recursive part of cte,
+-- but there is no motion above worktablescan, that is ok
+WITH RECURSIVE x(n) AS (SELECT 1 UNION ALL SELECT distinct(n+1) FROM x)
+  SELECT * FROM x limit 10;
+
 --
 -- error cases
 --
@@ -466,10 +472,6 @@ WITH RECURSIVE cte(level, id) as (
 	UNION ALL
 	SELECT level+1, c FROM (SELECT * FROM cte OFFSET 0) foo, bar)
 SELECT * FROM cte LIMIT 10;
-
--- recursive term with a distinct operation is not allowed
-WITH RECURSIVE x(n) AS (SELECT 1 UNION ALL SELECT distinct(n+1) FROM x)
-  SELECT * FROM x;
 
 -- recursive term with a group by operation is not allowed
 CREATE TEMPORARY TABLE bar(c int);

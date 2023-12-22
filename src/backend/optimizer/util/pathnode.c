@@ -2962,12 +2962,13 @@ create_worktablescan_path(PlannerInfo *root, RelOptInfo *rel,
 		CdbPathLocus_MakeSingleQE(&result, numsegments);
 	else if (ctelocus == CdbLocusType_General)
 		CdbPathLocus_MakeGeneral(&result, numsegments);
-	else if (ctelocus == CdbLocusType_SegmentGeneral)
+	else if (ctelocus == CdbLocusType_SegmentGeneral
+		|| ctelocus == CdbLocusType_General)
 	{
 		/* See comments in set_worktable_pathlist */
 		elog(ERROR,
 			 "worktable scan path can never have "
-			 "segmentgeneral locus.");
+			 "segmentgeneral or general locus.");
 	}
 	else
 		CdbPathLocus_MakeStrewn(&result, numsegments);

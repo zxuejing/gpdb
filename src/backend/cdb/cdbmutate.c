@@ -3689,9 +3689,6 @@ checkMotionWithParamWalker(Node *node, MotionWithParamContext* motionWithParamco
 	if (node == NULL)
 		return false;
 
-	if (!is_plan_node(node))
-		return false;
-
 	if (IsA(node, Motion))
 	{
 		Plan * plan = (Plan *) node;
@@ -3720,4 +3717,64 @@ checkMotionWithParam(Node *node, Bitmapset *bmsNestParams, PlannerInfo *root)
 	motionWithParamcontext.nestLoopParams = bmsNestParams;
 	planner_init_plan_tree_base(&motionWithParamcontext.base, root);
 	checkMotionWithParamWalker(node, &motionWithParamcontext);
+}
+
+typedef struct CTEMotionSearchContext
+{
+	plan_tree_base_prefix base; /* Required prefix for plan_tree_walker/mutator */
+	bool    bellowMotion;       /* True if we are under a Motion node */
+} CTEMotionSearchContext;
+
+/*
+ * GPDB:
+ * We can not pass params by a motion.
+ * So there should not be any motion between RecursiveUnion and WorkTableScan.
+ * Check if there is a motion between RecursiveUnion and WorkTableScan.
+ */
+static bool
+cte_motion_search_walker(Node *node, CTEMotionSearchContext *context)
+{
+	if (node == NULL)
+		return false;
+
+	if (IsA(node, Motion))
+	{
+		bool savedBellowMotion = context->bellowMotion;
+		context->bellowMotion = true;
+		plan_tree_walker(node, cte_motion_search_walker, context);
+		context->bellowMotion = savedBellowMotion;
+		return false;
+	}
+	if (IsA(node, RecursiveUnion))
+	{
+		/*
+		 * We process RecursiveUnion recursively in create_recursiveunion_plan
+		 * here, we do not process repeatedly.
+		 */
+		return false;
+	}
+	if (IsA(node, WorkTableScan))
+	{
+		if (context->bellowMotion)
+		{
+			elog(ERROR, "Passing parameters across motion is not supported.");
+		}
+		return false;
+	}
+	return plan_tree_walker(node, cte_motion_search_walker, context);
+}
+
+/*
+ * GPDB does not support pass params by a motion.
+ * Check the rightplan of RecursiveUnion, wether there is a motion above WorkTableScan,
+ * If true, throw an error.
+ */
+void
+checkMotionAboveWorkTableScan(Node* node, PlannerInfo *root)
+{
+	CTEMotionSearchContext context;
+	planner_init_plan_tree_base(&context.base, root);
+	context.bellowMotion = false;
+
+	(void) cte_motion_search_walker(node, (void *) &context);
 }

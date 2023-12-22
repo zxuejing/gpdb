@@ -78,4 +78,5 @@ extern SplitUpdate *make_splitupdate(PlannerInfo *root, ModifyTable *mt, Plan *s
 									 RangeTblEntry *rte);
 extern bool contains_outer_params(Node *node, void *context);
 extern void checkMotionWithParam(Node *node, Bitmapset *bmsNestParams, PlannerInfo *root);
+extern void checkMotionAboveWorkTableScan(Node* node, PlannerInfo *root);
 #endif   /* CDBMUTATE_H */

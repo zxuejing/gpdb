@@ -2198,9 +2198,7 @@ with recursive rcte(x,y) as
   where t.b = x
 )
 select * from rcte limit 10;
-ERROR:  window functions in the target list of a recursive query is not supported in Greenplum
-LINE 5:   select (first_value(c) over (partition by b))::int, a+x
-                  ^
+ERROR:  Passing parameters across motion is not supported. (cdbmutate.c:3764)
 -- should error out during parse-analyze
 with recursive rcte(x,y) as
 (
@@ -2212,6 +2210,4 @@ with recursive rcte(x,y) as
   where t.b = x
 )
 select * from rcte limit 10;
-ERROR:  window functions in the target list of a recursive query is not supported in Greenplum
-LINE 5:   select first_value(c) over (partition by b), a+x
-                 ^
+ERROR:  Passing parameters across motion is not supported. (cdbmutate.c:3764)

@@ -2204,14 +2204,16 @@ set_worktable_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 	 * Remember WTS path cannot be turned to replicated(means broadcast)
 	 * when dealing with join. Most of the cases, it is OK. But for
 	 * replicated table whose locus is CdbLocusType_SegmentGeneral,
-	 * it can not be taken as everywhere, we will gather it to singleQE
-	 * or redistribute it when joining.
+	 * or locus is CdbLocusType_General, it can not be taken as everywhere,
+	 * we will gather it to singleQE or redistribute it when joining.
 	 *
-	 * To avoid such case, if cteplan's locus is CdbLocusType_SegmentGeneral,
-	 * we build WTS path using singlQE, and later in the function
-	 * `set_recursive_union_flow` to add a gather on the top of cteplan.
+	 * To avoid such case, if cteplan's locus is CdbLocusType_SegmentGeneral
+	 * or CdbLocusType_General, we build WTS path using singlQE, and later
+	 * in the function `set_recursive_union_flow` to add a gather on the top
+	 * of cteplan.
 	 */
-	if (cteplan->flow->locustype == CdbLocusType_SegmentGeneral)
+	if (cteplan->flow->locustype == CdbLocusType_SegmentGeneral
+		||cteplan->flow->locustype == CdbLocusType_General)
 		ctelocus = CdbLocusType_SingleQE;
 	else
 		ctelocus = cteplan->flow->locustype;

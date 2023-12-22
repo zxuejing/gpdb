@@ -56,6 +56,7 @@
 #include "cdb/cdbpartition.h"
 #include "cdb/cdbsetop.h"
 #include "cdb/cdbvars.h"
+#include "cdb/cdbmutate.h"
 #include "commands/tablecmds.h"
 
 
@@ -495,6 +496,11 @@ generate_recursion_plan(SetOperationStmt *setOp, PlannerInfo *root,
 										 groupList, numGroups);
 
 	*sortClauses = NIL;			/* RecursiveUnion result is always unsorted */
+
+	/*
+	 * Check whether there is a motion above WorkTableScan
+	 */
+	checkMotionAboveWorkTableScan((Node *)rplan, root);
 
 	return plan;
 }

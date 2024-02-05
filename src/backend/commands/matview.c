@@ -858,6 +858,14 @@ refresh_by_match_merge(Oid matviewOid, Oid tempOid, Oid relowner,
 						   SPI_getvalue(SPI_tuptable->vals[0], SPI_tuptable->tupdesc, 1))));
 	}
 
+	/*
+	 * Create the temporary "diff" table.
+	 *
+	 * Temporarily switch out of the SECURITY_RESTRICTED_OPERATION context,
+	 * because you cannot create temp tables in SRO context.  For extra
+	 * paranoia, add the composite type column only after switching back to
+	 * SRO context.
+	 */
 	SetUserIdAndSecContext(relowner,
 						   save_sec_context | SECURITY_LOCAL_USERID_CHANGE);
 
@@ -865,10 +873,25 @@ refresh_by_match_merge(Oid matviewOid, Oid tempOid, Oid relowner,
 	distributed = TextDatumGetCString(DirectFunctionCall1(pg_get_table_distributedby,
 														   ObjectIdGetDatum(tempOid)));
 
-	/* Start building the query for creating the diff table. */
 	resetStringInfo(&querybuf);
 	appendStringInfo(&querybuf,
-					 "CREATE TEMP TABLE %s AS "
+					 "CREATE TEMP TABLE %s (tid pg_catalog.tid)",
+					 diffname);
+	if (SPI_exec(querybuf.data, 0) != SPI_OK_UTILITY)
+		elog(ERROR, "SPI_exec failed: %s", querybuf.data);
+	SetUserIdAndSecContext(relowner,
+						   save_sec_context | SECURITY_RESTRICTED_OPERATION);
+	resetStringInfo(&querybuf);
+	appendStringInfo(&querybuf,
+					 "ALTER TABLE %s ADD COLUMN newdata %s",
+					 diffname, tempname);
+	if (SPI_exec(querybuf.data, 0) != SPI_OK_UTILITY)
+		elog(ERROR, "SPI_exec failed: %s", querybuf.data);
+
+	/* Start building the query for populating the diff table. */
+	resetStringInfo(&querybuf);
+	appendStringInfo(&querybuf,
+					 "INSERT INTO %s "
 					 "SELECT mv.ctid AS tid, mv.gp_segment_id as sid, newdata.* "
 					 "FROM %s mv FULL JOIN %s newdata ON (",
 					 diffname, matviewname, tempname);
@@ -1000,12 +1023,9 @@ refresh_by_match_merge(Oid matviewOid, Oid tempOid, Oid relowner,
 						   "ORDER BY tid "); /* GPDB: tailing space matters */
 	appendStringInfoString(&querybuf, distributed);
 
-	/* Create the temporary "diff" table. */
-	if (SPI_exec(querybuf.data, 0) != SPI_OK_UTILITY)
+	/* Populate the temporary "diff" table. */
+	if (SPI_exec(querybuf.data, 0) != SPI_OK_INSERT)
 		elog(ERROR, "SPI_exec failed: %s", querybuf.data);
-
-	SetUserIdAndSecContext(relowner,
-						   save_sec_context | SECURITY_RESTRICTED_OPERATION);
 
 	/*
 	 * We have no further use for data from the "full-data" temp table, but we

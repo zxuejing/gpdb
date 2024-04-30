@@ -233,12 +233,15 @@ $$ /*in func*/
 LANGUAGE plpgsql;
 
 CREATE TRIGGER trig BEFORE INSERT OR UPDATE ON t_trigger FOR EACH ROW EXECUTE PROCEDURE update_update_time();
-insert into t_trigger values (1, 1, now());
+/* original time is a very very old timestamp */
+insert into t_trigger values (1, 1, '1000-01-01');
 1: begin;
 1: update t_trigger set tc2 = 2 where tc1 = 1;
 2&: update t_trigger set tc2 = 3 where tc1 = 1;
 1: commit;
 2<:
+-- verify that trigger works. The case running time must larger then the old original data for years.
+select tc1, tc2, extract(epoch from (update_time - '1000-01-01'))/3600/24/365 > 2 from t_trigger;
 1: drop trigger trig on t_trigger;
 1: drop function update_update_time();
 1: drop table t_trigger;

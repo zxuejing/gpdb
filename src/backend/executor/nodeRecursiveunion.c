@@ -136,7 +136,7 @@ ExecRecursiveUnion(PlanState *pstate)
 
 			/* create new empty intermediate table */
 			node->intermediate_table = tuplestore_begin_heap(false, false,
-															 work_mem);
+															 PlanStateOperatorMemKB(&node->ps));
 			node->intermediate_empty = true;
 
 			/* reset the recursive term */
@@ -202,8 +202,8 @@ ExecInitRecursiveUnion(RecursiveUnion *node, EState *estate, int eflags)
 	/* initialize processing state */
 	rustate->recursing = false;
 	rustate->intermediate_empty = true;
-	rustate->working_table = tuplestore_begin_heap(false, false, work_mem);
-	rustate->intermediate_table = tuplestore_begin_heap(false, false, work_mem);
+	rustate->working_table = tuplestore_begin_heap(false, false, PlanStateOperatorMemKB(&rustate->ps));
+	rustate->intermediate_table = tuplestore_begin_heap(false, false, PlanStateOperatorMemKB(&rustate->ps));
 	rustate->refcount = 0;
 
 	/*

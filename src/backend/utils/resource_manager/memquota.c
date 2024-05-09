@@ -897,7 +897,14 @@ int64
 ResourceManagerGetQueryMemoryLimit(PlannedStmt* stmt)
 {
 	if (Gp_role != GP_ROLE_DISPATCH)
-		return stmt->query_mem;
+	{   if (stmt->query_mem > 0)
+			return stmt->query_mem;
+		else
+		{
+			// TODO 有的qd会给qe直接发送语句，这个时候也需要设置语句的query_mem,否则为0。
+			return (uint64) statement_mem * 1024L;
+		}
+	}
 
 	/* no limits in single user mode. */
 	if (!IsUnderPostmaster)

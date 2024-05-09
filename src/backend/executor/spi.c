@@ -3264,7 +3264,7 @@ uint64 SPI_GetMemoryReservation(void)
 bool SPI_IsMemoryReserved(void)
 {
 	Assert(!IsResManagerMemoryPolicyNone());
-	return (SPIMemReserved == 0);
+	return (SPIMemReserved != 0);
 }
 
 /**

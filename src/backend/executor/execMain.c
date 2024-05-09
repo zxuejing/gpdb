@@ -285,6 +285,38 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 			PG_END_TRY();
 		}
 	}
+	else if (Gp_role == GP_ROLE_EXECUTE)
+	{
+		if (queryDesc->plannedstmt->planTree->operatorMemKB == 0 && queryDesc->plannedstmt->query_mem > 0)
+		{
+			PG_TRY();
+			{
+				switch (*gp_resmanager_memory_policy)
+				{
+					case RESMANAGER_MEMORY_POLICY_AUTO:
+						PolicyAutoAssignOperatorMemoryKB(queryDesc->plannedstmt,
+														 queryDesc->plannedstmt->query_mem);
+						break;
+					case RESMANAGER_MEMORY_POLICY_EAGER_FREE:
+						PolicyEagerFreeAssignOperatorMemoryKB(queryDesc->plannedstmt,
+															  queryDesc->plannedstmt->query_mem);
+						break;
+					default:
+						Assert(IsResManagerMemoryPolicyNone());
+						break;
+				}
+			}
+			PG_CATCH();
+			{
+				/* GPDB hook for collecting query info */
+				if (query_info_collect_hook)
+					(*query_info_collect_hook)(QueryCancelCleanup ? METRICS_QUERY_CANCELED : METRICS_QUERY_ERROR, queryDesc);
+
+				PG_RE_THROW();
+			}
+			PG_END_TRY();
+		}
+	}
 
 	/*
 	 * If the transaction is read-only, we need to check if any writes are

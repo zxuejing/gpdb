@@ -1653,7 +1653,8 @@ uint64 PlanStateOperatorMemKB(const PlanState *ps)
 		 * plans dont get decorated with the operatorMemKB. Someday, we should fix resource queues.
 		 */
 		result = work_mem;
-		elog(WARNING, "xxxx use work_mem in planstateoperatorMemkb");
+		if (Gp_role != GP_ROLE_UTILITY)
+			elog(WARNING, "xxxx use work_mem in planstateoperatorMemkb");
 	}
 	else
 	{

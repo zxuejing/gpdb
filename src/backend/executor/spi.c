@@ -2714,7 +2714,7 @@ _SPI_convert_params(int nargs, Oid *argtypes,
 static void
 _SPI_assign_query_mem(QueryDesc * queryDesc)
 {
-	if (Gp_role == GP_ROLE_DISPATCH
+	if (Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_EXECUTE
 		&& ActivePortal
 		&& !IsResManagerMemoryPolicyNone())
 	{

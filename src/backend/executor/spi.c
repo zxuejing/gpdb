@@ -2733,13 +2733,14 @@ _SPI_assign_query_mem(QueryDesc * queryDesc)
 		 * */
 	}
 }
-
+extern void SPI_ReserveMemory_force(uint64 mem_reserved);
 static int
 _SPI_pquery(QueryDesc *queryDesc, bool fire_triggers, uint64 tcount)
 {
 	int			operation = queryDesc->operation;
 	int			eflags;
 	int			res;
+	uint64 oldSPIMemReserved = SPI_GetMemoryReservation();
 
 	_SPI_assign_query_mem(queryDesc);
 
@@ -2888,6 +2889,11 @@ _SPI_pquery(QueryDesc *queryDesc, bool fire_triggers, uint64 tcount)
 		PG_RE_THROW();
 	}
 	PG_END_TRY();
+	if (!IsResManagerMemoryPolicyNone()
+			&& SPI_IsMemoryReserved())
+	{
+		SPI_ReserveMemory_force(oldSPIMemReserved);
+	}
 
 	_SPI_current->processed = queryDesc->es_processed;	/* Mpp: Dispatched
 														 * queries fill in this

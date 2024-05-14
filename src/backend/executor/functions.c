@@ -1113,6 +1113,7 @@ postquel_get_single_result(TupleTableSlot *slot,
 	return value;
 }
 
+extern void SPI_ReserveMemory_force(uint64 mem_reserved);
 /*
  * fmgr_sql: function call manager for SQL functions
  */
@@ -1255,6 +1256,7 @@ PG_TRY();
 	 * snapshot is on the active stack and we can just bump its command ID.
 	 */
 	pushed_snapshot = false;
+	uint64 oldSPIMemReserved;
 	while (es)
 	{
 		bool		completed;
@@ -1278,7 +1280,7 @@ PG_TRY();
 				else
 					UpdateActiveSnapshotCommandId();
 			}
-
+			oldSPIMemReserved = SPI_GetMemoryReservation();
 			postquel_start(es, fcache);
 		}
 		else if (!fcache->readonly_func && !pushed_snapshot)
@@ -1299,7 +1301,18 @@ PG_TRY();
 		 * don't care about fetching any more result rows.
 		 */
 		if (completed || !fcache->returnsSet)
+		{
+			if (es->qd->operation != CMD_UTILITY)
+			{
+
+				if (!IsResManagerMemoryPolicyNone()
+					&& SPI_IsMemoryReserved())
+				{
+					SPI_ReserveMemory_force(oldSPIMemReserved);
+				}
+			}
 			postquel_end(es);
+		}
 
 		/*
 		 * Break from loop if we didn't shut down (implying we got a

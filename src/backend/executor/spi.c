@@ -3248,6 +3248,11 @@ void SPI_ReserveMemory(uint64 mem_reserved)
 	}
 }
 
+void SPI_ReserveMemory_force(uint64 mem_reserved)
+{
+	Assert(!IsResManagerMemoryPolicyNone());
+	SPIMemReserved = mem_reserved;
+}
 /**
  * What was the amount of memory reserved for the last operator? See SPI_ReserveMemory()
  * for details.

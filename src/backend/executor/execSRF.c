@@ -264,7 +264,6 @@ ExecMakeTableFunctionResult(SetExprState *setexpr,
 			{
 				MemoryContext oldcontext =
 					MemoryContextSwitchTo(econtext->ecxt_per_query_memory);
-
 				tupstore = tuplestore_begin_heap(randomAccess, false, operatorMemKB);
 				rsinfo.setResult = tupstore;
 				if (!returnsTuple)
@@ -389,8 +388,11 @@ no_function_result:
 	{
 		MemoryContext oldcontext =
 			MemoryContextSwitchTo(econtext->ecxt_per_query_memory);
-
-		tupstore = tuplestore_begin_heap(randomAccess, false, work_mem);
+		/*
+		 * We use operatorMemKB is ok, tupstore will be initialize only once,
+		 * So we only use one copy of operatorMemKB memory at the same time.
+		 */
+		tupstore = tuplestore_begin_heap(randomAccess, false, operatorMemKB);
 		rsinfo.setResult = tupstore;
 		MemoryContextSwitchTo(oldcontext);
 

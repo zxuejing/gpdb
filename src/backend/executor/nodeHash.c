@@ -1267,6 +1267,7 @@ ExecParallelHashIncreaseNumBatches(HashJoinTable hashtable)
 					 * We are going from single-batch to multi-batch.  We need
 					 * to switch from one large combined memory budget to the
 					 * regular work_mem budget.
+					 * GPDB does not support Parallel hash, still use work_mem here.
 					 */
 					pstate->space_allowed = work_mem * 1024L;
 

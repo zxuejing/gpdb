@@ -2106,6 +2106,7 @@ BeginCopy(ParseState *pstate,
 		 *
 		 * ExecutorStart computes a result tupdesc for us
 		 */
+		cstate->queryDesc->plannedstmt->query_mem = ResourceManagerGetQueryMemoryLimit(cstate->queryDesc->plannedstmt);
 		ExecutorStart(cstate->queryDesc, 0);
 
 		tupDesc = cstate->queryDesc->tupDesc;

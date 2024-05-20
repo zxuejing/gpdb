@@ -232,6 +232,10 @@ ExecInitCteScan(CteScan *node, EState *estate, int eflags)
 		/* I am the leader */
 		prmdata->value = PointerGetDatum(scanstate);
 		scanstate->leader = scanstate;
+		/*
+		 * In GPDB we do not generate cte scan,
+		 * So continue to use work_mem for postgresql.
+		 */
 		scanstate->cte_table = tuplestore_begin_heap(true, false, work_mem);
 		tuplestore_set_eflags(scanstate->cte_table, scanstate->eflags);
 		scanstate->readptr = 0;

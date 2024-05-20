@@ -52,7 +52,6 @@ build_hash_table(RecursiveUnionState *rustate)
 												false);
 }
 
-
 /* ----------------------------------------------------------------
  *		ExecRecursiveUnion(node)
  *
@@ -136,7 +135,7 @@ ExecRecursiveUnion(PlanState *pstate)
 
 			/* create new empty intermediate table */
 			node->intermediate_table = tuplestore_begin_heap(false, false,
-															 work_mem);
+															 PlanStateOperatorMemKB(&node->ps) / 2);
 			node->intermediate_empty = true;
 
 			/* reset the recursive term */
@@ -181,7 +180,7 @@ ExecInitRecursiveUnion(RecursiveUnion *node, EState *estate, int eflags)
 {
 	RecursiveUnionState *rustate;
 	ParamExecData *prmdata;
-
+	uint64 operatorMem;
 	/* check for unsupported flags */
 	Assert(!(eflags & (EXEC_FLAG_BACKWARD | EXEC_FLAG_MARK)));
 
@@ -200,10 +199,12 @@ ExecInitRecursiveUnion(RecursiveUnion *node, EState *estate, int eflags)
 	rustate->tableContext = NULL;
 
 	/* initialize processing state */
+	/* operatorMem is used for both working_table and intermediate_table */
+	operatorMem = PlanStateOperatorMemKB(&rustate->ps) / 2;
 	rustate->recursing = false;
 	rustate->intermediate_empty = true;
-	rustate->working_table = tuplestore_begin_heap(false, false, work_mem);
-	rustate->intermediate_table = tuplestore_begin_heap(false, false, work_mem);
+	rustate->working_table = tuplestore_begin_heap(false, false, operatorMem);
+	rustate->intermediate_table = tuplestore_begin_heap(false, false, operatorMem);
 	rustate->refcount = 0;
 
 	/*
@@ -276,6 +277,11 @@ ExecInitRecursiveUnion(RecursiveUnion *node, EState *estate, int eflags)
 							  node->dupOperators,
 							  &rustate->eqfuncoids,
 							  &rustate->hashfunctions);
+		/*
+		 * If memory is not enough, it will grow,
+		 * It doesn't matter whether use operatorMem or work_mem
+		 * as the initial table size.
+		 */
 		build_hash_table(rustate);
 	}
 

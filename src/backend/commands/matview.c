@@ -50,6 +50,7 @@
 #include "utils/rel.h"
 #include "utils/snapmgr.h"
 #include "utils/syscache.h"
+#include "cdb/memquota.h"
 
 
 typedef struct
@@ -492,6 +493,7 @@ refresh_matview_datafill(DestReceiver *dest, Query *query,
 								dest, NULL, NULL, 0);
 
 	RestoreOidAssignments(saved_dispatch_oids);
+	queryDesc->plannedstmt->query_mem = ResourceManagerGetQueryMemoryLimit(queryDesc->plannedstmt);
 
 	/* call ExecutorStart to prepare the plan for execution */
 	ExecutorStart(queryDesc, 0);

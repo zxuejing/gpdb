@@ -11,3 +11,28 @@
 \! gpconfig -s gp_resource_group_cpu_limit;
 -- end_ignore
 \! echo $?;
+
+-- start_ignore
+\! gpconfig -s gp_resgroup_print_operator_memory_limits;
+-- end_ignore
+\! echo $?;
+
+-- start_ignore
+\! gpconfig -s gp_resgroup_debug_wait_queue;
+-- end_ignore
+\! echo $?;
+
+-- start_ignore
+\! gpconfig -s gp_resgroup_memory_query_fixed_mem;
+-- end_ignore
+\! echo $?;
+
+-- start_ignore
+\! gpconfig -s gp_resgroup_memory_policy_auto_fixed_mem;
+-- end_ignore
+\! echo $?;
+
+-- start_ignore
+\! gpconfig -s gp_resgroup_memory_policy;
+-- end_ignore
+\! echo $?;

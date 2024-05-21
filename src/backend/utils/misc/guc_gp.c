@@ -1742,6 +1742,18 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
+		{"gp_resgroup_print_operator_memory_limits", PGC_USERSET, LOGGING_WHAT,
+			gettext_noop("Prints out the memory limit for operators (in explain) assigned by resource group's "
+						 "memory management."),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&gp_resgroup_print_operator_memory_limits,
+		false,
+		NULL, NULL, NULL
+	},
+
+	{
 		{"gp_resgroup_debug_wait_queue", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Enable the debugging check on the wait queue of resource group."),
 			NULL,

@@ -19,3 +19,48 @@ Segment     value: 0.9
 -- end_ignore
 \! echo $?;
 0
+-- start_ignore
+\! gpconfig -s gp_resgroup_print_operator_memory_limits;
+Values on all segments are consistent
+GUC              : gp_resgroup_print_operator_memory_limits
+Coordinator value: off
+Segment     value: off
+-- end_ignore
+\! echo $?;
+0
+-- start_ignore
+\! gpconfig -s gp_resgroup_debug_wait_queue;
+Values on all segments are consistent
+GUC              : gp_resgroup_debug_wait_queue
+Coordinator value: on
+Segment     value: on
+-- end_ignore
+\! echo $?;
+0
+-- start_ignore
+\! gpconfig -s gp_resgroup_memory_query_fixed_mem;
+Values on all segments are consistent
+GUC              : gp_resgroup_memory_query_fixed_mem
+Coordinator value: 0
+Segment     value: 0
+-- end_ignore
+\! echo $?;
+0
+-- start_ignore
+\! gpconfig -s gp_resgroup_memory_policy_auto_fixed_mem;
+Values on all segments are consistent
+GUC              : gp_resgroup_memory_policy_auto_fixed_mem
+Coordinator value: 100kB
+Segment     value: 100kB
+-- end_ignore
+\! echo $?;
+0
+-- start_ignore
+\! gpconfig -s gp_resgroup_memory_policy;
+Values on all segments are consistent
+GUC              : gp_resgroup_memory_policy
+Coordinator value: eager_free
+Segment     value: eager_free
+-- end_ignore
+\! echo $?;
+0

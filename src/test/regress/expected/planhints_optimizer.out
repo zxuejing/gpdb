@@ -2286,6 +2286,67 @@ DETAIL:  Unrecognized hint keyword "NoBitmap".
  Optimizer: GPORCA
 (4 rows)
 
+-- Hints with prepare statements
+--
+-- Make sure that hint parsing is done correctly in PREPARE/EXECUTE scenario.
+-- ORCA leverages PLANNER code path in planner_hook for hint parsing. Make sure
+-- that they are in-sync.
+--
+-- There was a bug in following scenario where in EXECUTE planner_hook parsed
+-- the hint defined in the PREPARE. After the EXECUTE finished, the hint memory
+-- is reclaimed. Then another EXECUTE/PREPARE is run, but this time the hint is
+-- not parsed by planner_hook because the hint is not defined on the PREPARE
+-- statement. In that case ORCA should not use the previous stale hint!
+CREATE TABLE t1 (c1 int, c2 text, PRIMARY KEY (c1));
+LOG:  statement: CREATE TABLE t1 (c1 int, c2 text, PRIMARY KEY (c1));
+-- A hint may be defined in the PREPARE statement.  Then EXECUTE uses the hint
+-- bound to PREPARE.
+/*+BitmapScan(t1)*/
+PREPARE p1 AS SELECT * FROM t1 WHERE t1.c1 < $1;
+LOG:  statement: /*+BitmapScan(t1)*/
+PREPARE p1 AS SELECT * FROM t1 WHERE t1.c1 < $1;
+EXPLAIN (COSTS false) EXECUTE p1 (1000);
+LOG:  statement: EXPLAIN (COSTS false) EXECUTE p1 (1000);
+LOG:  2024-05-21 17:24:14:964220 UTC,THD000,ERROR,"Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA",
+2024-05-21 17:24:14:964659 UTC,THD000,ERROR,"Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA",
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
+LOG:  pg_hint_plan:
+used hint:
+BitmapScan(t1)
+not used hint:
+duplication hint:
+error hint:
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Bitmap Heap Scan on t1
+         Recheck Cond: (c1 < 1000)
+         ->  Bitmap Index Scan on t1_pkey
+               Index Cond: (c1 < 1000)
+ Optimizer: Postgres-based planner
+(6 rows)
+
+DEALLOCATE p1;
+LOG:  statement: DEALLOCATE p1;
+-- If no hint is defined in the PREPARE statement.  Then EXECUTE will not use a
+-- hint even if one is defined in the EXECUTE statement.
+PREPARE p1 AS SELECT * FROM t1 WHERE t1.c1 = 1;
+LOG:  statement: PREPARE p1 AS SELECT * FROM t1 WHERE t1.c1 = 1;
+/*+BitmapScan(t1)*/
+EXPLAIN (COSTS false) EXECUTE p1;
+LOG:  statement: /*+BitmapScan(t1)*/
+EXPLAIN (COSTS false) EXECUTE p1;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  Index Scan using t1_pkey on t1
+         Index Cond: (c1 = 1)
+ Optimizer: GPORCA
+(4 rows)
+
+DEALLOCATE p1;
+LOG:  statement: DEALLOCATE p1;
 RESET client_min_messages;
 LOG:  statement: RESET client_min_messages;
 RESET pg_hint_plan.debug_print;

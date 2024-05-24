@@ -235,7 +235,6 @@ static unsigned int qno = 0;
 static unsigned int msgqno = 0;
 static char qnostr[32];
 static const char *current_hint_str = NULL;
-static HintState *hstate = NULL;
 
 /*
  * However we usually take a hint stirng in post_parse_analyze_hook, we still
@@ -415,7 +414,7 @@ static void pg_hint_plan_ProcessUtility(PlannedStmt *pstmt,
 					ParamListInfo params, QueryEnvironment *queryEnv,
 					DestReceiver *dest, char *completionTag);
 #ifdef USE_ORCA
-static void *external_plan_hint_hook(Query *parse);
+static void *external_plan_hint_hook();
 #endif
 static PlannedStmt *pg_hint_plan_planner(Query *parse, int cursorOptions,
 										 ParamListInfo boundParams);
@@ -3114,6 +3113,7 @@ pg_hint_plan_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 {
 	int				save_nestlevel;
 	PlannedStmt	   *result;
+	HintState	   *hstate;
 	const char 	   *prev_hint_str = NULL;
 
 	/*
@@ -5046,23 +5046,14 @@ void plpgsql_query_erase_callback(ResourceReleasePhase phase,
 
 #ifdef USE_ORCA
 /*
- * This function hook allows external code (i.e. backend) to parse a query into
+ * This function hook allows external code (i.e. backend) to access the parsed
  * hint structures.
  */
 static void *
-external_plan_hint_hook(Query *parse)
+external_plan_hint_hook()
 {
-	if (parse == NULL)
-		return NULL;
-
-	current_hint_retrieved = false;
-	get_current_hint_string(NULL, parse);
-
-	if (!current_hint_str)
-		return NULL;
-
-	if(hstate)
-		hstate->log_level = debug_level;
-	return hstate;
+	if (current_hint_state)
+		current_hint_state->log_level = debug_level;
+	return current_hint_state;
 }
 #endif

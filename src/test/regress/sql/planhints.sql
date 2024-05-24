@@ -576,5 +576,36 @@ EXPLAIN (costs off) SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
 */
 EXPLAIN (costs off) SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
 
+
+-- Hints with prepare statements
+--
+-- Make sure that hint parsing is done correctly in PREPARE/EXECUTE scenario.
+-- ORCA leverages PLANNER code path in planner_hook for hint parsing. Make sure
+-- that they are in-sync.
+--
+-- There was a bug in following scenario where in EXECUTE planner_hook parsed
+-- the hint defined in the PREPARE. After the EXECUTE finished, the hint memory
+-- is reclaimed. Then another EXECUTE/PREPARE is run, but this time the hint is
+-- not parsed by planner_hook because the hint is not defined on the PREPARE
+-- statement. In that case ORCA should not use the previous stale hint!
+CREATE TABLE t1 (c1 int, c2 text, PRIMARY KEY (c1));
+
+-- A hint may be defined in the PREPARE statement.  Then EXECUTE uses the hint
+-- bound to PREPARE.
+
+/*+BitmapScan(t1)*/
+PREPARE p1 AS SELECT * FROM t1 WHERE t1.c1 < $1;
+EXPLAIN (COSTS false) EXECUTE p1 (1000);
+DEALLOCATE p1;
+
+-- If no hint is defined in the PREPARE statement.  Then EXECUTE will not use a
+-- hint even if one is defined in the EXECUTE statement.
+
+PREPARE p1 AS SELECT * FROM t1 WHERE t1.c1 = 1;
+/*+BitmapScan(t1)*/
+EXPLAIN (COSTS false) EXECUTE p1;
+DEALLOCATE p1;
+
+
 RESET client_min_messages;
 RESET pg_hint_plan.debug_print;

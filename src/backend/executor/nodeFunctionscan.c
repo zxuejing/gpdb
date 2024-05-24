@@ -672,6 +672,10 @@ ExecEndFunctionScan(FunctionScanState *node)
 	ExecClearTuple(node->ss.ss_ScanTupleSlot);
 
 	ExecEagerFreeFunctionScan(node);
+	if (!IsResManagerMemoryPolicyNone())
+	{
+		SPI_RestoreMemory(((Plan *)node)->operatorMemKB * 1024L);
+	}
 
 	/*
 	 * destroy tuplestore reader if exists

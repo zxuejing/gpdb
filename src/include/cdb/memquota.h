@@ -55,7 +55,7 @@ extern uint64 PolicyAutoStatementMemForNoSpill(PlannedStmt *stmt, uint64 minOper
 /**
  * Is result node memory intensive?
  */
-extern bool IsResultMemoryIntensive(Result *res);
+extern bool IsNodeMemoryIntensive(Plan *node);
 
 /*
  * Calculate the amount of memory reserved for the query

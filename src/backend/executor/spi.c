@@ -2714,7 +2714,10 @@ _SPI_convert_params(int nargs, Oid *argtypes,
 static void
 _SPI_assign_query_mem(QueryDesc * queryDesc)
 {
-	if (Gp_role == GP_ROLE_DISPATCH
+	/*
+	 * SPI can also be called in QE, So set query_mem for QE too.
+	 */
+	if ((Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_EXECUTE)
 		&& ActivePortal
 		&& !IsResManagerMemoryPolicyNone())
 	{
@@ -2740,6 +2743,7 @@ _SPI_pquery(QueryDesc *queryDesc, bool fire_triggers, uint64 tcount)
 	int			operation = queryDesc->operation;
 	int			eflags;
 	int			res;
+	uint64 oldSPIMemReserved = SPI_GetMemoryReservation();
 
 	_SPI_assign_query_mem(queryDesc);
 
@@ -2888,6 +2892,11 @@ _SPI_pquery(QueryDesc *queryDesc, bool fire_triggers, uint64 tcount)
 		PG_RE_THROW();
 	}
 	PG_END_TRY();
+	if (!IsResManagerMemoryPolicyNone()
+			&& SPI_IsMemoryReserved())
+	{
+		SPI_RestoreMemory(oldSPIMemReserved);
+	}
 
 	_SPI_current->processed = queryDesc->es_processed;	/* Mpp: Dispatched
 														 * queries fill in this
@@ -3248,6 +3257,15 @@ void SPI_ReserveMemory(uint64 mem_reserved)
 	}
 }
 
+/*
+ * Restore memory reserved after current SPI call.
+ * Ensure it does not affect the next SPI call.
+ */
+void SPI_RestoreMemory(uint64 mem_reserved)
+{
+	Assert(!IsResManagerMemoryPolicyNone());
+	SPIMemReserved = mem_reserved;
+}
 /**
  * What was the amount of memory reserved for the last operator? See SPI_ReserveMemory()
  * for details.
@@ -3259,12 +3277,12 @@ uint64 SPI_GetMemoryReservation(void)
 }
 
 /**
- * Is memory reserved stack empty?
+ * Is memory reserved for SPI calls?
  */
 bool SPI_IsMemoryReserved(void)
 {
 	Assert(!IsResManagerMemoryPolicyNone());
-	return (SPIMemReserved == 0);
+	return (SPIMemReserved != 0);
 }
 
 /**

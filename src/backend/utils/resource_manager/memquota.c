@@ -215,11 +215,11 @@ IsBlockingOperator(Node *node)
  * Is a result node memory intensive? It is if it contains function calls.
  */
 bool
-IsResultMemoryIntensive(Result *res)
+IsNodeMemoryIntensive(Plan *node)
 {
 
 	List *funcNodes = extract_nodes(NULL /* glob */,
-			(Node *) ((Plan *) res)->targetlist, T_FuncExpr);
+			(Node *) node->targetlist, T_FuncExpr);
 
 	int nFuncExpr = list_length(funcNodes);
 	/* Shallow free of the funcNodes list */
@@ -259,13 +259,11 @@ IsMemoryIntensiveOperator(Node *node, PlannedStmt *stmt)
 				Agg *agg = (Agg *) node;
 				return IsAggMemoryIntensive(agg);
 			}
-		case T_Result:
-			{
-				Result *res = (Result *) node;
-				return IsResultMemoryIntensive(res);
-			}
 		default:
-			return false;
+			{
+				Plan *plan = (Plan *) node;
+				return IsNodeMemoryIntensive(plan);
+			}
 	}
 }
 
@@ -897,7 +895,21 @@ int64
 ResourceManagerGetQueryMemoryLimit(PlannedStmt* stmt)
 {
 	if (Gp_role != GP_ROLE_DISPATCH)
+	{
+		if (Gp_role == GP_ROLE_EXECUTE)
+		{
+			if (stmt->query_mem > 0)
+				return stmt->query_mem;
+			else
+			{
+				/* Sometimes QD will dispatch sql to QE,
+				 * use statement_mem to control memory
+				 */
+				return (uint64) statement_mem * 1024L;
+			}
+		}
 		return stmt->query_mem;
+	}
 
 	/* no limits in single user mode. */
 	if (!IsUnderPostmaster)

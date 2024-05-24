@@ -177,5 +177,6 @@ extern void SPI_InitMemoryReservation(void);
 extern uint64 SPI_GetMemoryReservation(void);
 extern void SPI_ReserveMemory(uint64 mem_reserved);
 extern bool SPI_IsMemoryReserved(void);
+extern void SPI_RestoreMemory(uint64 mem_reserved);
 
 #endif							/* SPI_H */

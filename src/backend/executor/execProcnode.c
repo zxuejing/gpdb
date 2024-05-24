@@ -117,11 +117,13 @@
 #include "executor/nodeValuesscan.h"
 #include "executor/nodeWindowAgg.h"
 #include "executor/nodeWorktablescan.h"
+#include "executor/spi.h"
 #include "nodes/nodeFuncs.h"
 #include "miscadmin.h"
 
 #include "cdb/cdbvars.h"
 #include "cdb/ml_ipc.h"			/* interconnect context */
+#include "cdb/memquota.h"
 #include "executor/nodeAssertOp.h"
 #include "executor/nodeDynamicIndexscan.h"
 #include "executor/nodeDynamicIndexOnlyscan.h"
@@ -223,6 +225,12 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 										ALLOCSET_SMALL_SIZES);
 		MemoryContextDeclareAccountingRoot(nodecxt);
 		oldcxt = MemoryContextSwitchTo(nodecxt);
+	}
+
+	if (!IsResManagerMemoryPolicyNone()
+		&& IsNodeMemoryIntensive(node))
+	{
+		SPI_ReserveMemory(node->operatorMemKB * 1024L);
 	}
 
 	switch (nodeTag(node))
@@ -794,6 +802,12 @@ ExecEndNode(PlanState *node)
 			pfree(node->cdbexplainbuf->data);
 		pfree(node->cdbexplainbuf);
 		node->cdbexplainbuf = NULL;
+	}
+
+	if (!IsResManagerMemoryPolicyNone()
+		&& IsNodeMemoryIntensive(node->plan))
+	{
+		SPI_RestoreMemory(node->plan->operatorMemKB * 1024L);
 	}
 
 	switch (nodeTag(node))

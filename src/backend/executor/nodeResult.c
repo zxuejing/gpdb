@@ -56,7 +56,6 @@
 #include "cdb/cdbutil.h"
 #include "cdb/cdbvars.h"
 #include "cdb/memquota.h"
-#include "executor/spi.h"
 
 static bool TupleMatchesHashFilter(ResultState *node, TupleTableSlot *resultSlot);
 
@@ -308,11 +307,7 @@ ExecInitResult(Result *node, EState *estate, int eflags)
 										   node->hashFilterFuncs);
 	}
 
-	if (!IsResManagerMemoryPolicyNone()
-			&& IsResultMemoryIntensive(node))
-	{
-		SPI_ReserveMemory(((Plan *)node)->operatorMemKB * 1024L);
-	}
+
 
 	return resstate;
 }

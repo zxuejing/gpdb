@@ -38,6 +38,7 @@
 		"gin_pending_list_limit",
 		"gp_allow_date_field_width_5digits",
 		"gp_appendonly_compaction",
+		"gp_appendonly_compaction_segfile_limit",
 		"gp_appendonly_compaction_threshold",
 		"gp_appendonly_verify_block_checksums",
 		"gp_appendonly_verify_write_block",

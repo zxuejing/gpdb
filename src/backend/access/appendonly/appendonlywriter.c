@@ -73,6 +73,7 @@ typedef enum
  * local functions
  */
 static int choose_segno_internal(Relation rel, List *avoid_segnos, choose_segno_mode mode);
+static int num_non_existing_segfiles(Relation rel, bool *existing_segnos, List *avoid_segnos);
 static int choose_new_segfile(Relation rel, bool *used, List *avoid_segnos);
 static void get_aoseg_fields(Relation rel, Relation pg_aoseg_rel, HeapTuple tuple,
 							 int32 *segno, int64 *tupcount, int16 *state, int16 *formatversion);
@@ -389,15 +390,16 @@ choose_segno_internal(Relation rel, List *avoid_segnos, choose_segno_mode mode)
 	int			i;
 	int32		chosen_segno = -1;
 	candidate_segment candidates[MAX_AOREL_CONCURRENCY];
-	bool		used[MAX_AOREL_CONCURRENCY];
+	bool		existing_segnos[MAX_AOREL_CONCURRENCY]; /* already have aoseg row */
 	int			ncandidates = 0;
+	int 		nemptysegs = 0;
 	SysScanDesc aoscan;
 	HeapTuple	tuple;
 	Snapshot	snapshot;
 	Oid			segrelid;
 	bool		tried_creating_new_segfile = false;
 
-	memset(used, 0, sizeof(used));
+	memset(existing_segnos, 0, sizeof(existing_segnos));
 
 	if (ShouldUseReservedSegno(rel, mode))
 	{
@@ -460,7 +462,7 @@ choose_segno_internal(Relation rel, List *avoid_segnos, choose_segno_mode mode)
 		get_aoseg_fields(rel, pg_aoseg_rel, tuple, &segno,
 						 &tupcount, &state, &formatversion);
 
-		used[segno] = true;
+		existing_segnos[segno] = true;
 
 		/* never write to AWAITING_DROP segments */
 		if (state != AOSEG_STATE_DEFAULT)
@@ -503,11 +505,11 @@ choose_segno_internal(Relation rel, List *avoid_segnos, choose_segno_mode mode)
 				break;
 			}
 		}
-		else
+		else if (tupcount == 0)
 		{
 			/* If the ao segment is empty, do not choose it for compaction */
-			if (tupcount == 0)
-				continue;
+			nemptysegs++;
+			continue;
 		}
 
 		candidates[ncandidates].segno = segno;
@@ -522,6 +524,35 @@ choose_segno_internal(Relation rel, List *avoid_segnos, choose_segno_mode mode)
 	 */
 	if (chosen_segno == -1)
 	{
+
+		/*
+		 * If we are choosing the next segfile to compact, check to see if we
+		 * still have enough segfiles that can be inserted into.
+		 *
+		 * The grand total of non-existing segfiles, empty segfiles and segfiles
+		 * that are worthy of compaction (ncandidates) represent the total
+		 * number of available segfiles that can serve inserts. This total must
+		 * at least be gp_appendonly_compaction_segfile_limit.
+		 *
+		 * Otherwise, we might put too many segments into AOSEG_STATE_AWAITING_DROP.
+		 * Segfiles also remain in that state if VACUUM runs while there is an
+		 * older snapshot in the system.
+		 */
+		if (mode == CHOOSE_MODE_COMPACTION_TARGET)
+		{
+			int 	non_existing_segfile_count;
+
+			non_existing_segfile_count =
+				num_non_existing_segfiles(rel, existing_segnos, avoid_segnos);
+			if (non_existing_segfile_count + ncandidates + nemptysegs < gp_appendonly_compaction_segfile_limit)
+			{
+				ereportif(Debug_appendonly_print_segfile_choice, LOG,
+						  (errmsg("number of available segfiles for inserts is below gp_appendonly_compaction_segfile_limit"),
+						   errdetail("compaction candidate count = %d, non-existing segfile count = %d, empty segfile count = %d, limit = %d",
+									 ncandidates, non_existing_segfile_count, nemptysegs, gp_appendonly_compaction_segfile_limit)));
+				goto cleanup;
+			}
+		}
 
 		/*
 		 * Sort the candidates by tuple count, to prefer segment with fewest existing
@@ -550,7 +581,7 @@ choose_segno_internal(Relation rel, List *avoid_segnos, choose_segno_mode mode)
 				!tried_creating_new_segfile &&
 				candidates[i].tupcount > 0)
 			{
-				chosen_segno = choose_new_segfile(rel, used, avoid_segnos);
+				chosen_segno = choose_new_segfile(rel, existing_segnos, avoid_segnos);
 				tried_creating_new_segfile = true;
 				if (chosen_segno != -1)
 					break;
@@ -589,9 +620,10 @@ choose_segno_internal(Relation rel, List *avoid_segnos, choose_segno_mode mode)
 		mode != CHOOSE_MODE_COMPACTION_TARGET &&
 		!tried_creating_new_segfile)
 	{
-		chosen_segno = choose_new_segfile(rel, used, avoid_segnos);
+		chosen_segno = choose_new_segfile(rel, existing_segnos, avoid_segnos);
 	}
 
+cleanup:
 	UnlockRelationForExtension(rel, ExclusiveLock);
 
 	if (Debug_appendonly_print_segfile_choice && chosen_segno != -1)
@@ -602,6 +634,31 @@ choose_segno_internal(Relation rel, List *avoid_segnos, choose_segno_mode mode)
 	heap_close(pg_aoseg_rel, AccessShareLock);
 
 	return chosen_segno;
+}
+
+/*
+ * Discounting the 'existing_segnos' and 'avoid_segnos', count the number of
+ * segnos for this append-optimized relation. These segnos won't have an
+ * aoseg/aocsseg row.
+ */
+static int
+num_non_existing_segfiles(Relation rel, bool *existing_segnos, List *avoid_segnos)
+{
+	int non_existing = 0;
+
+	Assert(RelationStorageIsAO(rel));
+
+	for (int segno = 0; segno < MAX_AOREL_CONCURRENCY; segno++)
+	{
+		/* Only choose seg 0 in utility mode. See above. */
+		if (Gp_role != GP_ROLE_UTILITY && segno == 0)
+			continue;
+
+		if (!existing_segnos[segno] && !list_member_int(avoid_segnos, segno))
+			non_existing++;
+	}
+
+	return non_existing;
 }
 
 static int

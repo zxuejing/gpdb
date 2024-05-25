@@ -1,5 +1,7 @@
 -- @Description Insert into a ao relation with 128 concurrent transactions.
--- The 128th transaction is expected to fail.
+-- The 128th transaction is expected to fail. After that, test VACUUM in the
+-- presence of an old snapshot and ensure that it respects
+-- gp_appendonly_compaction_segfile_limit.
 --
 --
 -- start_matchsubs
@@ -398,5 +400,29 @@ ALTER RESOURCE GROUP admin_group SET CONCURRENCY 130;
 128: ROLLBACK;
 SELECT * FROM ao;
 SELECT * FROM gp_ao_or_aocs_seg('ao') ORDER BY segno;
+
+-- Test VACUUM in the presence of an old snapshot.
+SHOW gp_appendonly_compaction_segfile_limit;
+
+DELETE FROM ao;
+
+-- Create an "old" snapshot.
+1: BEGIN;
+1: SELECT * FROM ao;
+
+-- Since there is an old snapshot that is active, even though VACUUM will find
+-- that all segments are eligible to be compacted, it will compact them sans
+-- gp_appendonly_compaction_segfile_limit number of segments. The compacted segments
+-- will be in AWAITING_DROP due to the "old" snapshot though.
+VACUUM ao;
+SELECT * FROM gp_ao_or_aocs_seg('ao') ORDER BY state, segno;
+
+-- Terminate the "old" snapshot.
+1: END;
+
+-- Now VACUUM will be able to compact the segments it wasn't able to and drop
+-- the ones that were AWAITING_DROP.
+VACUUM ao;
+SELECT * FROM gp_ao_or_aocs_seg('ao') ORDER BY state, segno;
 
 ALTER RESOURCE GROUP admin_group SET CONCURRENCY 20;
